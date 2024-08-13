@@ -1,7 +1,5 @@
-"use client";
-
-import { Crisp } from "crisp-sdk-web";
-import { useEffect } from "react";
+import { useEffect } from 'react';
+import Crisp from 'crisp-sdk-web';
 
 export const CrispChat = () => {
   useEffect(() => {
@@ -10,7 +8,7 @@ export const CrispChat = () => {
     if (websiteId) {
       Crisp.configure(websiteId);
     } else {
-      console.error("Crisp website ID is not set.");
+      console.error('Crisp website ID is not set.');
     }
   }, []);
 
