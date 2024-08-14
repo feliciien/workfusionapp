@@ -47,7 +47,7 @@ export async function GET(request: Request) {
           price_data: {
             currency: "USD",
             product_data: {
-              name: "SynthAI Pro",
+              name: "Prometheus Pro",
               description: "SynthAI Pro",
             },
             unit_amount: 2000,

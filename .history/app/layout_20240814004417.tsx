@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <head>
-          <title>SynthAI AI</title>
+          <title>Prometheus AI</title>
           <meta name="description" content="An AI platform." />
         </head>
         <body className={inter.className}>
