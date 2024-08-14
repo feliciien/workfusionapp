@@ -2,9 +2,14 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
+datasource mysqlDb {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+datasource postgresDb {
   provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  url      = env("POSTGRES_PRISMA_URL") // uses connection pooling
   directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
@@ -14,6 +19,7 @@ model UserApiLimit {
   count Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@datasource(mysqlDb) // Specify MySQL datasource
 }
 
 model UserSubscription {
@@ -25,4 +31,5 @@ model UserSubscription {
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@datasource(mysqlDb) // Specify MySQL datasource
 }
