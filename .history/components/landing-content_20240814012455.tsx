@@ -12,13 +12,13 @@ const testimonials = [
   {
     name: "Marie",
     avatar: "A",
-    title: "AI expert",
+    title: "Softw",
     description: "This is the best application I've ever used!",
   },
   {
-    name: "Andrew",
+    name: "John Doe",
     avatar: "A",
-    title: "SINGER",
+    title: "Software Engineer",
     description: "This is the best application I've ever used!",
   },
   {

@@ -16,9 +16,9 @@ const testimonials = [
     description: "This is the best application I've ever used!",
   },
   {
-    name: "Andrew",
+    name: "",
     avatar: "A",
-    title: "SINGER",
+    title: "Software Engineer",
     description: "This is the best application I've ever used!",
   },
   {
