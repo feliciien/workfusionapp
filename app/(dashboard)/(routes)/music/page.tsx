@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
+import { Analytics } from '@vercel/analytics/react';
 import { Empty } from "@/components/empty";
 import { Heading } from "@/components/heading";
 import { Loader } from "@/components/loader";

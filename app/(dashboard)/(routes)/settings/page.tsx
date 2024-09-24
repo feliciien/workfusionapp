@@ -2,7 +2,7 @@ import { Heading } from "@/components/heading";
 import { SubscriptionButton } from "@/components/subscription-button";
 import { checkSubscription } from "@/lib/subscription";
 import { Settings } from "lucide-react";
-
+import { Analytics } from '@vercel/analytics/react';
 const SettingsPage = async () => {
   const isPro = await checkSubscription();
 

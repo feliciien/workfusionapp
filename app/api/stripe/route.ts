@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
 import { stripe } from "@/lib/stripe";
 import { absoluteUrl } from "@/lib/utils";
-
+import { Analytics } from '@vercel/analytics/react';
 // Ensure that your settings URL is correct
 const settingsUrl = absoluteUrl("/settings");
 

@@ -8,7 +8,7 @@ import { ChatCompletionRequestMessage } from "openai";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
+import { Analytics } from '@vercel/analytics/react';
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
 import { Heading } from "@/components/heading";

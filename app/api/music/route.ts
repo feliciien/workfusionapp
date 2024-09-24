@@ -3,7 +3,7 @@ import { checkSubscription } from "@/lib/subscription";
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
-
+import { Analytics } from '@vercel/analytics/react';
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });

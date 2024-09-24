@@ -3,7 +3,7 @@ import { checkSubscription } from "@/lib/subscription";
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from "openai";
-
+import { Analytics } from '@vercel/analytics/react';
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });

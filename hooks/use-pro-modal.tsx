@@ -1,5 +1,5 @@
 import { create } from "zustand";
-
+import { Analytics } from '@vercel/analytics/react';
 interface useProModalStore {
   isOpen: boolean;
   onOpen: () => void;
