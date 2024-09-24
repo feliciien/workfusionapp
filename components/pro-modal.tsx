@@ -69,7 +69,7 @@ export const ProModal = () => {
         <DialogHeader>
           <DialogTitle className="flex justify-center flex-col items-center pb-2 gap-y-4">
             <div className="flex items-center gap-x-2 font-bold py-1">
-              Upgrade to SynthAI Pro
+              Upgrade to workfusionapp Pro
               <Badge variant="premium" className="uppercase text-sm py-1">
                 pro
               </Badge>

@@ -71,7 +71,7 @@ const Sidebar: FC<SidebarProps> = ({ apiLimitCount = 0, isPro = false }) => {
           <div className="relative w-8 h-8 mr-4">
             <Image fill alt="Logo" src="/logo.png" />
           </div>
-          <h1 className={cn("text-2xl font-bold", montserrat.className)}>SynthAI</h1>
+          <h1 className={cn("text-2xl font-bold", montserrat.className)}>workfusionapp</h1>
         </Link>
         <div className="space-y-1">
           {routes.map((route) => (
