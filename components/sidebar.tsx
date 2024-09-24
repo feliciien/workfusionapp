@@ -65,28 +65,26 @@ const Sidebar: FC<SidebarProps> = ({ apiLimitCount = 0, isPro = false }) => {
   const pathname = usePathname();
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
-      <div className="px-3 py-2 flex-1">
-        <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <div className="relative w-8 h-8 mr-4">
-            <Image fill alt="Logo" src="/logo.png" />
+    <div className="space-y-4 py-4 flex flex-col h-full bg-blue-900 text-white">
+      <div className="px-4 py-3 flex-1">
+        <Link href="/dashboard" className="flex items-center mb-12">
+          <div className="relative w-10 h-10 mr-3">
+            <Image fill alt="Logo" src="/logo.png" className="rounded-full" />
           </div>
-          <h1 className={cn("text-2xl font-bold", montserrat.className)}>workfusionapp</h1>
+          <h1 className={cn("text-3xl font-bold", montserrat.className)}>WorkFusion</h1>
         </Link>
-        <div className="space-y-1">
+        <div className="space-y-2">
           {routes.map((route) => (
             <Link
               href={route.href}
               key={route.href}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "bg-white/10 text-white" : "text-zinc-400"
+                "text-base group flex items-center p-3 rounded-lg transition-all duration-150",
+                pathname === route.href ? "bg-blue-700 text-white" : "text-zinc-300 hover:bg-blue-800 hover:text-white"
               )}
             >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("w-5 h-5 mr-3", route.color)} />
-                {route.label}
-              </div>
+              <route.icon className={cn("w-6 h-6 mr-3", route.color)} />
+              {route.label}
             </Link>
           ))}
         </div>
