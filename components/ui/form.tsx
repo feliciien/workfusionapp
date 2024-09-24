@@ -12,7 +12,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
-
+import { Analytics } from "@vercel/analytics/react"
 const Form = FormProvider
 
 type FormFieldContextValue<

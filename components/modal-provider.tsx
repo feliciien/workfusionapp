@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { Analytics } from "@vercel/analytics/react"
 import ProModal from "./pro-modal";
 
 export const ModalProvider = () => {

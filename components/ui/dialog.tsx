@@ -4,7 +4,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
-
+import { Analytics } from "@vercel/analytics/react"
 // Radix UI Dialog components
 const Dialog = DialogPrimitive.Root
 

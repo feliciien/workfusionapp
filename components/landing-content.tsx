@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-
+import { Analytics } from "@vercel/analytics/react"
 const testimonials = [
   {
     name: "Franck",

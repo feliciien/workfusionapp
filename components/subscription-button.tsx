@@ -5,7 +5,7 @@ import { Zap } from "lucide-react";
 import { FC, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "./ui/button";
-
+import { Analytics } from "@vercel/analytics/react"
 interface SubscriptionButtonProps {
   isPro: boolean;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, useEffect, useState } from "react";
-
+import { Analytics } from "@vercel/analytics/react"
 import { MAX_FREE_COUNTS } from "@/constants";
 import useProModal from "@/hooks/use-pro-modal";
 import { Zap } from "lucide-react";

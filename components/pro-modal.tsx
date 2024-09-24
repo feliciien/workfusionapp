@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { useState } from "react";
-
+import { Analytics } from "@vercel/analytics/react"
 import useProModal from "@/hooks/use-pro-modal";
 import { cn } from "@/lib/utils";
 import { Check, Code, ImageIcon, MessageSquare, Music, VideoIcon, Zap } from "lucide-react";

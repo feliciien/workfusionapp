@@ -1,6 +1,6 @@
 import { useUser } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-
+import { Analytics } from "@vercel/analytics/react"
 export const UserAvatar = () => {
 	const { user } = useUser();
 	return (

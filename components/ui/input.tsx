@@ -1,5 +1,5 @@
 import * as React from "react"
-
+import { Analytics } from "@vercel/analytics/react"
 import { cn } from "@/lib/utils"
 
 export interface InputProps

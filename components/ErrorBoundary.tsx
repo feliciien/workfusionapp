@@ -2,7 +2,7 @@
 "use client";
 
 import React, { Component, ReactNode } from 'react';
-
+import { Analytics } from "@vercel/analytics/react"
 interface Props {
   children: ReactNode;
 }

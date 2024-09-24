@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
-
+import { Analytics } from "@vercel/analytics/react"
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import MobileSidebar from "./mobile-sidebar";

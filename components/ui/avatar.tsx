@@ -1,5 +1,5 @@
 "use client"
-
+import { Analytics } from "@vercel/analytics/react"
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 

@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import TypewriterComponent from "typewriter-effect";
-
+import { Analytics } from "@vercel/analytics/react"
 import { Button } from "./ui/button";
 
 export const LandingHero = () => {

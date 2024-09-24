@@ -1,5 +1,5 @@
 import { LucideIcon } from "lucide-react";
-
+import { Analytics } from "@vercel/analytics/react"
 import { cn } from "@/lib/utils";
 
 interface HeadingProps {
