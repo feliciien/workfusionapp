@@ -1,17 +1,50 @@
-// pages/api/stripe/route.ts
-
+// route.ts
 import { auth, currentUser } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
-import { stripe } from "@/lib/stripe";
 import { absoluteUrl } from "@/lib/utils";
-import { Analytics } from '@vercel/analytics/react';
-// Ensure that your settings URL is correct
+import axios from "axios";
+
 const settingsUrl = absoluteUrl("/settings");
+
+// PayPal API base URL and credentials
+const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.sandbox.paypal.com";
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
+const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
+
+// Function to get an access token from PayPal
+async function getPayPalAccessToken() {
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+    throw new Error("PayPal credentials are not set correctly.");
+  }
+
+  // Encode the client ID and secret for Basic Auth
+  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+
+  try {
+    const response = await axios.post(
+      `${PAYPAL_API_BASE}/v1/oauth2/token`,
+      new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    return response.data.access_token;
+  } catch (error) {
+    console.error("[PAYPAL_TOKEN_ERROR]", error);
+    if (error.response && error.response.status === 401) {
+      throw new Error("PayPal authentication failed. Please check your client credentials.");
+    }
+    throw new Error("Failed to obtain PayPal access token.");
+  }
+}
 
 export async function GET(request: Request) {
   try {
-    // Retrieve the authenticated user ID and user details
     const { userId } = auth();
     const user = await currentUser();
 
@@ -19,51 +52,51 @@ export async function GET(request: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Find the user's subscription details from the database
     const userSubscription = await prismadb.userSubscription.findUnique({
       where: { userId },
     });
 
-    if (userSubscription?.stripeCustomerId) {
-      // If the user has a Stripe customer ID, create a billing portal session
-      const stripeSession = await stripe.billingPortal.sessions.create({
-        customer: userSubscription.stripeCustomerId,
-        return_url: settingsUrl,
-      });
-
-      return new NextResponse(JSON.stringify({ url: stripeSession.url }), { status: 200 });
+    if (userSubscription) {
+      return new NextResponse(JSON.stringify({ url: settingsUrl }), { status: 200 });
     }
 
-    // If the user does not have a Stripe customer ID, create a checkout session
-    const stripeSession = await stripe.checkout.sessions.create({
-      success_url: settingsUrl,
-      cancel_url: settingsUrl,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      billing_address_collection: "auto",
-      customer_email: user.emailAddresses[0]?.emailAddress, // Use optional chaining for safety
-      line_items: [
-        {
-          price_data: {
-            currency: "USD",
-            product_data: {
-              name: "workfusionapp Pro",
-              description: "workfusionapp Pro",
-            },
-            unit_amount: 2000,
-            recurring: {
-              interval: "month",
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      metadata: { userId },
-    });
+    // Get the PayPal access token
+    const accessToken = await getPayPalAccessToken();
 
-    return new NextResponse(JSON.stringify({ url: stripeSession.url }), { status: 200 });
+    // Create a PayPal order for the subscription
+    const orderResponse = await axios.post(
+      `${PAYPAL_API_BASE}/v2/checkout/orders`,
+      {
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: {
+              currency_code: "USD",
+              value: "10.00",
+            },
+            description: "WorkFusionApp Pro Subscription",
+          },
+        ],
+        application_context: {
+          brand_name: "WorkFusionApp",
+          landing_page: "BILLING",
+          user_action: "PAY_NOW",
+          return_url: `${settingsUrl}?success=true`,
+          cancel_url: `${settingsUrl}?canceled=true`,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const approvalUrl = orderResponse.data.links.find((link: any) => link.rel === "approve").href;
+    return new NextResponse(JSON.stringify({ url: approvalUrl }), { status: 200 });
   } catch (error) {
-    console.error("[STRIPE_ERROR]", error);
+    console.error("[PAYPAL_ERROR]", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
