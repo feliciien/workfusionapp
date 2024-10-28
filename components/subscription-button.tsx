@@ -5,7 +5,8 @@ import { Zap } from "lucide-react";
 import { FC, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "./ui/button";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
+
 interface SubscriptionButtonProps {
   isPro: boolean;
 }
@@ -16,8 +17,9 @@ export const SubscriptionButton: FC<SubscriptionButtonProps> = ({ isPro = false 
   const onClick = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/stripe");
+      const response = await axios.get("/api/paypal");
 
+      // Redirect the user to the PayPal approval URL
       window.location.href = response.data.url;
     } catch (error) {
       console.log("[BILLING_ERROR]", error);

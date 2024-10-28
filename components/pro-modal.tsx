@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { useState } from "react";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 import useProModal from "@/hooks/use-pro-modal";
 import { cn } from "@/lib/utils";
 import { Check, Code, ImageIcon, MessageSquare, Music, VideoIcon, Zap } from "lucide-react";
@@ -52,11 +52,12 @@ export const ProModal = () => {
   const onSubscribe = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/stripe");
+      const response = await axios.get("/api/paypal");
 
+      // Redirect the user to the PayPal approval URL
       window.location.href = response.data.url;
     } catch (error) {
-      console.log("[STRIPE_CLIENT_ERROR]", error);
+      console.log("[PAYPAL_CLIENT_ERROR]", error);
       toast.error("Something went wrong.");
     } finally {
       setLoading(false);
@@ -69,7 +70,7 @@ export const ProModal = () => {
         <DialogHeader>
           <DialogTitle className="flex justify-center flex-col items-center pb-2 gap-y-4">
             <div className="flex items-center gap-x-2 font-bold py-1">
-              Upgrade to workfusionapp Pro
+              Upgrade to WorkFusionApp Pro
               <Badge variant="premium" className="uppercase text-sm py-1">
                 pro
               </Badge>

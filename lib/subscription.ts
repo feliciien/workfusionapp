@@ -1,5 +1,4 @@
 import { auth } from "@clerk/nextjs";
-
 import prismadb from "./prismadb";
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
@@ -16,10 +15,9 @@ export const checkSubscription = async () => {
       userId,
     },
     select: {
-      stripeSubscriptionId: true,
-      stripeCurrentPeriodEnd: true,
-      stripeCustomerId: true,
-      stripePriceId: true,
+      paypalSubscriptionId: true,
+      paypalCurrentPeriodEnd: true,
+      paypalStatus: true,
     },
   });
 
@@ -27,7 +25,10 @@ export const checkSubscription = async () => {
     return false;
   }
 
-  const isValid = userSubscription.stripePriceId && userSubscription.stripeCurrentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now();
+  // Check if the subscription is active and not expired
+  const isValid =
+    userSubscription.paypalStatus === "ACTIVE" &&
+    userSubscription.paypalCurrentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now();
 
   return !!isValid;
 };
