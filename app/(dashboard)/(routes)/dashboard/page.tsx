@@ -1,79 +1,117 @@
 "use client";
 
 import {
-	ArrowRight,
-	Code,
-	ImageIcon,
-	MessageSquare,
-	Music,
-	VideoIcon,
+  ArrowRight,
+  Code,
+  ImageIcon,
+  MessageSquare,
+  Music,
+  VideoIcon,
+  Mic2,
+  Palette,
+  Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from "@vercel/analytics/react";
+
 const tools = [
-	{
-		label: "Conversation",
-		icon: MessageSquare,
-		color: "text-violet-500",
-		bgColor: "bg-violet-500/10",
-		href: "/conversation",
-	},
-	
-	{
-		label: "Image Generation",
-		icon: ImageIcon,
-		color: "text-pink-700",
-		bgColor: "bg-pink-700/10",
-		href: "/image",
-	},
-	
-	{
-		label: "Code Generation",
-		icon: Code,
-		color: "text-green-700",
-		bgColor: "bg-green-700/10",
-		href: "/code",
-	},
+  {
+    label: "Conversation",
+    description: "Chat seamlessly with our AI assistant to brainstorm ideas.",
+    icon: MessageSquare,
+    href: "/conversation",
+  },
+  {
+    label: "Image Generation",
+    description: "Create unique images and illustrations from your prompts.",
+    icon: ImageIcon,
+    href: "/image",
+  },
+  {
+    label: "Code Generation",
+    description: "Generate code snippets, functions, or entire modules.",
+    icon: Code,
+    href: "/code",
+  },
+  {
+    label: "Music Synthesis",
+    description: "Produce custom audio tracks suited for your projects.",
+    icon: Music,
+    href: "/music",
+  },
+  {
+    label: "Video Creation",
+    description: "Convert text-based ideas into short, AI-generated videos.",
+    icon: VideoIcon,
+    href: "/video",
+  },
+  {
+    label: "Voice Synthesis",
+    description: "Generate voice samples and narrations in various styles.",
+    icon: Mic2,
+    href: "/voice",
+  },
+  {
+    label: "Art Generation",
+    description: "Craft stunning AI-assisted artwork and designs.",
+    icon: Palette,
+    href: "/art",
+  },
+  {
+    label: "Custom Models",
+    description: "Train and configure your own AI models for specific tasks.",
+    icon: Settings,
+    href: "/custom",
+  },
 ];
 
 const DashboardPage = () => {
-	const router = useRouter();
+  const router = useRouter();
 
-	return (
-		<div>
-			<div className="mb-8 space-y-4">
-				<h2 className="text-2xl md:text-4xl font-bold text-center">
-					Explore the power of AI
-				</h2>
-				<p className="text-muted-foreground font-light text-sm md:text-lg text-center">
-				SynthAI is a platform that allows you to generate music, videos,
-					and code using the power of AI.
-				</p>
-			</div>
-			<div className="px-4 md:px-20 lg:px-32 space-y-4">
-				{tools.map((tool) => (
-					<Card
-						onClick={() => router.push(tool.href)}
-						key={tool.href}
-						className={
-							"p-4 border-black/5 flex items-center justify-between hover:shadow-md transition cursor-pointer"
-						}
-					>
-						<div className="flex items-center gap-x-4">
-							<div className={cn("p-2 w-fit rounded-md", tool.bgColor)}>
-								<tool.icon className={cn("w-8 h-8", tool.color)} />
-							</div>
-							<div className="font-semibold">{tool.label}</div>
-						</div>
-						<ArrowRight className="w-5 h-5" />
-					</Card>
-				))}
-			</div>
-		</div>
-	);
+  return (
+    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+      <div className="w-full max-w-5xl mx-auto px-4 py-16">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
+            Explore the Power of AI
+          </h2>
+          <p className="text-sm md:text-base text-gray-600 font-light max-w-xl mx-auto mt-3">
+            SynthAI enhances your workflows with AI-driven tools. Generate code, images, music, and more—all from one unified platform.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {tools.map((tool) => (
+            <Card
+              key={tool.href}
+              onClick={() => router.push(tool.href)}
+              className={cn(
+                "p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-pointer flex flex-col justify-between"
+              )}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-md bg-gray-100">
+                  <tool.icon className="w-6 h-6 text-gray-700" />
+                </div>
+                <div className="font-medium text-gray-800">{tool.label}</div>
+              </div>
+              <p className="text-sm text-gray-600 font-light mb-3">
+                {tool.description}
+              </p>
+              <div className="flex items-center text-gray-500 group-hover:text-gray-700 transition">
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <Analytics />
+    </div>
+  );
 };
 
 export default DashboardPage;
