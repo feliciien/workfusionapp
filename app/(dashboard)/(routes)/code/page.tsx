@@ -2,14 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Code } from "lucide-react";
+import { Code, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ChatCompletionRequestMessage } from "openai";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
 import * as z from "zod";
 import { Analytics } from '@vercel/analytics/react';
+
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
 import { Heading } from "@/components/heading";
@@ -19,7 +20,6 @@ import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
-
 import useProModal from "@/hooks/use-pro-modal";
 import { toast } from "react-hot-toast";
 import { formSchema } from "./constants";
@@ -27,7 +27,9 @@ import { formSchema } from "./constants";
 const CodePage = () => {
   const router = useRouter();
   const proModal = useProModal();
+
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+  const [darkMode, setDarkMode] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,7 +41,6 @@ const CodePage = () => {
   const isLoading = form.formState.isSubmitting;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log(values);
     try {
       const userMessage: ChatCompletionRequestMessage = {
         role: "user",
@@ -65,78 +66,123 @@ const CodePage = () => {
     }
   };
 
+  const handleClearConversation = () => {
+    setMessages([]);
+    form.reset();
+    router.refresh();
+  };
+
+  const messageCount = messages.length;
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
   return (
-    <div>
-      <Heading
-        title="Code Generation"
-        description="Our most advanced AI Code Generation model."
-        icon={Code}
-        iconColor="text-green-700"
-        bgColor="bg-green-700/10"
-      />
-      <div className="px-4 lg:px-8">
-        <div>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
-            >
-              <FormField
-                name="prompt"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-10">
-                    <FormControl className="m-0 p-0">
-                      <Input
-                        {...field}
-                        placeholder="Start typing here..."
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <Button className="col-span-12 lg:col-span-2 w-full" disabled={isLoading}>
-                Generate
-              </Button>
-            </form>
-          </Form>
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      {/* Header */}
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 flex items-center justify-between w-full">
+        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          SynthAI Code
         </div>
-        <div className="space-y-4 mt-4">
-          {isLoading && (
-            <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
-              <Loader />
-            </div>
-          )}
-          {messages.length === 0 && !isLoading && <Empty label="Start typing to have a conversation." />}
-          <div className="flex flex-col-reverse gap-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                  message.role === "user" ? "bg-white border border-black/10" : "bg-muted"
-                )}
-              >
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <ReactMarkdown
-                  className="text-sm overflow-hidden leading-7"
-                  components={{
-                    pre: ({ node, ...props }) => (
-                      <div className="overflow-auto w-full my-2 bg-black/10 p-2 rounded-lg">
-                        <pre {...props} />
-                      </div>
-                    ),
-                    code: ({ node, ...props }) => <code className="rounded-sm p-1 bg-black/10" {...props} />,
-                  }}
-                >
-                  {message.content || ""}
-                </ReactMarkdown>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          <Button variant="outline" onClick={handleClearConversation}>
+            Clear
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl p-4 lg:p-8">
+          <Heading
+            title="Code Generation"
+            description="Leverage advanced AI to generate and refine code snippets."
+            icon={Code}
+            iconColor="text-green-700"
+            bgColor="bg-green-700/10"
+          />
+
+          <div className="my-4 space-y-4">
+            {isLoading && (
+              <div className="p-8 rounded-lg w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <Loader />
               </div>
-            ))}
+            )}
+            {messages.length === 0 && !isLoading && <Empty label="Start typing to generate code." />}
+            <div className="flex flex-col gap-y-4">
+              {messages.map((message, index) => {
+                const isUser = message.role === "user";
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "w-full flex items-start gap-x-4 rounded-lg p-4",
+                      isUser
+                        ? "bg-white dark:bg-gray-950 border border-black/10 dark:border-gray-800"
+                        : "bg-gray-100 dark:bg-gray-800"
+                    )}
+                  >
+                    {isUser ? <UserAvatar /> : <BotAvatar />}
+                    <ReactMarkdown
+                      className="text-sm text-gray-900 dark:text-gray-100 leading-7 w-full"
+                      components={{
+                        pre: ({ node, ...props }) => (
+                          <div className="overflow-auto w-full my-2 bg-black/10 p-2 rounded-lg dark:bg-black/20">
+                            <pre {...props} />
+                          </div>
+                        ),
+                        code: ({ node, ...props }) => (
+                          <code
+                            className="rounded-sm p-1 bg-black/10 dark:bg-black/20"
+                            {...props}
+                          />
+                        ),
+                      }}
+                    >
+                      {message.content || ""}
+                    </ReactMarkdown>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Prompt Input (Fixed at Bottom) */}
+      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 fixed bottom-0 w-full">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center space-x-2 max-w-3xl mx-auto">
+            <FormField
+              name="prompt"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormControl className="m-0 p-0">
+                    <Input
+                      {...field}
+                      placeholder="Ask for code, e.g. 'Generate a Python function that reverses a list.'"
+                      className="border-gray-300 dark:border-gray-700 focus-visible:ring-0 focus-visible:ring-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button className="w-auto" disabled={isLoading}>
+              Generate
+            </Button>
+          </form>
+        </Form>
+      </div>
+      <Analytics />
     </div>
   );
 };
