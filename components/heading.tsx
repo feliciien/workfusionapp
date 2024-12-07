@@ -1,11 +1,12 @@
 // components/heading.tsx
 import React from 'react';
-import { Icon as LucideIcon } from "lucide-react";
+import { LucideProps } from "lucide-react";
 
 interface HeadingProps {
   title: string;
   description?: string;
-  icon?: LucideIcon;
+  // Use LucideProps for icons from lucide-react
+  icon?: React.ComponentType<LucideProps>;
   iconColor?: string;
   bgColor?: string;
 }
