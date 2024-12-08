@@ -5,11 +5,16 @@ import axios from "axios";
 import { Code, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ChatCompletionRequestMessage } from "openai";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
 import * as z from "zod";
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from "@vercel/analytics/react";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import javascript from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
+import python from "react-syntax-highlighter/dist/esm/languages/hljs/python";
+import bash from "react-syntax-highlighter/dist/esm/languages/hljs/bash";
+import { atomOneLight, atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
@@ -24,12 +29,27 @@ import useProModal from "@/hooks/use-pro-modal";
 import { toast } from "react-hot-toast";
 import { formSchema } from "./constants";
 
+// Register languages for syntax highlighting
+SyntaxHighlighter.registerLanguage("javascript", javascript);
+SyntaxHighlighter.registerLanguage("python", python);
+SyntaxHighlighter.registerLanguage("bash", bash);
+
+// Model options and default values
+const modelOptions = [
+  { label: "gpt-3.5-turbo", value: "gpt-3.5-turbo" },
+  { label: "gpt-4", value: "gpt-4" },
+];
+
 const CodePage = () => {
   const router = useRouter();
   const proModal = useProModal();
 
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
   const [darkMode, setDarkMode] = useState(false);
+  const [model, setModel] = useState("gpt-3.5-turbo");
+  const [temperature, setTemperature] = useState(0.7);
+  const [lastUserPrompt, setLastUserPrompt] = useState("");
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,39 +60,67 @@ const CodePage = () => {
 
   const isLoading = form.formState.isSubmitting;
 
+  // Handle request submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const controller = new AbortController();
+    setAbortController(controller);
     try {
       const userMessage: ChatCompletionRequestMessage = {
         role: "user",
         content: values.prompt,
       };
-      const newMessages = [...messages, userMessage];
 
-      const response = await axios.post("/api/code", {
-        messages: newMessages,
-      });
+      const newMessages = [...messages, userMessage];
+      setLastUserPrompt(values.prompt);
+
+      const response = await axios.post(
+        "/api/code",
+        {
+          messages: newMessages,
+          model,
+          temperature,
+        },
+        { signal: controller.signal }
+      );
 
       setMessages((current) => [...current, userMessage, response.data]);
       form.reset();
     } catch (error: any) {
       console.log(error);
-      if (error?.response?.status === 403) {
+      if (error?.name === "CanceledError") {
+        toast("Generation stopped.");
+      } else if (error?.response?.status === 403) {
         proModal.onOpen();
       } else {
         toast.error("Something went wrong.");
       }
     } finally {
+      setAbortController(null);
       router.refresh();
+    }
+  };
+
+  // Regenerate last response
+  const handleRegenerate = async () => {
+    if (!lastUserPrompt) return;
+    form.setValue("prompt", lastUserPrompt);
+    await onSubmit({ prompt: lastUserPrompt });
+  };
+
+  // Stop generation
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
     }
   };
 
   const handleClearConversation = () => {
     setMessages([]);
     form.reset();
+    setLastUserPrompt("");
     router.refresh();
   };
-
-  const messageCount = messages.length;
 
   useEffect(() => {
     if (darkMode) {
@@ -82,6 +130,67 @@ const CodePage = () => {
     }
   }, [darkMode]);
 
+  // Code block rendering with copy and download
+  const CodeBlock = ({ inline, className, children }: any) => {
+    const codeRef = useRef<HTMLDivElement>(null);
+    const match = /language-(\w+)/.exec(className || "");
+    const language = match ? match[1] : "javascript";
+
+    const handleCopy = async () => {
+      const codeText = String(children).trim();
+      try {
+        await navigator.clipboard.writeText(codeText);
+        toast.success("Copied to clipboard!");
+      } catch (err) {
+        toast.error("Failed to copy.");
+      }
+    };
+
+    const handleDownload = () => {
+      const codeText = String(children).trim();
+      const blob = new Blob([codeText], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `code-snippet.${language}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    if (inline) {
+      return (
+        <code className="rounded-sm p-1 bg-black/10 dark:bg-black/20">
+          {children}
+        </code>
+      );
+    }
+
+    return (
+      <div className="relative group my-2">
+        <div className="flex space-x-2 absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="sm" onClick={handleCopy}>
+            Copy
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleDownload}>
+            Download
+          </Button>
+        </div>
+        <SyntaxHighlighter
+          language={language}
+          style={darkMode ? atomOneDark : atomOneLight}
+          customStyle={{
+            borderRadius: "0.5rem",
+            padding: "1rem",
+            marginTop: "2rem",
+          }}
+          ref={codeRef}
+        >
+          {String(children).trim()}
+        </SyntaxHighlighter>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
@@ -90,10 +199,39 @@ const CodePage = () => {
           SynthAI Code
         </div>
         <div className="flex items-center space-x-4">
+          {/* Model Selection */}
+          <select
+            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded p-1"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={isLoading}
+          >
+            {modelOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Temperature Control */}
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-700 dark:text-gray-300 text-sm">Temp:</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={temperature}
+              onChange={(e) => setTemperature(Number(e.target.value))}
+              disabled={isLoading}
+            />
+            <span className="text-gray-700 dark:text-gray-300 text-sm">{temperature.toFixed(1)}</span>
+          </div>
+
           <Button variant="ghost" onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-          <Button variant="outline" onClick={handleClearConversation}>
+          <Button variant="outline" onClick={handleClearConversation} disabled={isLoading}>
             Clear
           </Button>
         </div>
@@ -116,7 +254,9 @@ const CodePage = () => {
                 <Loader />
               </div>
             )}
-            {messages.length === 0 && !isLoading && <Empty label="Start typing to generate code." />}
+            {messages.length === 0 && !isLoading && (
+              <Empty label="Start typing to generate code." />
+            )}
             <div className="flex flex-col gap-y-4">
               {messages.map((message, index) => {
                 const isUser = message.role === "user";
@@ -134,17 +274,8 @@ const CodePage = () => {
                     <ReactMarkdown
                       className="text-sm text-gray-900 dark:text-gray-100 leading-7 w-full"
                       components={{
-                        pre: ({ node, ...props }) => (
-                          <div className="overflow-auto w-full my-2 bg-black/10 p-2 rounded-lg dark:bg-black/20">
-                            <pre {...props} />
-                          </div>
-                        ),
-                        code: ({ node, ...props }) => (
-                          <code
-                            className="rounded-sm p-1 bg-black/10 dark:bg-black/20"
-                            {...props}
-                          />
-                        ),
+                        code: CodeBlock,
+                        pre: ({ node, ...props }) => <div {...props} />,
                       }}
                     >
                       {message.content || ""}
@@ -176,6 +307,16 @@ const CodePage = () => {
                 </FormItem>
               )}
             />
+            {!isLoading && lastUserPrompt && (
+              <Button variant="outline" type="button" onClick={handleRegenerate}>
+                Regenerate
+              </Button>
+            )}
+            {isLoading && (
+              <Button variant="outline" type="button" onClick={handleStop}>
+                Stop
+              </Button>
+            )}
             <Button className="w-auto" disabled={isLoading}>
               Generate
             </Button>

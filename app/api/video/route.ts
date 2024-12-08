@@ -1,47 +1,49 @@
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
-import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
-import Replicate from "replicate";
+import { NextResponse } from 'next/server';
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN!,
-});
+const RUNWAY_API_URL = "https://api.runwayml.com/v1/generate"; // Ensure the endpoint is correct
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-    const body = await req.json();
-    const { prompt } = body;
+    const { prompt } = await req.json();
+    console.log("Received prompt for video:", prompt);
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!process.env.RUNWAY_API_KEY) {
+      throw new Error("RUNWAY_API_KEY not set in .env.local");
     }
 
-    if (!prompt) {
-      return new NextResponse("Prompt is required", { status: 400 });
-    }
+    const payload = {
+      prompt, // Adjust the field name if needed based on Runway's API documentation
+      // Include any additional parameters required by the API (e.g., duration, resolution, etc.)
+    };
 
-    const isAllowed = await checkApiLimit();
-    const isPro = await checkSubscription();
-
-    if (!isAllowed && !isPro) {
-      return new NextResponse("API Limit Exceeded", { status: 403 });
-    }
-
-    const response = await replicate.run("anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351", {
-      input: {
-        prompt,
+    const response = await fetch(RUNWAY_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.RUNWAY_API_KEY}`,
+        "X-Runway-Version": "2024-11-06", // Set the correct API version as per documentation
       },
+      body: JSON.stringify(payload),
     });
 
-    if (!isPro) {
-      await increaseApiLimit();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Runway API error:", errorText);
+      return NextResponse.json({ error: "Error generating video." }, { status: 500 });
     }
 
-    return NextResponse.json(response, { status: 200 });
+    const data = await response.json();
+
+    // Assuming the API response contains a field "video_url".
+    const videoUrl = data.video_url;
+    if (!videoUrl) {
+      console.error("No video URL returned from Runway.");
+      return NextResponse.json({ error: "No video returned." }, { status: 500 });
+    }
+
+    return NextResponse.json({ video: videoUrl });
   } catch (error) {
-    console.log("[VIDEO_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("Video generation error:", error);
+    return NextResponse.json({ error: "Error generating video." }, { status: 500 });
   }
 }

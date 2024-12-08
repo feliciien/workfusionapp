@@ -39,6 +39,7 @@
     "react-hook-form": "^7.45.2",
     "react-hot-toast": "^2.4.1",
     "react-markdown": "^8.0.7",
+    "react-syntax-highlighter": "^15.6.1",
     "replicate": "^0.12.3",
     "stripe": "^16.7.0",
     "tailwind-merge": "^1.14.0",

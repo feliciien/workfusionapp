@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 
 import useProModal from "@/hooks/use-pro-modal";
 import { toast } from "react-hot-toast";
+
+// Create or update `constants.ts` with a suitable schema:
 import { formSchema } from "./constants";
 
 const VideoPage = () => {
@@ -34,19 +36,19 @@ const VideoPage = () => {
   const isLoading = form.formState.isSubmitting;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log(values);
     try {
       setVideo("");
-      const response = await axios.post("/api/music");
-      setVideo(response.data.audio);
-
+      const response = await axios.post("/api/video", {
+        prompt: values.prompt,
+      });
+      setVideo(response.data.video);
       form.reset();
     } catch (error: any) {
-      console.log(error);
+      console.error("Error generating video:", error);
       if (error?.response?.status === 403) {
         proModal.onOpen();
       } else {
-        toast.error("Something went wrong.");
+        toast.error("Something went wrong generating the video.");
       }
     } finally {
       router.refresh();
@@ -57,7 +59,7 @@ const VideoPage = () => {
     <div>
       <Heading
         title="Video Generation"
-        description="Our most advanced AI Video Generation model."
+        description="Generate AI-driven videos from your prompt."
         icon={Video}
         iconColor="text-orange-700"
         bgColor="bg-orange-700/10"
@@ -76,7 +78,7 @@ const VideoPage = () => {
                     <FormControl className="m-0 p-0">
                       <Input
                         {...field}
-                        placeholder="Start typing here..."
+                        placeholder="Describe the video scene..."
                         className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                         disabled={isLoading}
                       />
@@ -85,7 +87,7 @@ const VideoPage = () => {
                 )}
               />
               <Button className="col-span-12 lg:col-span-2 w-full" disabled={isLoading}>
-                Generate
+                {isLoading ? "Generating..." : "Generate"}
               </Button>
             </form>
           </Form>
@@ -96,10 +98,11 @@ const VideoPage = () => {
               <Loader />
             </div>
           )}
-          {!video && !isLoading && <Empty label="Start typing to generate videos." />}
+          {!video && !isLoading && <Empty label="Enter a prompt to generate a video." />}
           {video && (
             <video className="w-full aspect-video mt-8 rounded-lg border bg-black" controls>
-              <source src={video} />
+              <source src={video} type="video/mp4" />
+              Your browser does not support the video element.
             </video>
           )}
         </div>
