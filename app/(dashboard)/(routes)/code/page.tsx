@@ -2,34 +2,33 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Code } from "lucide-react";
+import { Code, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ChatCompletionRequestMessage } from "openai";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
-import * as z from "zod";
-import { BotAvatar } from "@/components/bot-avatar";
-import { Empty } from "@/components/empty";
-import { Heading } from "@/components/heading";
-import { Loader } from "@/components/loader";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { UserAvatar } from "@/components/user-avatar";
-import { cn } from "@/lib/utils";
-import useProModal from "@/hooks/use-pro-modal";
-import { toast } from "react-hot-toast";
-import { formSchema } from "./constants";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import * as z from "zod";
+import { BotAvatar } from "@/components/bot-avatar";
+import { UserAvatar } from "@/components/user-avatar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/loader";
+import { toast } from "react-hot-toast";
+import { formSchema } from "./constants";
+import { cn } from "@/lib/utils";
+import useProModal from "@/hooks/use-pro-modal";
 
 const CodePage = () => {
-  const router = useRouter();
   const proModal = useProModal();
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
   const [sandboxCode, setSandboxCode] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -39,6 +38,14 @@ const CodePage = () => {
 
   const isLoading = form.formState.isSubmitting;
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const userMessage: ChatCompletionRequestMessage = {
@@ -46,110 +53,91 @@ const CodePage = () => {
         content: values.prompt,
       };
       const newMessages = [...messages, userMessage];
-      const response = await axios.post("/api/code", {
-        messages: newMessages,
-      });
-      setMessages((current) => [...current, userMessage, response.data]);
-      setSandboxCode(response.data.content || "");
+      const { data } = await axios.post("/api/code", { messages: newMessages });
+
+      setMessages((current) => [...current, userMessage, data]);
+      setSandboxCode(data.content || "");
       form.reset();
     } catch (error: any) {
       if (error?.response?.status === 403) {
         proModal.onOpen();
       } else {
-        toast.error("Something went wrong.");
+        toast.error("Error: Unable to generate code. Please try again.");
       }
     } finally {
       router.refresh();
     }
   };
 
-  const runCodeInSandbox = () => {
+  const handleSandboxRun = () => {
     if (iframeRef.current) {
-      const iframeDocument = iframeRef.current.contentDocument;
-      const iframeWindow = iframeRef.current.contentWindow;
+      try {
+        const iframeDocument = iframeRef.current.contentDocument;
+        const iframeWindow = iframeRef.current.contentWindow;
 
-      if (iframeDocument && iframeWindow) {
-        iframeDocument.open();
-        iframeDocument.write(sandboxCode);
-        iframeDocument.close();
+        if (iframeDocument && iframeWindow) {
+          iframeDocument.open();
+          iframeDocument.write(sandboxCode);
+          iframeDocument.close();
+        }
+      } catch {
+        toast.error("Error: Unable to execute the code in the sandbox.");
       }
     }
   };
 
-  const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copied to clipboard!");
-  };
-
-  const downloadCode = (code: string) => {
-    const blob = new Blob([code], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "code.txt";
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleCopyOrDownload = (code: string, action: "copy" | "download") => {
+    if (action === "copy") {
+      navigator.clipboard.writeText(code);
+      toast.success("Code copied to clipboard!");
+    } else {
+      const blob = new Blob([code], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "code.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (
-    <div>
-      <Heading
-        title="Code Generation"
-        description="Our most advanced AI Code Generation model."
-        icon={Code}
-        iconColor="text-green-700"
-        bgColor="bg-green-700/10"
-      />
-      <div className="px-4 lg:px-8">
-        <div>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="flex items-center p-4 bg-white dark:bg-gray-800 shadow-md">
+        <Code className="w-6 h-6 text-green-600 dark:text-green-400" />
+        <h1 className="ml-2 text-xl font-semibold text-gray-800 dark:text-white">Code Generation</h1>
+      </header>
+
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400">
+            Start a conversation by entering a prompt below.
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "flex items-start",
+                message.role === "user" ? "justify-end" : "justify-start"
+              )}
             >
-              <FormField
-                name="prompt"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-10">
-                    <FormControl className="m-0 p-0">
-                      <Input
-                        {...field}
-                        placeholder="Enter your code prompt here"
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <Button className="col-span-12 lg:col-span-2 w-full" disabled={isLoading}>
-                Generate
-              </Button>
-            </form>
-          </Form>
-        </div>
-        <div className="space-y-4 mt-4">
-          {isLoading && (
-            <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
-              <Loader />
-            </div>
-          )}
-          {messages.length === 0 && !isLoading && <Empty label="Start typing to have a conversation." />}
-          <div className="flex flex-col-reverse gap-y-4">
-            {messages.map((message, index) => (
+              {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
               <div
-                key={index}
                 className={cn(
-                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                  message.role === "user" ? "bg-white border border-black/10" : "bg-muted"
+                  "max-w-lg mx-2 p-4 rounded-lg shadow-md transition-all duration-300",
+                  message.role === "user"
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                 )}
               >
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
                 <ReactMarkdown
-                  className="text-sm overflow-hidden leading-7 w-full"
+                  className="prose prose-sm dark:prose-dark"
                   components={{
                     pre: ({ node, ...props }) => (
-                      <div className="overflow-auto w-full my-2 bg-black/10 p-2 rounded-lg">
+                      <div className="overflow-auto my-2 bg-black/10 p-2 rounded-lg">
                         <pre {...props} />
                       </div>
                     ),
@@ -166,38 +154,83 @@ const CodePage = () => {
                 >
                   {message.content || ""}
                 </ReactMarkdown>
-                {message.role !== "user" && (
-                  <div className="flex flex-col items-start gap-2">
-                    <Button size="sm" onClick={() => copyToClipboard(message.content || "")}>
-                      Copy Code
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => downloadCode(message.content || "")}>
-                      Download
-                    </Button>
-                  </div>
-                )}
+                {/* Optional: Add timestamps here */}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
-        <div className="mt-8">
-          <h2 className="text-lg font-bold">Sandbox Preview</h2>
-          <textarea
-            className="w-full h-40 bg-gray-100 rounded-lg p-4 mt-2"
-            value={sandboxCode}
-            onChange={(e) => setSandboxCode(e.target.value)}
+
+        {isLoading && (
+          <div className="flex justify-center mt-4">
+            <Loader />
+          </div>
+        )}
+      </main>
+
+      <footer className="p-4 bg-white dark:bg-gray-800 shadow-inner">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex items-center gap-2"
+          aria-label="Code generation form"
+        >
+          <Input
+            {...form.register("prompt")}
+            placeholder="Enter your code prompt here..."
+            className="flex-1"
+            disabled={isLoading}
+            aria-label="Code generation input"
+            multiline
+            rows={1}
           />
-          <Button className="mt-4" onClick={runCodeInSandbox}>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+            aria-label="Send prompt"
+          >
+            {isLoading ? <Loader className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+          </Button>
+        </form>
+      </footer>
+
+      <aside className="p-4 bg-gray-100 dark:bg-gray-800 border-t dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Sandbox Preview</h2>
+        <textarea
+          className="w-full h-32 p-2 mt-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+          value={sandboxCode}
+          onChange={(e) => setSandboxCode(e.target.value)}
+          aria-label="Sandbox code editor"
+        />
+        <div className="flex items-center gap-2 mt-2">
+          <Button
+            onClick={handleSandboxRun}
+            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          >
             Run Code
           </Button>
-          <iframe
-            ref={iframeRef}
-            className="w-full h-96 mt-4 border rounded-lg bg-white"
-            sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
-            title="Code Execution Sandbox"
-          />
+          <Button
+            onClick={() => handleCopyOrDownload(sandboxCode, "copy")}
+            variant="outline"
+            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          >
+            Copy
+          </Button>
+          <Button
+            onClick={() => handleCopyOrDownload(sandboxCode, "download")}
+            variant="outline"
+            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          >
+            Download
+          </Button>
         </div>
-      </div>
+        <iframe
+          ref={iframeRef}
+          className="w-full h-64 mt-4 border rounded-lg bg-white dark:bg-gray-700"
+          sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+          title="Code Execution Sandbox"
+        />
+      </aside>
     </div>
   );
 };
