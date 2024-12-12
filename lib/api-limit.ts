@@ -1,7 +1,36 @@
 import { auth } from "@clerk/nextjs";
-
-import { MAX_FREE_COUNTS } from "@/constants";
 import prismadb from "./prismadb";
+
+const FREE_CREDITS = 5;
+
+export const checkSubscription = async () => {
+  const { userId } = auth();
+
+  if (!userId) {
+    return false;
+  }
+
+  const userSubscription = await prismadb.userSubscription.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      paypalStatus: true,
+      paypalCurrentPeriodEnd: true,
+    },
+  });
+
+  if (!userSubscription) {
+    return false;
+  }
+
+  const isValid =
+    userSubscription.paypalStatus === "ACTIVE" &&
+    userSubscription.paypalCurrentPeriodEnd != null &&
+    userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now();
+
+  return !!isValid;
+};
 
 export const increaseApiLimit = async () => {
   const { userId } = auth();
@@ -42,17 +71,23 @@ export const checkApiLimit = async () => {
     return false;
   }
 
+  const isPro = await checkSubscription();
+  
+  if (isPro) {
+    return true;
+  }
+
   const userApiLimit = await prismadb.userApiLimit.findUnique({
     where: {
       userId,
     },
   });
 
-  if (!userApiLimit || userApiLimit.count < MAX_FREE_COUNTS) {
+  if (!userApiLimit || userApiLimit.count < FREE_CREDITS) {
     return true;
-  } else {
-    return false;
   }
+
+  return false;
 };
 
 export const getApiLimitCount = async () => {
@@ -70,7 +105,7 @@ export const getApiLimitCount = async () => {
 
   if (!userApiLimit) {
     return 0;
-  } else {
-    return userApiLimit.count;
   }
+
+  return userApiLimit.count;
 };

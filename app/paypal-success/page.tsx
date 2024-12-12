@@ -1,24 +1,28 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Loader } from "@/components/loader";
 import { Heading } from "@/components/heading";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 
 const PayPalSuccessPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const handleSubscription = async () => {
       const subscriptionId = searchParams.get("subscription_id");
 
       if (!subscriptionId) {
-        toast.error("Subscription ID not found.");
-        router.push("/dashboard");
+        setStatus("error");
+        setError("Subscription ID not found");
+        toast.error("Subscription ID not found");
+        setTimeout(() => router.push("/dashboard"), 2000);
         return;
       }
 
@@ -27,17 +31,24 @@ const PayPalSuccessPage = () => {
           subscriptionId,
         });
 
-        if (response.status === 200) {
+        if (response.data.success) {
+          setStatus("success");
           toast.success("Subscription activated successfully!");
-          router.push("/dashboard");
+          setTimeout(() => router.push("/dashboard"), 2000);
         } else {
-          toast.error("Failed to activate subscription.");
-          router.push("/dashboard");
+          throw new Error(response.data.error || "Failed to activate subscription");
         }
       } catch (error) {
         console.error("Subscription Capture Error:", error);
-        toast.error("An error occurred while activating your subscription.");
-        router.push("/dashboard");
+        setStatus("error");
+        if (axios.isAxiosError(error) && error.response?.data?.error) {
+          setError(error.response.data.error);
+          toast.error(error.response.data.error);
+        } else {
+          setError("An error occurred while activating your subscription");
+          toast.error("An error occurred while activating your subscription");
+        }
+        setTimeout(() => router.push("/dashboard"), 2000);
       }
     };
 
@@ -45,10 +56,36 @@ const PayPalSuccessPage = () => {
   }, [searchParams, router]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <CheckCircle className="w-16 h-16 text-green-500" />
-      <Heading title="Subscription Activated!" description="Thank you for subscribing to SynthAI." />
-      <Loader />
+    <div className="h-full flex flex-col items-center justify-center space-y-6">
+      {status === "loading" && (
+        <>
+          <Loader />
+          <Heading
+            title="Activating Subscription..."
+            description="Please wait while we activate your subscription."
+          />
+        </>
+      )}
+
+      {status === "success" && (
+        <>
+          <CheckCircle className="w-16 h-16 text-green-500" />
+          <Heading
+            title="Subscription Activated!"
+            description="Thank you for subscribing to SynthAI. Redirecting you to dashboard..."
+          />
+        </>
+      )}
+
+      {status === "error" && (
+        <>
+          <XCircle className="w-16 h-16 text-red-500" />
+          <Heading
+            title="Activation Failed"
+            description={error || "An error occurred while activating your subscription"}
+          />
+        </>
+      )}
     </div>
   );
 };

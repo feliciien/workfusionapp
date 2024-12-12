@@ -180,8 +180,6 @@ const CodePage = () => {
             className="flex-1"
             disabled={isLoading}
             aria-label="Code generation input"
-            multiline
-            rows={1}
           />
           <Button
             type="submit"

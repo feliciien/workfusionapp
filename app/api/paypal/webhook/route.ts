@@ -1,84 +1,157 @@
 import { NextResponse } from "next/server";
-import { buffer } from "micro";
+import prisma from "@/lib/prismadb";
 
 const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 
-// Dummy function to update user subscription status
-async function updateUserSubscription(subscriptionId: string, isPro: boolean) {
-  // Implement your logic to update the user's subscription status in your database
-  // Example using Prisma:
-  // await prisma.user.update({
-  //   where: { subscriptionId },
-  //   data: { isPro },
-  // });
+async function handleSubscriptionActivated(event: any) {
+  const subscriptionId = event.resource.id;
+  const planId = event.resource.plan_id;
+  const userId = event.resource.custom_id; // We'll pass the userId as custom_id when creating subscription
+
+  try {
+    await prisma.userSubscription.upsert({
+      where: {
+        userId,
+      },
+      create: {
+        userId,
+        paypalSubscriptionId: subscriptionId,
+        paypalPlanId: planId,
+        paypalStatus: 'ACTIVE',
+        paypalCurrentPeriodEnd: new Date(event.resource.billing_info.next_billing_time),
+      },
+      update: {
+        paypalSubscriptionId: subscriptionId,
+        paypalPlanId: planId,
+        paypalStatus: 'ACTIVE',
+        paypalCurrentPeriodEnd: new Date(event.resource.billing_info.next_billing_time),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating subscription:", error);
+    throw error;
+  }
+}
+
+async function handleSubscriptionCancelled(event: any) {
+  const subscriptionId = event.resource.id;
+
+  try {
+    const subscription = await prisma.userSubscription.findFirst({
+      where: {
+        paypalSubscriptionId: subscriptionId,
+      },
+    });
+
+    if (!subscription) {
+      console.log("No subscription found for ID:", subscriptionId);
+      return;
+    }
+
+    await prisma.userSubscription.update({
+      where: {
+        id: subscription.id,
+      },
+      data: {
+        paypalStatus: 'CANCELLED',
+      },
+    });
+  } catch (error) {
+    console.error("Error cancelling subscription:", error);
+    throw error;
+  }
+}
+
+async function handleSubscriptionExpired(event: any) {
+  const subscriptionId = event.resource.id;
+
+  try {
+    const subscription = await prisma.userSubscription.findFirst({
+      where: {
+        paypalSubscriptionId: subscriptionId,
+      },
+    });
+
+    if (!subscription) {
+      console.log("No subscription found for ID:", subscriptionId);
+      return;
+    }
+
+    await prisma.userSubscription.update({
+      where: {
+        id: subscription.id,
+      },
+      data: {
+        paypalStatus: 'EXPIRED',
+      },
+    });
+  } catch (error) {
+    console.error("Error updating expired subscription:", error);
+    throw error;
+  }
 }
 
 export async function POST(req: Request) {
-  const reqBuffer = await buffer(req);
-  const signature = req.headers.get("paypal-auth-algo");
-  const transmissionId = req.headers.get("paypal-transmission-id");
-  const timestamp = req.headers.get("paypal-transmission-time");
-  const webhookEventBody = reqBuffer.toString();
-  const webhookEvent = JSON.parse(webhookEventBody);
-  const webhookId = PAYPAL_WEBHOOK_ID;
-  const authAlgo = req.headers.get("paypal-auth-algo");
-  const certUrl = req.headers.get("paypal-cert-url");
-  const transmissionSig = req.headers.get("paypal-transmission-sig");
+  try {
+    const rawBody = await req.text();
+    const signature = req.headers.get("paypal-auth-algo");
+    const transmissionId = req.headers.get("paypal-transmission-id");
+    const timestamp = req.headers.get("paypal-transmission-time");
+    const webhookEvent = JSON.parse(rawBody);
+    const webhookId = PAYPAL_WEBHOOK_ID;
+    const authAlgo = req.headers.get("paypal-auth-algo");
+    const certUrl = req.headers.get("paypal-cert-url");
+    const transmissionSig = req.headers.get("paypal-transmission-sig");
 
-  // Verify the webhook signature
-  const verifyResponse = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64")}`,
-    },
-    body: JSON.stringify({
-      auth_algo: authAlgo,
-      cert_url: certUrl,
-      transmission_id: transmissionId,
-      transmission_sig: transmissionSig,
-      transmission_time: timestamp,
-      webhook_id: webhookId,
-      webhook_event: webhookEvent,
-    }),
-  });
+    // Verify the webhook signature
+    const verifyResponse = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64")}`,
+      },
+      body: JSON.stringify({
+        auth_algo: authAlgo,
+        cert_url: certUrl,
+        transmission_id: transmissionId,
+        transmission_sig: transmissionSig,
+        transmission_time: timestamp,
+        webhook_id: webhookId,
+        webhook_event: webhookEvent,
+      }),
+    });
 
-  const verifyData = await verifyResponse.json();
+    const verifyData = await verifyResponse.json();
 
-  if (verifyData.verification_status !== "SUCCESS") {
-    console.error("Webhook signature verification failed.");
-    return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+    if (verifyData.verification_status !== "SUCCESS") {
+      console.error("Failed to verify webhook signature");
+      return new NextResponse("Webhook signature verification failed", { status: 400 });
+    }
+
+    // Handle different webhook events
+    switch (webhookEvent.event_type) {
+      case "BILLING.SUBSCRIPTION.ACTIVATED":
+        await handleSubscriptionActivated(webhookEvent);
+        break;
+      case "BILLING.SUBSCRIPTION.CANCELLED":
+        await handleSubscriptionCancelled(webhookEvent);
+        break;
+      case "BILLING.SUBSCRIPTION.EXPIRED":
+        await handleSubscriptionExpired(webhookEvent);
+        break;
+      default:
+        console.log("Unhandled webhook event type:", webhookEvent.event_type);
+    }
+
+    return new NextResponse("Webhook processed successfully", { status: 200 });
+  } catch (error) {
+    console.error("Webhook processing error:", error);
+    return new NextResponse("Webhook processing failed", { status: 500 });
   }
-
-  // Handle different event types
-  const eventType = webhookEvent.event_type;
-  const resource = webhookEvent.resource;
-
-  switch (eventType) {
-    case "BILLING.SUBSCRIPTION.CREATED":
-    case "BILLING.SUBSCRIPTION.ACTIVATED":
-      const subscriptionId = resource.id;
-      await updateUserSubscription(subscriptionId, true);
-      break;
-    case "BILLING.SUBSCRIPTION.CANCELLED":
-    case "BILLING.SUBSCRIPTION.SUSPENDED":
-      const cancelledSubscriptionId = resource.id;
-      await updateUserSubscription(cancelledSubscriptionId, false);
-      break;
-    // Handle other event types as needed
-    default:
-      console.log(`Unhandled event type: ${eventType}`);
-  }
-
-  return NextResponse.json({ status: "success" }, { status: 200 });
 }
 
-// To allow body parsing as buffer
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Route segment config
+export const dynamic = 'force-dynamic';

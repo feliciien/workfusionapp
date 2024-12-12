@@ -1,40 +1,53 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs"; // Assuming you're using Clerk for authentication
+import { currentUser } from "@clerk/nextjs";
+import prismadb from "@/lib/prismadb";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
-// Dummy functions - replace with your actual database logic
 async function associateSubscriptionWithUser(userId: string, subscriptionId: string): Promise<void> {
-  // Implement your logic to associate the subscription ID with the user in your database
-  // Example using Prisma:
-  // await prisma.user.update({
-  //   where: { id: userId },
-  //   data: { subscriptionId, isPro: true },
-  // });
+  await prismadb.userSubscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      paypalSubscriptionId: subscriptionId,
+      paypalStatus: "ACTIVE",
+      paypalCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    },
+    update: {
+      paypalSubscriptionId: subscriptionId,
+      paypalStatus: "ACTIVE",
+      paypalCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    },
+  });
 }
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await currentUser();
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     const { subscriptionId } = await req.json();
 
     if (!subscriptionId) {
-      return NextResponse.json({ error: "Subscription ID is required." }, { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ error: "Subscription ID is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Obtain Access Token
-    const authHeader = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+    const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
     const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${authHeader}`,
+        Authorization: `Basic ${authString}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: "grant_type=client_credentials",
@@ -43,38 +56,57 @@ export async function POST(req: Request) {
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
       console.error("PayPal Auth Error:", errorText);
-      return NextResponse.json({ error: "Failed to fetch PayPal access token." }, { status: 500 });
+      return new NextResponse(
+        JSON.stringify({ error: "Failed to fetch PayPal access token" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     const { access_token } = await authResponse.json();
 
     // Get subscription details
-    const subscriptionResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const subscriptionResponse = await fetch(
+      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
 
     if (!subscriptionResponse.ok) {
       const errorText = await subscriptionResponse.text();
-      console.error("PayPal Subscription Retrieval Error:", errorText);
-      return NextResponse.json({ error: "Failed to retrieve subscription details." }, { status: 500 });
+      console.error("PayPal Subscription Error:", errorText);
+      return new NextResponse(
+        JSON.stringify({ error: "Failed to verify subscription" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const subscriptionData = await subscriptionResponse.json();
+    const subscriptionDetails = await subscriptionResponse.json();
 
-    if (subscriptionData.status !== "ACTIVE") {
-      return NextResponse.json({ error: "Subscription is not active." }, { status: 400 });
+    // Verify subscription status
+    if (subscriptionDetails.status !== "ACTIVE") {
+      return new NextResponse(
+        JSON.stringify({ error: "Subscription is not active" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Associate subscription with user
-    await associateSubscriptionWithUser(userId, subscriptionId);
+    await associateSubscriptionWithUser(user.id, subscriptionId);
 
-    return NextResponse.json({ status: "success" }, { status: 200 });
+    return new NextResponse(
+      JSON.stringify({ success: true, message: "Subscription activated successfully" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Subscription Capture Error:", error);
-    return NextResponse.json({ error: "Internal Server Error." }, { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to activate subscription" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }

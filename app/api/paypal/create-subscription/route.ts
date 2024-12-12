@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs";
+import { clerkClient } from "@clerk/nextjs";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
@@ -10,21 +12,14 @@ const PLAN_DETAILS: Record<string, { plan_id: string }> = {
   yearly: { plan_id: "P-67X44179VA3351546M5M7P5I" },  // Your actual Yearly Plan ID
 };
 
-export async function POST(req: Request) {
+async function createSubscription(plan: string, userId: string) {
   try {
-    const { plan } = await req.json();
-
-    if (!plan || !PLAN_DETAILS[plan]) {
-      console.error("Invalid subscription plan requested:", plan);
-      return NextResponse.json({ error: "Invalid subscription plan." }, { status: 400 });
-    }
-
     // Create Access Token
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+    const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
     const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${auth}`,
+        Authorization: `Basic ${authString}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: "grant_type=client_credentials",
@@ -33,11 +28,10 @@ export async function POST(req: Request) {
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
       console.error("PayPal Auth Error:", errorText);
-      return NextResponse.json({ error: "Failed to fetch PayPal access token." }, { status: 500 });
+      throw new Error("Failed to fetch PayPal access token");
     }
 
     const { access_token } = await authResponse.json();
-    console.log("Obtained PayPal access token.");
 
     // Create Subscription
     const subscriptionResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions`, {
@@ -45,12 +39,13 @@ export async function POST(req: Request) {
       headers: {
         Authorization: `Bearer ${access_token}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         plan_id: PLAN_DETAILS[plan].plan_id,
+        custom_id: userId,
         application_context: {
           brand_name: "SynthAI",
-          logo_url: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`, // Ensure this URL is accessible
           locale: "en-US",
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",
@@ -63,23 +58,90 @@ export async function POST(req: Request) {
     if (!subscriptionResponse.ok) {
       const errorText = await subscriptionResponse.text();
       console.error("PayPal Subscription Error:", errorText);
-      return NextResponse.json({ error: "Failed to create PayPal subscription." }, { status: 500 });
+      throw new Error("Failed to create PayPal subscription");
     }
 
     const subscriptionData = await subscriptionResponse.json();
-    console.log("Subscription created successfully:", subscriptionData);
+    return { success: true, data: subscriptionData };
+  } catch (error) {
+    console.error("Subscription creation error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error occurred" };
+  }
+}
 
-    const approvalUrl = subscriptionData.links.find((link: any) => link.rel === "approve")?.href;
-
-    if (!approvalUrl) {
-      console.error("Approval URL not found in PayPal response.");
-      return NextResponse.json({ error: "Approval URL not found." }, { status: 500 });
+export async function GET(req: Request) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    console.log("Redirecting user to PayPal approval URL:", approvalUrl);
-    return NextResponse.json({ url: approvalUrl }, { status: 200 });
+    const { searchParams } = new URL(req.url);
+    const plan = searchParams.get('plan') || 'monthly'; // Default to monthly if not specified
+
+    if (!PLAN_DETAILS[plan]) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid subscription plan" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new NextResponse(
+      JSON.stringify({ 
+        planId: PLAN_DETAILS[plan].plan_id
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
-    console.error("PayPal API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error." }, { status: 500 });
+    console.error("Error getting plan ID:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to get plan ID" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { plan } = body;
+    
+    if (!plan || !PLAN_DETAILS[plan]) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid subscription plan" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const result = await createSubscription(plan, user.id);
+    
+    if (!result.success) {
+      return new NextResponse(
+        JSON.stringify({ error: result.error }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new NextResponse(
+      JSON.stringify(result.data),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("API Error:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
