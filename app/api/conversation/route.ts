@@ -1,15 +1,13 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { Configuration, OpenAIApi } from "openai";
-import { Analytics } from '@vercel/analytics/react';
+import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
-import { checkSubscription } from "@/lib/subscription";
+import { checkSubscription } from "@/lib/api-limit";
+import { trackEvent } from "@/lib/analytics";
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
-
-const openAi = new OpenAIApi(configuration);
 
 export async function POST(req: Request) {
   try {
@@ -21,33 +19,56 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!configuration) {
+    if (!openai.apiKey) {
       return new NextResponse("OpenAI API Key not configured", { status: 500 });
     }
 
     if (!messages) {
-      return new NextResponse("Missing messages", { status: 400 });
+      return new NextResponse("Messages are required", { status: 400 });
     }
 
-    const isAllowed = await checkApiLimit();
+    const freeTrial = await checkApiLimit();
     const isPro = await checkSubscription();
 
-    if (!isAllowed && !isPro) {
-      return new NextResponse("API Limit Exceeded", { status: 403 });
+    if (!freeTrial && !isPro) {
+      return new NextResponse("Free trial has expired", { status: 403 });
     }
 
-    const response = await openAi.createChatCompletion({
+    // Track API call attempt
+    await trackEvent(userId, "api_call", {
+      endpoint: "/api/conversation",
+      messageCount: messages.length,
+      status: "attempt"
+    });
+
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages,
+      messages
     });
 
     if (!isPro) {
       await increaseApiLimit();
     }
 
-    return NextResponse.json(response.data.choices[0].message, { status: 200 });
+    // Track successful API call
+    await trackEvent(userId, "api_call", {
+      endpoint: "/api/conversation",
+      status: "success",
+      tokens: response.usage?.total_tokens,
+      messageCount: messages.length
+    });
+
+    return NextResponse.json(response.choices[0].message);
   } catch (error) {
-    console.log("[CONVERSATION_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    // Track error
+    if (userId) {
+      await trackEvent(userId, "error", {
+        endpoint: "/api/conversation",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+
+    console.error("[CONVERSATION_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

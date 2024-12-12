@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model UserApiLimit {
@@ -17,12 +17,55 @@ model UserApiLimit {
 }
 
 model UserSubscription {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  paypalSubscriptionId  String?  @unique @map(name: "paypal_subscription_id")
-  paypalPlanId          String?  @map(name: "paypal_plan_id")
-  paypalStatus          String?  @map(name: "paypal_status")
-  paypalCurrentPeriodEnd DateTime? @map(name: "paypal_current_period_end")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  paypalCurrentPeriodEnd DateTime? @map("paypal_current_period_end")
+  paypalPlanId           String?   @map("paypal_plan_id")
+  paypalStatus           String?   @map("paypal_status")
+  paypalSubscriptionId   String?   @unique @map("paypal_subscription_id")
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isShared  Boolean   @default(false)
+  shareId   String?   @unique
+  settings  Json?
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model UserSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  theme              String   @default("system")
+  emailNotifications Boolean  @default(true)
+  preferredLanguage  String   @default("en")
+  customApiKey       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  userId    String
+  eventType String
+  eventData Json
+  createdAt DateTime @default(now())
+
+  @@index([userId, eventType])
+  @@index([createdAt])
 }

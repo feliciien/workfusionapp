@@ -15,6 +15,7 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  BarChart,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -45,6 +46,12 @@ const routes = [
     label: "Code Generation",
     icon: Code,
     href: "/code",
+    color: "text-green-700",
+  },
+  {
+    label: "Analytics",
+    icon: BarChart,
+    href: "/analytics",
     color: "text-green-700",
   },
   {
