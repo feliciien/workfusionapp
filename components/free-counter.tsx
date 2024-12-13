@@ -3,11 +3,12 @@
 import { FC, useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react"
 import { MAX_FREE_COUNTS } from "@/constants";
-import useProModal from "@/hooks/use-pro-modal";
 import { Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Progress } from "./ui/progress";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 
 interface FreeCounterProps {
   apiLimitCount: number;
@@ -16,11 +17,20 @@ interface FreeCounterProps {
 
 export const FreeCounter: FC<FreeCounterProps> = ({ apiLimitCount = 0, isPro = false }) => {
   const [mounted, setMounted] = useState(false);
-  const proModal = useProModal();
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const onUpgradeClick = () => {
+    if (isSignedIn) {
+      router.push("/settings");
+    } else {
+      router.push("/sign-up");
+    }
+  };
 
   if (!mounted) {
     return null;
@@ -40,7 +50,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({ apiLimitCount = 0, isPro = f
             </p>
             <Progress className="h-3" value={(apiLimitCount / MAX_FREE_COUNTS) * 100} />
           </div>
-          <Button variant="premium" className="w-full" onClick={proModal.onOpen}>
+          <Button variant="premium" className="w-full" onClick={onUpgradeClick}>
             Upgrade <Zap className="w-4 h-4 ml-2 fill-white" />
           </Button>
         </CardContent>
