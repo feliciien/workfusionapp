@@ -11,6 +11,7 @@ import {
   ImageIcon,
   LayoutDashboard,
   MessageSquare,
+  Music,
   Settings,
   Bell,
   ChevronLeft,
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import FreeCounter from "./free-counter";
+import { FreeCounter } from "@/components/free-counter";
 
 const montserrat = Montserrat({ weight: "600", subsets: ["latin"] });
 
@@ -43,6 +44,12 @@ const routes = [
     color: "text-pink-700",
   },
   {
+    label: "Voice Synthesis",
+    icon: Music,
+    href: "/voice",
+    color: "text-emerald-500",
+  },
+  {
     label: "Code Generation",
     icon: Code,
     href: "/code",
@@ -52,21 +59,13 @@ const routes = [
     label: "Analytics",
     icon: BarChart,
     href: "/analytics",
-    color: "text-green-700",
+    color: "text-blue-700",
+    hasNotification: true,
   },
   {
     label: "Settings",
     icon: Settings,
     href: "/settings",
-    color: "text-yellow-500",
-  },
-  // Example route with notification badge
-  {
-    label: "Updates",
-    icon: Bell,
-    href: "/updates",
-    color: "text-red-500",
-    hasNotification: true,
   },
 ];
 
@@ -79,7 +78,7 @@ interface User {
 interface SidebarProps {
   apiLimitCount: number;
   isPro: boolean;
-  user?: User; // Made optional
+  user?: User;
 }
 
 const Sidebar: FC<SidebarProps> = ({
@@ -161,50 +160,18 @@ const Sidebar: FC<SidebarProps> = ({
                   New
                 </span>
               )}
-              {isCollapsed && (
-                <span className="absolute left-20 bg-gray-800 text-xs rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                  {route.label}
-                </span>
-              )}
             </div>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-700">
-        {/* Free Counter */}
-        {!isCollapsed && (
-          <FreeCounter apiLimitCount={apiLimitCount} isPro={isPro} />
-        )}
-
-        {/* User Profile */}
-        {user && (
-          <div className="mt-4 flex items-center">
-            <div className="relative w-10 h-10 mr-3">
-              <Image
-                fill
-                alt="User Avatar"
-                src={user.avatarUrl}
-                className="rounded-full object-cover"
-              />
-            </div>
-            {!isCollapsed && (
-              <div>
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-gray-400">{user.email}</p>
-              </div>
-            )}
-            {isCollapsed && (
-              <span className="absolute left-20 bg-gray-800 text-xs rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                {user.name}
-              </span>
-            )}
-          </div>
-        )}
+      {/* Free Counter */}
+      <div className="mt-auto">
+        <FreeCounter
+          apiLimitCount={apiLimitCount}
+          isPro={isPro}
+        />
       </div>
-
-      <Analytics />
     </div>
   );
 };

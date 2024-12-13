@@ -24,14 +24,6 @@ export const FreeCounter: FC<FreeCounterProps> = ({ apiLimitCount = 0, isPro = f
     setMounted(true);
   }, []);
 
-  const onUpgradeClick = () => {
-    if (isSignedIn) {
-      router.push("/settings");
-    } else {
-      router.push("/sign-up");
-    }
-  };
-
   if (!mounted) {
     return null;
   }
@@ -50,8 +42,8 @@ export const FreeCounter: FC<FreeCounterProps> = ({ apiLimitCount = 0, isPro = f
             </p>
             <Progress className="h-3" value={(apiLimitCount / MAX_FREE_COUNTS) * 100} />
           </div>
-          <Button variant="premium" className="w-full" onClick={onUpgradeClick}>
-            Upgrade <Zap className="w-4 h-4 ml-2 fill-white" />
+          <Button variant="premium" className="w-full" onClick={() => router.push('/settings')}>
+            Upgrade to WorkFusionApp Pro <Zap className="w-4 h-4 ml-2 fill-white" />
           </Button>
         </CardContent>
       </Card>

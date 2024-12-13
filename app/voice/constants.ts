@@ -5,4 +5,5 @@ export const formSchema = z.object({
     message: "Voice prompt is required."
   }),
   voice: z.string().min(1),
+  emotion: z.string().min(1),
 });

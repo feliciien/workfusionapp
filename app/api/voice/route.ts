@@ -8,13 +8,19 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const VOICE_MAPPINGS = {
+  male: "echo",     // Deep male voice
+  female: "nova",   // Female voice
+  child: "alloy",   // Young voice
+};
+
 export async function POST(
   req: Request
 ) {
   try {
     const { userId } = auth();
     const body = await req.json();
-    const { prompt, voice } = body;
+    const { prompt, voice, emotion, speed, pitch } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -35,21 +41,47 @@ export async function POST(
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
+    // Add emotion to the prompt
+    let enhancedPrompt = prompt;
+    if (emotion && emotion !== "neutral") {
+      switch(emotion) {
+        case "happy":
+          enhancedPrompt = `[Speaking with enthusiasm and joy] ${prompt}`;
+          break;
+        case "sad":
+          enhancedPrompt = `[Speaking with sadness and melancholy] ${prompt}`;
+          break;
+        case "angry":
+          enhancedPrompt = `[Speaking with anger and intensity] ${prompt}`;
+          break;
+        default:
+          enhancedPrompt = prompt;
+      }
+    }
+
+    const selectedVoice = VOICE_MAPPINGS[voice as keyof typeof VOICE_MAPPINGS] || "echo";
+
     const mp3 = await openai.audio.speech.create({
       model: "tts-1",
-      voice: voice === "male" ? "onyx" : voice === "female" ? "nova" : "alloy",
-      input: prompt,
+      voice: selectedVoice,
+      input: enhancedPrompt,
+      speed: speed || 1.0,
     });
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
     const base64Audio = buffer.toString('base64');
     const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
 
+    // Only increase the API limit count for non-pro users
     if (!isPro) {
       await increaseApiLimit();
     }
 
-    return NextResponse.json(audioDataUrl);
+    return NextResponse.json({
+      audio: audioDataUrl,
+      remaining: freeTrial ? await checkApiLimit() : null,
+      isPro
+    });
   } catch (error) {
     console.log('[VOICE_ERROR]', error);
     return new NextResponse("Internal Error", { status: 500 });
