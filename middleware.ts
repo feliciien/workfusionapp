@@ -9,9 +9,23 @@ export default authMiddleware({
     "/api/webhook",
     "/api/paypal/webhook",  // Allow PayPal webhook
     "/paypal-success",  // Allow PayPal success page
+    "/sign-in",
+    "/sign-up",
   ],
+  afterAuth(auth, req, evt) {
+    // Handle auth state
+    if (!auth.userId && !auth.isPublicRoute) {
+      const signInUrl = new URL('/sign-in', req.url);
+      signInUrl.searchParams.set('redirect_url', req.url);
+      return Response.redirect(signInUrl);
+    }
+  }
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!.+\\.[\\w]+$|_next).*)",
+    "/",
+    "/(api|trpc)(.*)",
+  ],
 };
