@@ -10,7 +10,9 @@ const configuration = {
 
 const openai = new OpenAI(configuration);
 
-const VOICE_MAPPINGS = {
+type OpenAIVoice = "alloy" | "echo" | "fable" | "nova" | "onyx" | "shimmer";
+
+const VOICE_MAPPINGS: Record<string, OpenAIVoice> = {
   male: "echo",     // Deep male voice
   female: "nova",   // Female voice
   child: "alloy",   // Young voice
@@ -61,7 +63,7 @@ export async function POST(
       }
     }
 
-    const selectedVoice = VOICE_MAPPINGS[voice as keyof typeof VOICE_MAPPINGS] || "echo";
+    const selectedVoice: OpenAIVoice = VOICE_MAPPINGS[voice as keyof typeof VOICE_MAPPINGS] || "echo";
 
     const mp3 = await openai.audio.speech.create({
       model: "tts-1",

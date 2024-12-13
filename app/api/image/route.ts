@@ -2,13 +2,12 @@ import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { Analytics } from '@vercel/analytics/react';
-const configuration = new Configuration({
+
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const openAi = new OpenAIApi(configuration);
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +19,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!configuration) {
+    if (!openai) {
       return new NextResponse("OpenAI API Key not configured", { status: 500 });
     }
 
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
       return new NextResponse("API Limit Exceeded", { status: 403 });
     }
 
-    const response = await openAi.createImage({
+    const response = await openai.images.generate({
       prompt,
       n: parseInt(amount, 10),
       size: resolution,
@@ -53,7 +52,7 @@ export async function POST(req: Request) {
       await increaseApiLimit();
     }
 
-    return NextResponse.json(response.data.data, { status: 200 });
+    return NextResponse.json(response.data, { status: 200 });
   } catch (error) {
     console.log("[CONVERSATION_ERROR]", error);
     return new NextResponse("Internal Server Error", { status: 500 });

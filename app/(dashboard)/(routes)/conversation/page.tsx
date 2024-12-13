@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { MessageSquare, Moon, Sun, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ChatCompletionRequestMessage } from "openai";
+import OpenAI from "openai";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -27,7 +27,7 @@ const ConversationPage = () => {
   const router = useRouter();
   const proModal = useProModal();
 
-  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+  const [messages, setMessages] = useState<OpenAI.Chat.ChatCompletionMessageParam[]>([]);
   const [darkMode, setDarkMode] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,7 +49,7 @@ const ConversationPage = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const userMessage: ChatCompletionRequestMessage = {
+      const userMessage: OpenAI.Chat.ChatCompletionMessageParam = {
         role: "user",
         content: values.prompt,
       };
@@ -173,7 +173,17 @@ const ConversationPage = () => {
                 >
                   {isUser ? <UserAvatar /> : <BotAvatar />}
                   <p className="text-sm text-gray-900 dark:text-gray-100 leading-7 w-full">
-                    {message.content}
+                    {typeof message.content === 'string' 
+                      ? message.content 
+                      : Array.isArray(message.content)
+                        ? message.content.map((part, index) => 
+                            typeof part === 'string' 
+                              ? part 
+                              : 'text' in part 
+                                ? part.text 
+                                : ''
+                          ).join('')
+                        : ''}
                   </p>
                 </div>
               );

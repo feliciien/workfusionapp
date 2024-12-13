@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { Code, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ChatCompletionRequestMessage } from "openai";
+import OpenAI from "openai";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
@@ -24,7 +24,7 @@ import useProModal from "@/hooks/use-pro-modal";
 const CodePage = () => {
   const proModal = useProModal();
   const router = useRouter();
-  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+  const [messages, setMessages] = useState<OpenAI.Chat.ChatCompletionMessageParam[]>([]);
   const [sandboxCode, setSandboxCode] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -48,7 +48,7 @@ const CodePage = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const userMessage: ChatCompletionRequestMessage = {
+      const userMessage: OpenAI.Chat.ChatCompletionMessageParam = {
         role: "user",
         content: values.prompt,
       };
@@ -152,7 +152,7 @@ const CodePage = () => {
                     ),
                   }}
                 >
-                  {message.content || ""}
+                  {typeof message.content === 'string' ? message.content : ''}
                 </ReactMarkdown>
                 {/* Optional: Add timestamps here */}
               </div>
