@@ -1,5 +1,9 @@
+import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs"; // Assuming you're using Clerk for authentication
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
@@ -16,7 +20,11 @@ export async function GET(req: Request) {
     const { userId } = auth();
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    if (!PAYPAL_API_BASE || !PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+      return new NextResponse("PayPal configuration error", { status: 500 });
     }
 
     const subscriptionId = await getUserSubscriptionId(userId);
@@ -64,6 +72,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ subscription: subscriptionData }, { status: 200 });
   } catch (error) {
     console.error("Get Subscription Error:", error);
-    return NextResponse.json({ error: "Internal Server Error." }, { status: 500 });
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

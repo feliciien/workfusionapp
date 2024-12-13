@@ -3,6 +3,10 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prismadb"; // Adjust the path as per your project structure
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 const FREE_CREDITS = 5;
 
@@ -11,7 +15,7 @@ export async function GET() {
     const { userId } = auth();
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Fetch user data from the database
@@ -31,7 +35,7 @@ export async function GET() {
     });
 
     if (!userApiLimit || !userSubscription) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return new NextResponse("User not found", { status: 404 });
     }
 
     const isPro = 
@@ -50,6 +54,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[API-Usage Error]", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
