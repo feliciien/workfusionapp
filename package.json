@@ -35,7 +35,7 @@
     "lucide-react": "^0.468.0",
     "micro": "^10.0.1",
     "next": "^13.4.19",
-    "openai": "3.3.0",
+    "openai": "^4.76.2",
     "postcss": "8.4.27",
     "react": "18.2.0",
     "react-dom": "18.2.0",
