@@ -4,9 +4,11 @@ import OpenAI from "openai";
 import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 
-const openai = new OpenAI({
+const configuration = {
   apiKey: process.env.OPENAI_API_KEY,
-});
+};
+
+const openai = new OpenAI(configuration);
 
 const VOICE_MAPPINGS = {
   male: "echo",     // Deep male voice
@@ -26,7 +28,7 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!openai.apiKey) {
+    if (!configuration.apiKey) {
       return new NextResponse("OpenAI API Key not configured.", { status: 500 });
     }
 
