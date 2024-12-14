@@ -17,6 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart,
+  Video,
+  Mic2,
+  Palette,
+  Brain,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -38,22 +42,34 @@ const routes = [
     color: "text-violet-500",
   },
   {
-    label: "Image Generation",
-    icon: ImageIcon,
-    href: "/image",
-    color: "text-pink-700",
-  },
-  {
-    label: "Voice Synthesis",
+    label: "Music",
     icon: Music,
-    href: "/voice",
+    href: "/music",
     color: "text-emerald-500",
   },
   {
-    label: "Code Generation",
+    label: "Voice",
+    icon: Mic2,
+    href: "/voice",
+    color: "text-orange-500",
+  },
+  {
+    label: "Art",
+    icon: ImageIcon,
+    href: "/art",
+    color: "text-pink-700",
+  },
+  {
+    label: "Custom",
     icon: Code,
-    href: "/code",
+    href: "/custom",
     color: "text-green-700",
+  },
+  {
+    label: "Video",
+    icon: Video,
+    href: "/video",
+    color: "text-purple-700",
   },
   {
     label: "Analytics",
