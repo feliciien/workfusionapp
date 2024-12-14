@@ -28,24 +28,26 @@ model UserSubscription {
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  userId    String
-  title     String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  isShared  Boolean   @default(false)
-  shareId   String?   @unique
-  settings  Json?
-  messages  Message[]
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  messages    Message[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Message {
   id             String       @id @default(cuid())
+  content        String       @db.Text
+  role           String       // 'user' or 'assistant'
   conversationId String
-  role           String
-  content        String
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
 }
 
 model UserSettings {
@@ -68,4 +70,9 @@ model Analytics {
 
   @@index([userId, eventType])
   @@index([createdAt])
+}
+
+model User {
+  id       String   @id @default(cuid())
+  conversations Conversation[]
 }

@@ -45,7 +45,7 @@ async function createSubscription(plan: string, userId: string) {
         plan_id: PLAN_DETAILS[plan].plan_id,
         custom_id: userId,
         application_context: {
-          brand_name: "SynthAI",
+          brand_name: "WorkFusion",
           locale: "en-US",
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",

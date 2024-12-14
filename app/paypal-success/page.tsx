@@ -72,7 +72,7 @@ const PayPalSuccessPage = () => {
           <CheckCircle className="w-16 h-16 text-green-500" />
           <Heading
             title="Subscription Activated!"
-            description="Thank you for subscribing to SynthAI. Redirecting you to dashboard..."
+            description="Thank you for subscribing to WorkFusion."
           />
         </>
       )}

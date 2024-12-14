@@ -14,7 +14,8 @@ import {
   VideoIcon,
   Mic2,
   Palette,
-  Brain
+  Brain,
+  History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
@@ -35,6 +36,13 @@ const routes = [
     href: '/conversation',
     color: "text-violet-500",
     description: "Chat seamlessly with our AI assistant to brainstorm ideas."
+  },
+  {
+    label: 'History',
+    icon: History,
+    href: '/history',
+    color: "text-indigo-500",
+    description: "View your past conversations and interactions."
   },
   {
     label: 'Image Generation',
@@ -113,7 +121,7 @@ const Sidebar = ({
             <Image fill alt="Logo" src="/logo.png" />
           </div>
           <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-            SynthAI
+            WorkFusion
           </h1>
         </Link>
         <div className="space-y-1">

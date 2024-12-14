@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/api-limit";
 import { trackEvent } from "@/lib/analytics";
+import prismadb from "@/lib/prismadb";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { messages } = body;
+    const { messages, conversationId } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -47,6 +48,55 @@ export async function POST(req: Request) {
       messages
     });
 
+    const assistantMessage = response.choices[0].message;
+
+    // Store conversation and messages in database
+    let conversation;
+    if (conversationId) {
+      // Update existing conversation
+      conversation = await prismadb.conversation.update({
+        where: {
+          id: conversationId,
+          userId: userId,
+        },
+        data: {
+          updatedAt: new Date(),
+          messages: {
+            create: [
+              {
+                content: messages[messages.length - 1].content,
+                role: 'user',
+              },
+              {
+                content: assistantMessage.content,
+                role: 'assistant',
+              }
+            ]
+          }
+        },
+      });
+    } else {
+      // Create new conversation
+      conversation = await prismadb.conversation.create({
+        data: {
+          userId: userId,
+          title: messages[0].content.slice(0, 100), // Use first message as title
+          messages: {
+            create: [
+              {
+                content: messages[messages.length - 1].content,
+                role: 'user',
+              },
+              {
+                content: assistantMessage.content,
+                role: 'assistant',
+              }
+            ]
+          }
+        },
+      });
+    }
+
     if (!isPro) {
       await increaseApiLimit();
     }
@@ -59,7 +109,7 @@ export async function POST(req: Request) {
       messageCount: messages.length
     });
 
-    return NextResponse.json(response.choices[0].message);
+    return NextResponse.json(assistantMessage);
   } catch (error) {
     // Track error
     if (userId) {
@@ -70,6 +120,49 @@ export async function POST(req: Request) {
     }
 
     console.error("[CONVERSATION_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { userId } = auth();
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const url = new URL(req.url);
+    const conversationId = url.searchParams.get("id");
+
+    if (!conversationId) {
+      return new NextResponse("Conversation ID required", { status: 400 });
+    }
+
+    const conversation = await prismadb.conversation.findUnique({
+      where: {
+        id: conversationId,
+        userId: userId,
+      },
+      include: {
+        messages: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    });
+
+    if (!conversation) {
+      return new NextResponse("Conversation not found", { status: 404 });
+    }
+
+    return NextResponse.json(conversation);
+  } catch (error) {
+    console.error("[CONVERSATION_GET_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

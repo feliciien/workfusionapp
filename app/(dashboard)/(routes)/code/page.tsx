@@ -105,7 +105,7 @@ const CodePage = () => {
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center p-4 bg-white dark:bg-gray-800 shadow-md">
         <Code className="w-6 h-6 text-green-600 dark:text-green-400" />
-        <h1 className="ml-2 text-xl font-semibold text-gray-800 dark:text-white">Code Generation</h1>
+        <h1 className="ml-2 text-xl font-semibold text-gray-800 dark:text-white">WorkFusion Code</h1>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
