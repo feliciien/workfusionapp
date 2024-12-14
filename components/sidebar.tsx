@@ -1,193 +1,147 @@
 "use client";
 
-import { Analytics } from "@vercel/analytics/react";
-import { FC, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Montserrat } from "next/font/google";
-import {
-  Code,
-  ImageIcon,
-  LayoutDashboard,
-  MessageSquare,
-  Music,
-  Settings,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  BarChart,
-  Video,
+import { Montserrat } from 'next/font/google';
+import { usePathname } from "next/navigation";
+import { 
+  Code, 
+  ImageIcon, 
+  LayoutDashboard, 
+  MessageSquare, 
+  Music, 
+  Settings, 
+  VideoIcon,
   Mic2,
   Palette,
-  Brain,
+  Brain
 } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
 
-const montserrat = Montserrat({ weight: "600", subsets: ["latin"] });
+const montserrat = Montserrat ({ weight: '600', subsets: ['latin'] });
 
 const routes = [
   {
-    label: "Dashboard",
+    label: 'Dashboard',
     icon: LayoutDashboard,
-    href: "/dashboard",
+    href: '/dashboard',
     color: "text-sky-500",
+    description: "Overview of your AI workspace and activities."
   },
   {
-    label: "Conversation",
+    label: 'Conversation',
     icon: MessageSquare,
-    href: "/conversation",
+    href: '/conversation',
     color: "text-violet-500",
+    description: "Chat seamlessly with our AI assistant to brainstorm ideas."
   },
   {
-    label: "Music",
-    icon: Music,
-    href: "/music",
-    color: "text-emerald-500",
-  },
-  {
-    label: "Voice",
-    icon: Mic2,
-    href: "/voice",
-    color: "text-orange-500",
-  },
-  {
-    label: "Art",
+    label: 'Image Generation',
     icon: ImageIcon,
-    href: "/art",
     color: "text-pink-700",
+    href: '/image',
+    description: "Create unique images and illustrations from your prompts."
   },
   {
-    label: "Custom",
+    label: 'Video Creation',
+    icon: VideoIcon,
+    color: "text-orange-700",
+    href: '/video',
+    description: "Convert text-based ideas into short, AI-generated videos."
+  },
+  {
+    label: 'Code Generation',
     icon: Code,
-    href: "/custom",
     color: "text-green-700",
+    href: '/code',
+    description: "Generate code snippets, functions, or entire modules."
   },
   {
-    label: "Video",
-    icon: Video,
-    href: "/video",
+    label: 'Music Synthesis',
+    icon: Music,
+    color: "text-emerald-500",
+    href: '/music',
+    description: "Produce custom audio tracks suited for your projects."
+  },
+  {
+    label: 'Voice Synthesis',
+    icon: Mic2,
+    color: "text-yellow-500",
+    href: '/voice',
+    description: "Generate voice samples and narrations in various styles."
+  },
+  {
+    label: 'Art Generation',
+    icon: Palette,
     color: "text-purple-700",
+    href: '/art',
+    description: "Craft stunning AI-assisted artwork and designs."
   },
   {
-    label: "Analytics",
-    icon: BarChart,
-    href: "/analytics",
+    label: 'Custom Models',
+    icon: Brain,
     color: "text-blue-700",
-    hasNotification: true,
+    href: '/custom',
+    description: "Train and configure your own AI models for specific tasks."
   },
   {
-    label: "Settings",
+    label: 'Settings',
     icon: Settings,
-    href: "/settings",
+    href: '/settings',
+    color: "text-gray-500",
+    description: "Configure your AI workspace preferences."
   },
 ];
-
-interface User {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
 
 interface SidebarProps {
   apiLimitCount: number;
   isPro: boolean;
-  user?: User;
 }
 
-const Sidebar: FC<SidebarProps> = ({
+const Sidebar = ({
   apiLimitCount = 0,
   isPro = false,
-  user,
-}) => {
+}: SidebarProps) => {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const handleNavigation = (href: string) => {
-    router.push(href);
-  };
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col h-full bg-gray-900 text-white transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        {!isCollapsed && (
-          <Link href="/dashboard" className="flex items-center">
-            <div className="relative w-10 h-10 mr-3">
-              <Image
-                fill
-                alt="Logo"
-                src="/logo.png"
-                className="rounded-full object-cover"
-              />
-            </div>
-            <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-              WorkFusion
-            </h1>
-          </Link>
-        )}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-md hover:bg-gray-700 focus:outline-none"
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-5 h-5" />
-          ) : (
-            <ChevronLeft className="w-5 h-5" />
-          )}
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-2 space-y-2">
-        {routes.map((route) => {
-          const Icon = route.icon;
-          const isActive = pathname === route.href;
-          return (
-            <div
+    <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
+      <div className="px-3 py-2 flex-1">
+        <Link href="/dashboard" className="flex items-center pl-3 mb-14">
+          <div className="relative h-8 w-8 mr-4">
+            <Image fill alt="Logo" src="/logo.png" />
+          </div>
+          <h1 className={cn("text-2xl font-bold", montserrat.className)}>
+            SynthAI
+          </h1>
+        </Link>
+        <div className="space-y-1">
+          {routes.map((route) => (
+            <Link
               key={route.href}
-              onClick={() => handleNavigation(route.href)}
+              href={route.href}
               className={cn(
-                "group flex items-center p-2 my-1 rounded-md cursor-pointer hover:bg-gray-800 relative",
-                isActive ? "bg-gray-800" : ""
+                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
             >
-              <Icon className={cn("w-6 h-6", route.color)} />
-              {!isCollapsed && (
-                <span className="ml-3 text-sm font-medium">
-                  {route.label}
-                </span>
-              )}
-              {route.hasNotification && !isCollapsed && (
-                <span className="ml-auto bg-red-500 text-xs rounded-full px-2 py-0.5">
-                  New
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </nav>
-
-      {/* Free Counter */}
-      <div className="mt-auto">
-        <FreeCounter
-          apiLimitCount={apiLimitCount}
-          isPro={isPro}
-        />
+              <div className="flex items-center flex-1">
+                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                {route.label}
+              </div>
+              {/* Show description on hover */}
+              <div className="absolute left-full ml-2 p-2 bg-gray-900 rounded-md w-64 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 hidden lg:block">
+                {route.description}
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
+      <FreeCounter 
+        apiLimitCount={apiLimitCount} 
+        isPro={isPro}
+      />
     </div>
   );
 };

@@ -1,49 +1,65 @@
-import { NextResponse } from 'next/server';
+import { auth } from "@clerk/nextjs";
+import { NextResponse } from "next/server";
+import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
+import { checkSubscription } from "@/lib/subscription";
+import Replicate from "replicate";
 
-const RUNWAY_API_URL = "https://api.runwayml.com/v1/generate"; // Ensure the endpoint is correct
+if (!process.env.REPLICATE_API_TOKEN) {
+  throw new Error("Missing REPLICATE_API_TOKEN environment variable");
+}
 
-export async function POST(req: Request) {
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
+
+export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const { prompt } = await req.json();
-    console.log("Received prompt for video:", prompt);
+    const { userId } = auth();
+    const body = await req.json();
+    const { prompt } = body;
 
-    if (!process.env.RUNWAY_API_KEY) {
-      throw new Error("RUNWAY_API_KEY not set in .env.local");
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const payload = {
-      prompt, // Adjust the field name if needed based on Runway's API documentation
-      // Include any additional parameters required by the API (e.g., duration, resolution, etc.)
-    };
-
-    const response = await fetch(RUNWAY_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.RUNWAY_API_KEY}`,
-        "X-Runway-Version": "2024-11-06", // Set the correct API version as per documentation
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Runway API error:", errorText);
-      return NextResponse.json({ error: "Error generating video." }, { status: 500 });
+    if (!prompt) {
+      return new NextResponse("Prompt is required", { status: 400 });
     }
 
-    const data = await response.json();
+    const freeTrial = await checkApiLimit();
+    const isPro = await checkSubscription();
 
-    // Assuming the API response contains a field "video_url".
-    const videoUrl = data.video_url;
-    if (!videoUrl) {
-      console.error("No video URL returned from Runway.");
-      return NextResponse.json({ error: "No video returned." }, { status: 500 });
+    if (!freeTrial && !isPro) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    return NextResponse.json({ video: videoUrl });
+    console.log("Starting video generation with prompt:", prompt);
+
+    // Use the text-to-video-zero model
+    const prediction = await replicate.run(
+      "anotherjesse/zeroscope-v2-xl:71996d331e8ede8ef7bd76eba9fae076d31792e4ddf4ad057779b443d6aea62f",
+      {
+        input: {
+          prompt,
+          num_frames: 24,
+          fps: 12
+        }
+      }
+    );
+
+    console.log("Generation completed. Output:", prediction);
+
+    if (!isPro) {
+      await increaseApiLimit();
+    }
+
+    return NextResponse.json(prediction);
+
   } catch (error) {
-    console.error("Video generation error:", error);
-    return NextResponse.json({ error: "Error generating video." }, { status: 500 });
+    console.error('[VIDEO_ERROR] Full error:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    }
+    return new NextResponse(error instanceof Error ? error.message : "Internal Error", { status: 500 });
   }
 }
