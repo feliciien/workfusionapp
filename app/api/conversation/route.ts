@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { messages, conversationId } = body;
+    const { messages, conversationId, featureType = "conversation" } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -80,7 +80,8 @@ export async function POST(req: Request) {
       conversation = await prismadb.conversation.create({
         data: {
           userId: userId,
-          title: messages[0].content.slice(0, 100), // Use first message as title
+          title: messages[0].content.slice(0, 100),
+          featureType: featureType,
           messages: {
             create: [
               {
@@ -124,10 +125,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request) {
   try {
     const { userId } = auth();
 
