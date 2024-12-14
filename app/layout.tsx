@@ -11,8 +11,25 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "workfusionapp ",
-  description: "An AI platform.",
+  title: "WorkFusion App - Advanced AI Platform for Business Automation",
+  description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
+  keywords: "AI platform, business automation, artificial intelligence, productivity tools, machine learning, content generation",
+  authors: [{ name: "WorkFusion" }],
+  openGraph: {
+    title: "WorkFusion App - Advanced AI Platform for Business Automation",
+    description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity.",
+    type: "website",
+    locale: "en_US",
+    siteName: "WorkFusion App",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WorkFusion App - Advanced AI Platform",
+    description: "Transform your business with WorkFusion App's powerful AI tools.",
+  },
+  robots: "index, follow",
+  viewport: "width=device-width, initial-scale=1",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,8 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <head>
-          <title>workfusionapp</title>
-          <meta name="description" content="An AI platform." />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="keywords" content="AI platform, business automation, artificial intelligence, productivity tools, machine learning, content generation" />
+          <meta name="author" content="WorkFusion" />
+          <link rel="canonical" href="https://workfusionapp.com" />
+          <meta name="robots" content="index, follow" />
+          <title>WorkFusion App - Advanced AI Platform for Business Automation</title>
+          <meta name="description" content="Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform." />
         </head>
         <body className={inter.className}>
           <ModalProvider />
