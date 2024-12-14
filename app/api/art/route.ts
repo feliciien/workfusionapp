@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   try {
     const { userId } = auth();
     const body = await req.json();
-    const { prompt, amount = 1, resolution = "512x512", style = "realistic" } = body;
+    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -50,8 +50,8 @@ export async function POST(req: Request) {
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: enhancedPrompt,
-      n: parseInt(amount, 10),
-      size: resolution as "256x256" | "512x512" | "1024x1024",
+      n: 1, // DALL-E-3 only supports n=1
+      size: resolution === "1792x1024" ? "1792x1024" : "1024x1024", // Only these sizes are supported by DALL-E-3
       quality: "standard",
       response_format: "url",
     });

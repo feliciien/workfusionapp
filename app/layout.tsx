@@ -11,6 +11,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "WorkFusion App - Advanced AI Platform for Business Automation",
   description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
   keywords: "AI platform, business automation, artificial intelligence, productivity tools, machine learning, content generation, workflow automation, AI solutions, enterprise AI, digital transformation",
