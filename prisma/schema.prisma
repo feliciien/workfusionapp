@@ -14,6 +14,7 @@ model UserApiLimit {
   count     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserSubscription {
@@ -25,6 +26,7 @@ model UserSubscription {
   paypalPlanId           String?   @map("paypal_plan_id")
   paypalStatus           String?   @map("paypal_status")
   paypalSubscriptionId   String?   @unique @map("paypal_subscription_id")
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Conversation {
@@ -64,6 +66,7 @@ model UserSettings {
   customApiKey       String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Analytics {
@@ -72,12 +75,19 @@ model Analytics {
   eventType String
   eventData Json
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, eventType])
   @@index([createdAt])
 }
 
 model User {
-  id       String   @id @default(cuid())
+  id            String         @id
   conversations Conversation[]
+  settings      UserSettings?
+  apiLimit      UserApiLimit?
+  subscription  UserSubscription?
+  analytics     Analytics[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }

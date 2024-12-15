@@ -5,6 +5,7 @@ import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/api-limit";
 import { trackEvent } from "@/lib/analytics";
 import prismadb from "@/lib/prismadb";
+import { syncUser } from "@/lib/user-sync";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -14,19 +15,28 @@ export async function POST(req: Request) {
   const { userId } = auth();
 
   try {
-    const body = await req.json();
-    const { messages, conversationId, featureType = "conversation" } = body;
-
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!openai.apiKey) {
-      return new NextResponse("OpenAI API Key not configured", { status: 500 });
+    console.log("[CONVERSATION] Processing request for user:", userId);
+
+    // Sync user with database
+    const synced = await syncUser(userId);
+    if (!synced) {
+      console.error("[CONVERSATION] Failed to sync user:", userId);
+      return new NextResponse("Failed to sync user", { status: 500 });
     }
+
+    const body = await req.json();
+    const { messages, conversationId, featureType = "conversation" } = body;
 
     if (!messages) {
       return new NextResponse("Messages are required", { status: 400 });
+    }
+
+    if (!openai.apiKey) {
+      return new NextResponse("OpenAI API Key not configured", { status: 500 });
     }
 
     const freeTrial = await checkApiLimit();
@@ -52,50 +62,63 @@ export async function POST(req: Request) {
 
     // Store conversation and messages in database
     let conversation;
-    if (conversationId) {
-      // Update existing conversation
-      conversation = await prismadb.conversation.update({
-        where: {
-          id: conversationId,
-          userId: userId,
-        },
-        data: {
-          updatedAt: new Date(),
-          messages: {
-            create: [
-              {
-                content: messages[messages.length - 1].content,
-                role: 'user',
-              },
-              {
-                content: assistantMessage.content,
-                role: 'assistant',
-              }
-            ]
-          }
-        },
+    try {
+      if (conversationId) {
+        console.log("[CONVERSATION] Updating existing conversation:", conversationId);
+        // Update existing conversation
+        conversation = await prismadb.conversation.update({
+          where: {
+            id: conversationId,
+            userId: userId,
+          },
+          data: {
+            updatedAt: new Date(),
+            messages: {
+              create: [
+                {
+                  content: messages[messages.length - 1].content,
+                  role: 'user',
+                },
+                {
+                  content: assistantMessage.content,
+                  role: 'assistant',
+                }
+              ]
+            }
+          },
+        });
+      } else {
+        console.log("[CONVERSATION] Creating new conversation for user:", userId);
+        // Create new conversation
+        conversation = await prismadb.conversation.create({
+          data: {
+            userId: userId,
+            title: messages[0].content.slice(0, 100),
+            featureType: featureType,
+            messages: {
+              create: [
+                {
+                  content: messages[messages.length - 1].content,
+                  role: 'user',
+                },
+                {
+                  content: assistantMessage.content,
+                  role: 'assistant',
+                }
+              ]
+            }
+          },
+        });
+      }
+      console.log("[CONVERSATION] Successfully saved conversation");
+    } catch (error) {
+      console.error("[CONVERSATION_DB_ERROR]", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        conversationId,
+        stack: error instanceof Error ? error.stack : undefined
       });
-    } else {
-      // Create new conversation
-      conversation = await prismadb.conversation.create({
-        data: {
-          userId: userId,
-          title: messages[0].content.slice(0, 100),
-          featureType: featureType,
-          messages: {
-            create: [
-              {
-                content: messages[messages.length - 1].content,
-                role: 'user',
-              },
-              {
-                content: assistantMessage.content,
-                role: 'assistant',
-              }
-            ]
-          }
-        },
-      });
+      return new NextResponse("Failed to save conversation", { status: 500 });
     }
 
     if (!isPro) {
