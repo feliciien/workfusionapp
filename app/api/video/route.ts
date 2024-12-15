@@ -12,6 +12,8 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
+export const maxDuration = 60; // Maximum allowed duration for hobby plan
+
 export async function POST(req: Request): Promise<NextResponse> {
   try {
     const { userId } = auth();

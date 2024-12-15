@@ -7,6 +7,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+export const maxDuration = 60; // Maximum allowed duration for hobby plan
+
 export async function POST(req: Request) {
   try {
     const { data } = await req.json();

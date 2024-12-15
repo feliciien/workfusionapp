@@ -4,6 +4,7 @@ const HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/faceboo
 const MAX_RETRIES = 3;          // Number of times to retry if model is busy
 const RETRY_DELAY = 10000;      // Wait 10 seconds between retries
 const REQUEST_TIMEOUT = 90000;  // Abort request if it takes longer than 90s
+export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
 function bufferToBase64(buffer: ArrayBuffer): string {
   let binary = '';
