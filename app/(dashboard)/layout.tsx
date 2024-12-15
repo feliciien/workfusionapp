@@ -1,46 +1,24 @@
-"use client";
-
-import Navbar from "@/components/navbar";
+import Navbar from "@/components/navbar-server";
 import Sidebar from "@/components/sidebar";
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { useEffect, useState } from "react";
-import { Analytics } from '@vercel/analytics/react';
-import SubscriptionHandler from "@/components/subscription-handler";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const [apiLimitCount, setApiLimitCount] = useState<number>(0);
-  const [isPro, setIsPro] = useState<boolean>(false);
-
-  useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const count = await getApiLimitCount();
-        const proStatus = await checkSubscription();
-        setApiLimitCount(count);
-        setIsPro(proStatus);
-      } catch (error) {
-        console.error("Error fetching limits:", error);
-      }
-    };
-
-    fetchLimits();
-  }, []);
+  const apiLimitCount = await getApiLimitCount();
+  const isPro = await checkSubscription();
 
   return (
     <div className="h-full relative">
-      <SubscriptionHandler />
       <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-gray-900">
-        <Sidebar isPro={isPro} apiLimitCount={apiLimitCount} />
+        <Sidebar apiLimitCount={apiLimitCount} isPro={isPro} />
       </div>
-      <main className="md:pl-72 pb-10">
+      <main className="md:pl-72">
         <Navbar />
         {children}
-        <Analytics />
       </main>
     </div>
   );

@@ -1,10 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["oaidalleapiprodscus.blob.core.windows.net"],
+    domains: [
+      "oaidalleapiprodscus.blob.core.windows.net",
+      "img.clerk.com",
+    ],
   },
   experimental: {
-    serverActions: true
+    serverActions: {
+      allowedOrigins: ["localhost:3000"],
+    },
   },
   async headers() {
     return [

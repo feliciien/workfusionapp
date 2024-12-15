@@ -5,7 +5,7 @@ const FREE_CREDITS = 5;
 
 export const checkSubscription = async () => {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return false;
@@ -39,7 +39,7 @@ export const checkSubscription = async () => {
 
 export const increaseApiLimit = async () => {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return;
@@ -86,7 +86,7 @@ export const increaseApiLimit = async () => {
 
 export const checkApiLimit = async () => {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return true; // Allow access for public routes
@@ -127,7 +127,7 @@ export const checkApiLimit = async () => {
 
 export const getApiLimitCount = async () => {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return 0;

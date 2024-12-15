@@ -1,21 +1,24 @@
 // app/layout.tsx
 import { ClerkProvider } from "@clerk/nextjs";
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import type { Metadata, Viewport } from "next";
 import { ModalProvider } from "@/components/modal-provider";
 import { ToasterProvider } from "@/components/toaster-provider";
 import ErrorBoundary from "@/components/ErrorBoundary"; 
 import { OrganizationStructuredData } from "@/components/structured-data";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "WorkFusion App - Advanced AI Platform for Business Automation",
   description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
-  keywords: "AI platform, business automation, artificial intelligence, productivity tools, machine learning, content generation, workflow automation, AI solutions, enterprise AI, digital transformation",
-  authors: [{ name: "WorkFusion" }],
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/icon.png",
+  },
   openGraph: {
     title: "WorkFusion App - Advanced AI Platform for Business Automation",
     description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity.",
@@ -55,14 +58,19 @@ export const metadata: Metadata = {
   verification: {
     google: "your-google-verification-code",
   },
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport: Viewport = {
   themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <head>
           <OrganizationStructuredData />
           <script
@@ -91,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           <meta name="theme-color" content="#ffffff" />
         </head>
-        <body className={inter.className}>
+        <body className={inter.className} suppressHydrationWarning>
           <ErrorBoundary>
             <ModalProvider />
             <ToasterProvider />

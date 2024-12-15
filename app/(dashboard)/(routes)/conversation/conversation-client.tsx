@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Heading } from "@/components/heading";
@@ -24,29 +24,27 @@ const formSchema = z.object({
   }),
 });
 
-export default function ConversationPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const conversationId = searchParams.get('id');
+interface ConversationClientProps {
+  initialMessages?: Message[];
+  conversationId?: string | null;
+}
 
+export function ConversationClient({ 
+  initialMessages = [], 
+  conversationId 
+}: ConversationClientProps) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Only run client-side
   useEffect(() => {
     setMounted(true);
-    // Check for system dark mode preference
+    setMessages(initialMessages);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setDarkMode(prefersDark);
-  }, []);
-
-  useEffect(() => {
-    if (conversationId && mounted) {
-      loadConversation(conversationId);
-    }
-  }, [conversationId, mounted]);
+  }, [initialMessages]);
 
   useEffect(() => {
     if (mounted) {
@@ -57,22 +55,6 @@ export default function ConversationPage() {
       }
     }
   }, [darkMode, mounted]);
-
-  const loadConversation = async (id: string) => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`/api/conversation/${id}`);
-      const formattedMessages = response.data.messages.map((msg: any) => ({
-        role: msg.role,
-        content: typeof msg.content === 'string' ? msg.content : msg.content.text || '',
-      }));
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -112,7 +94,6 @@ export default function ConversationPage() {
     router.refresh();
   };
 
-  // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
     return null;
   }

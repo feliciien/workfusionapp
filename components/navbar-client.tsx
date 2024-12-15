@@ -1,13 +1,14 @@
+"use client";
+
 import { UserButton } from "@clerk/nextjs";
-import { Analytics } from "@vercel/analytics/react"
-import { getApiLimitCount } from "@/lib/api-limit";
-import { checkSubscription } from "@/lib/subscription";
 import MobileSidebar from "./mobile-sidebar";
 
-const Navbar = async () => {
-  const apiLimitCount = await getApiLimitCount();
-  const isPro = await checkSubscription();
+interface NavbarClientProps {
+  apiLimitCount: number;
+  isPro: boolean;
+}
 
+const NavbarClient = ({ apiLimitCount, isPro }: NavbarClientProps) => {
   return (
     <div className="flex items-center p-4">
       <MobileSidebar apiLimitCount={apiLimitCount} isPro={isPro} />
@@ -18,4 +19,4 @@ const Navbar = async () => {
   );
 };
 
-export default Navbar;
+export default NavbarClient;
