@@ -1,21 +1,198 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://workfusionapp.com</loc>
-    <lastmod>2024-12-14</lastmod>
+    <loc>http://localhost:3000</loc>
+    <lastmod>2024-12-15T00:13:38.749Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+
   <url>
-    <loc>https://workfusionapp.com/dashboard</loc>
-    <lastmod>2024-12-14</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>http://localhost:3000/404</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+
   <url>
-    <loc>https://workfusionapp.com/pricing</loc>
-    <lastmod>2024-12-14</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <loc>http://localhost:3000/</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000/analytics</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000/manage-subscription</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000/paypal-success</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000/updates</loc>
+    <lastmod>2024-12-15T00:13:38.750Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///art/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///art</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///code/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///code</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///custom/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///custom</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///conversation/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///conversation</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///dashboard</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///history</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///image/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///image</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///models/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///models</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///music/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///music</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///settings</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///video/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///video</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///voice/constants</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>http://localhost:3000///voice</loc>
+    <lastmod>2024-12-15T00:13:38.751Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

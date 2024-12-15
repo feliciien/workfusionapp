@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import { ModalProvider } from "@/components/modal-provider";
 import { ToasterProvider } from "@/components/toaster-provider";
 import ErrorBoundary from "@/components/ErrorBoundary"; 
+import { OrganizationStructuredData } from "@/components/structured-data";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <head>
+          <OrganizationStructuredData />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
@@ -81,12 +83,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               })
             }}
           />
+          <link rel="icon" href="/favicon.ico" />
+          <link 
+            rel="apple-touch-icon" 
+            sizes="180x180" 
+            href="/apple-touch-icon.png"
+          />
+          <meta name="theme-color" content="#ffffff" />
         </head>
         <body className={inter.className}>
-          <ModalProvider />
-          <ToasterProvider />
           <ErrorBoundary>
-            <main>{children}</main>
+            <ModalProvider />
+            <ToasterProvider />
+            {children}
           </ErrorBoundary>
         </body>
       </html>

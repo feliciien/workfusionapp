@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "generate-sitemap": "ts-node scripts/generate-sitemap.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^4.23.0",
@@ -35,6 +36,7 @@
     "encoding": "^0.1.13",
     "eslint": "8.45.0",
     "eslint-config-next": "^13.4.19",
+    "globby": "^13.2.2",
     "lucide-react": "^0.468.0",
     "micro": "^10.0.1",
     "next": "^13.4.19",
@@ -61,6 +63,8 @@
   "devDependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
     "prettier": "^3.0.0",
-    "prisma": "^6.0.1"
+    "prisma": "^6.0.1",
+    "schema-dts": "^1.1.2",
+    "ts-node": "^10.9.2"
   }
 }
