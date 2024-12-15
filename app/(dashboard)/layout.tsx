@@ -5,13 +5,25 @@ import { checkSubscription } from "@/lib/subscription";
 import { Analytics } from '@vercel/analytics/react';
 import SubscriptionHandler from "@/components/subscription-handler";
 
+const defaultApiLimit = 0;
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const apiLimitCount = await getApiLimitCount();
-  const isPro = await checkSubscription();
+  let apiLimitCount = defaultApiLimit;
+  let isPro = false;
+
+  try {
+    [apiLimitCount, isPro] = await Promise.all([
+      getApiLimitCount().catch(() => defaultApiLimit),
+      checkSubscription().catch(() => false)
+    ]);
+  } catch (error) {
+    console.error("Error loading dashboard data:", error);
+    // Continue with default values
+  }
 
   return (
     <div className="h-full relative">

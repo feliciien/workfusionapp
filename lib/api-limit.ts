@@ -39,6 +39,17 @@ export const increaseApiLimit = async () => {
     return;
   }
 
+  // First, ensure the user exists
+  const user = await prismadb.user.findUnique({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    await prismadb.user.create({
+      data: { id: userId }
+    });
+  }
+
   const userApiLimit = await prismadb.userApiLimit.findUnique({
     where: {
       userId,
@@ -69,6 +80,18 @@ export const checkApiLimit = async () => {
 
   if (!userId) {
     return false;
+  }
+
+  // Ensure user exists
+  const user = await prismadb.user.findUnique({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    await prismadb.user.create({
+      data: { id: userId }
+    });
+    return true; // New users get free credits
   }
 
   const isPro = await checkSubscription();
