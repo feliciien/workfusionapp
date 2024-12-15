@@ -5,7 +5,6 @@ import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/api-limit";
 import { trackEvent } from "@/lib/analytics";
 import prismadb from "@/lib/prismadb";
-import { syncUser } from "@/lib/user-sync";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -19,20 +18,25 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    console.log("[CONVERSATION] Processing request for user:", userId);
-
-    // Sync user with database
-    const synced = await syncUser(userId);
-    if (!synced) {
-      console.error("[CONVERSATION] Failed to sync user:", userId);
-      return new NextResponse("Failed to sync user", { status: 500 });
-    }
-
     const body = await req.json();
     const { messages, conversationId, featureType = "conversation" } = body;
 
     if (!messages) {
       return new NextResponse("Messages are required", { status: 400 });
+    }
+
+    console.log("[CONVERSATION] Processing request for user:", userId);
+
+    try {
+      // Try to create user if they don't exist
+      await prismadb.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: { id: userId }
+      });
+    } catch (error) {
+      console.error("[USER_CREATE_ERROR]", error);
+      return new NextResponse("Failed to create user", { status: 500 });
     }
 
     if (!openai.apiKey) {

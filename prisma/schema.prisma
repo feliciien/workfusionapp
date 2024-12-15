@@ -8,6 +8,17 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
+model User {
+  id            String           @id
+  conversations Conversation[]
+  settings      UserSettings?
+  apiLimit      UserApiLimit?
+  subscription  UserSubscription?
+  analytics     Analytics[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
 model UserApiLimit {
   id        String   @id @default(cuid())
   userId    String   @unique
@@ -33,10 +44,9 @@ model Conversation {
   id          String    @id @default(cuid())
   userId      String
   title       String
-  preview     String    @default("No messages yet")  // Default value for preview
+  preview     String    @default("No messages yet")
   featureType String    @default("conversation")
   isShared    Boolean   @default(false)
-  timestamp   DateTime  @default(now())
   messages    Message[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -48,9 +58,8 @@ model Conversation {
 model Message {
   id             String       @id @default(cuid())
   content        String       @db.Text
-  role           String       // 'user' or 'assistant'
+  role           String
   conversationId String
-  timestamp      DateTime     @default(now())
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -79,15 +88,4 @@ model Analytics {
 
   @@index([userId, eventType])
   @@index([createdAt])
-}
-
-model User {
-  id            String         @id
-  conversations Conversation[]
-  settings      UserSettings?
-  apiLimit      UserApiLimit?
-  subscription  UserSubscription?
-  analytics     Analytics[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
 }
