@@ -13,7 +13,18 @@ export default authMiddleware({
     "/presentation",
     "/api/presentation",
     "/code-analysis",
-    "/api/code-analysis"
+    "/api/code-analysis",
+    "/data-insights",
+    "/api/data-insights",
+    "/api/chat",
+    "/api/content",
+    "/api/translate",
+    "/api/image",
+    "/api/music",
+    "/api/video",
+    "/api/code",
+    "/api/ideas",
+    "/api/study"
   ]
 });
 

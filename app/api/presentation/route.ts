@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 60; // Maximum allowed duration for hobby plan
+export const maxDuration = 60;
 
 interface Slide {
   type: 'title' | 'intro' | 'content' | 'conclusion';
@@ -15,10 +15,26 @@ interface Slide {
   content: string | string[];
 }
 
+const validateSlide = (slide: any): slide is Slide => {
+  return (
+    slide &&
+    typeof slide === 'object' &&
+    ['title', 'intro', 'content', 'conclusion'].includes(slide.type) &&
+    typeof slide.title === 'string' &&
+    (typeof slide.content === 'string' || Array.isArray(slide.content))
+  );
+};
+
 const transformSlideType = (slide: any): Slide => {
+  // Ensure content is always an array for non-title slides
+  const content = slide.type === 'title'
+    ? (typeof slide.content === 'string' ? slide.content : slide.content.join(' '))
+    : (Array.isArray(slide.content) ? slide.content : [slide.content]);
+
   return {
-    ...slide,
-    type: slide.type === 'main' ? 'content' : slide.type
+    type: slide.type === 'main' ? 'content' : slide.type,
+    title: slide.title,
+    content: content
   };
 };
 
@@ -32,22 +48,24 @@ const formatSlides = (content: string): Slide[] => {
       throw new Error("Invalid slides format");
     }
     
-    const transformedSlides = parsed.slides.map(transformSlideType);
+    const transformedSlides = parsed.slides
+      .map(transformSlideType)
+      .filter(validateSlide);
+
+    if (transformedSlides.length === 0) {
+      throw new Error("No valid slides generated");
+    }
+
     console.log('Transformed slides:', transformedSlides);
     return transformedSlides;
   } catch (error) {
     console.error("Failed to parse slides:", error);
-    const lines = content.split('\n').filter(line => line.trim());
+    // Fallback format for error cases
     return [
       {
         type: 'title',
-        title: lines[0] || 'Presentation',
-        content: 'Generated presentation'
-      },
-      {
-        type: 'content',
-        title: 'Main Points',
-        content: lines.slice(1).map(line => line.replace(/^[•\-*]\s*/, ''))
+        title: 'Error in Presentation Generation',
+        content: 'Failed to generate presentation slides. Please try again.'
       }
     ];
   }
@@ -77,6 +95,7 @@ export async function POST(req: Request) {
       isPro = await checkSubscription();
     } catch (error) {
       console.error("Error checking API limits:", error);
+      // Continue with free trial if there's an error checking limits
       freeTrial = true;
       isPro = false;
     }
@@ -90,41 +109,62 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a presentation expert. Create a professional presentation outline for the given topic.
-          Include:
-          1. A title slide
-          2. An introduction
-          3. Several content slides (3-5)
-          4. A conclusion
+          content: `You are a presentation expert. Create a comprehensive presentation outline with multiple slides for the given topic.
           
-          Format your response as JSON with the following structure:
+          Required Slide Structure (7-10 slides total):
+          1. Title Slide: Engaging main title and subtitle
+          2. Introduction (1-2 slides): 
+             - Overview of the topic
+             - Key points to be covered
+             - Why this topic matters
+          3. Main Content (4-6 slides):
+             - Each slide should focus on one main point
+             - Include supporting details, examples, or statistics
+             - Use clear, actionable bullet points
+          4. Conclusion (1-2 slides):
+             - Summary of key takeaways
+             - Call to action or next steps
+             - Final thoughts
+          
+          Guidelines:
+          - Each slide must have a clear purpose and flow logically
+          - Keep titles concise but descriptive (5-8 words)
+          - Bullet points should be complete sentences
+          - Include relevant examples, statistics, or case studies
+          - Maintain consistent tone and style
+          
+          Format your response as JSON with this exact structure:
           {
             "slides": [
               {
                 "type": "title",
                 "title": "Main Title",
-                "content": "Subtitle or brief description"
+                "content": "Subtitle that explains the value proposition"
               },
               {
                 "type": "intro",
                 "title": "Introduction",
-                "content": ["Point 1", "Point 2", "Point 3"]
+                "content": ["Point 1", "Point 2", "Point 3", "Point 4"]
               },
               {
                 "type": "content",
-                "title": "Section Title",
-                "content": ["Point 1", "Point 2", "Point 3"]
+                "title": "Main Point Title",
+                "content": ["Detailed point 1", "Supporting example", "Statistical evidence", "Action item"]
               },
               {
                 "type": "conclusion",
-                "title": "Conclusion",
-                "content": ["Summary Point 1", "Summary Point 2", "Call to Action"]
+                "title": "Key Takeaways",
+                "content": ["Summary point 1", "Summary point 2", "Call to action", "Next steps"]
               }
             ]
           }
           
-          Note: Slide types MUST be one of: "title", "intro", "content", or "conclusion".
-          Make sure to return ONLY valid JSON, no additional text.`
+          Requirements:
+          1. Generate AT LEAST 7 slides, including title and conclusion
+          2. Each content slide must have 3-4 detailed bullet points
+          3. Use specific examples and data points
+          4. Ensure all content is factual and well-structured
+          5. Return ONLY valid JSON, no additional text`
         },
         {
           role: "user",
@@ -132,10 +172,10 @@ export async function POST(req: Request) {
         }
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 3000,
       top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
+      frequency_penalty: 0.2,
+      presence_penalty: 0.1,
     });
 
     if (!response.choices[0].message?.content) {
@@ -151,11 +191,13 @@ export async function POST(req: Request) {
       throw new Error("Failed to generate valid slides");
     }
 
+    // Only try to increase API limit if we successfully checked it
     if (!isPro) {
       try {
         await increaseApiLimit();
       } catch (error) {
         console.error("Error increasing API limit:", error);
+        // Continue anyway since we've already generated the content
       }
     }
 
@@ -169,9 +211,6 @@ export async function POST(req: Request) {
     console.error("[PRESENTATION_ERROR]", error);
     if (error.code === "P2024") {
       return NextResponse.json({
-        data: {
-          slides: []
-        },
         error: "Database connection error. Please try again."
       }, { status: 500 });
     }

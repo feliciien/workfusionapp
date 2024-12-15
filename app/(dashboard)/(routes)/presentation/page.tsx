@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft, Download, Copy, RefreshCw } from "lucide-react";
 import { Slide } from "@/lib/api-client";
 
 export default function PresentationPage() {
@@ -16,6 +16,7 @@ export default function PresentationPage() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const tool = tools.find(t => t.label === "Presentation Creator")!;
 
@@ -36,44 +37,33 @@ export default function PresentationPage() {
     try {
       setIsLoading(true);
       setSlides([]);
+      setCurrentSlide(0);
       
       console.log("Generating presentation for topic:", topic);
       const response = await api.generatePresentation(topic);
       console.log("API Response:", response);
 
-      if (!response?.data?.data?.slides) {
-        console.error("Invalid response structure:", response);
-        throw new Error("Invalid response structure: missing slides");
+      if (!response?.data?.slides) {
+        throw new Error("Failed to generate presentation");
       }
 
-      const receivedSlides = response.data.data.slides;
-      console.log("Received slides:", receivedSlides);
-
-      const validSlides = receivedSlides.filter(slide => {
-        const isValid = 
-          slide && 
-          typeof slide === 'object' &&
-          ['title', 'intro', 'content', 'conclusion'].includes(slide.type) &&
-          typeof slide.title === 'string' &&
-          (typeof slide.content === 'string' || Array.isArray(slide.content));
-        
-        if (!isValid) {
-          console.warn('Invalid slide:', slide);
-        }
-        return isValid;
-      });
-
-      console.log("Valid slides:", validSlides);
+      const validSlides = response.data.slides.filter(slide => 
+        slide && 
+        typeof slide === 'object' &&
+        ['title', 'intro', 'content', 'conclusion'].includes(slide.type) &&
+        typeof slide.title === 'string' &&
+        (typeof slide.content === 'string' || Array.isArray(slide.content))
+      );
 
       if (validSlides.length === 0) {
-        throw new Error("No valid slides in response");
+        throw new Error("No valid slides generated");
       }
 
       setSlides(validSlides);
       toast.success("Presentation generated!");
     } catch (error: any) {
       console.error("Presentation error:", error);
-      const errorMessage = error.response?.data || error.message || "Something went wrong";
+      const errorMessage = error.response?.data?.error || error.message || "Failed to generate presentation";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -82,23 +72,77 @@ export default function PresentationPage() {
   };
 
   const exampleTopics = [
-    "Digital Marketing Trends",
+    "Digital Marketing Trends 2024",
     "Climate Change Solutions",
     "Remote Work Best Practices",
-    "Artificial Intelligence Basics",
-    "Personal Finance Tips",
-    "Healthy Lifestyle Habits"
+    "AI in Healthcare",
+    "Personal Finance Essentials",
+    "Effective Leadership Skills"
   ];
 
-  const clearForm = () => {
+  const clearForm = useCallback(() => {
     setTopic("");
     setSlides([]);
     setError(null);
-  };
+    setCurrentSlide(0);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(prev => prev + 1);
+    }
+  }, [currentSlide, slides.length]);
+
+  const previousSlide = useCallback(() => {
+    if (currentSlide > 0) {
+      setCurrentSlide(prev => prev - 1);
+    }
+  }, [currentSlide]);
+
+  const downloadPresentation = useCallback(() => {
+    if (!slides.length) return;
+    
+    const presentationText = slides
+      .map((slide, index) => {
+        const content = Array.isArray(slide.content)
+          ? '• ' + slide.content.join('\n• ')
+          : slide.content;
+        return `Slide ${index + 1} (${slide.type})\n${slide.title}\n\n${content}`;
+      })
+      .join('\n\n---\n\n');
+
+    const blob = new Blob([presentationText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    toast.success("Presentation downloaded!");
+  }, [slides, topic]);
+
+  const copyToClipboard = useCallback(() => {
+    if (!slides.length) return;
+
+    const presentationText = slides
+      .map(slide => 
+        `${slide.title}\n\n${
+          Array.isArray(slide.content)
+            ? slide.content.join('\n')
+            : slide.content
+        }`
+      )
+      .join('\n\n---\n\n');
+    
+    navigator.clipboard.writeText(presentationText);
+    toast.success('Copied to clipboard!');
+  }, [slides]);
 
   return (
     <ToolPage tool={tool} isLoading={isLoading}>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {exampleTopics.map((exampleTopic) => (
             <Button
@@ -116,7 +160,7 @@ export default function PresentationPage() {
           ))}
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Presentation Topic</label>
@@ -157,68 +201,88 @@ export default function PresentationPage() {
             </Card>
           )}
 
-          {slides.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Generated Presentation</h3>
-              <div className="space-y-4">
-                {slides.map((slide, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">Slide {index + 1}</h4>
-                      <span className="text-xs text-muted-foreground capitalize px-2 py-1 bg-secondary rounded">
-                        {slide.type}
-                      </span>
+          {slides.length > 0 && currentSlide < slides.length && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <div className="space-y-4">
+                  {/* Slide Navigation */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-sm text-muted-foreground">
+                      Slide {currentSlide + 1} of {slides.length} • {slides[currentSlide].type}
                     </div>
-                    <div className="space-y-2">
-                      {slide.title && (
-                        <div className="text-lg font-semibold">
-                          {slide.title}
-                        </div>
-                      )}
-                      {slide.content && (
-                        <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                          {Array.isArray(slide.content) ? (
-                            <ul className="list-disc pl-4 space-y-1">
-                              {slide.content.map((point, i) => (
-                                <li key={i}>{point}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>{slide.content}</p>
-                          )}
-                        </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={previousSlide}
+                        disabled={currentSlide === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={nextSlide}
+                        disabled={currentSlide === slides.length - 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Current Slide */}
+                  <div className="space-y-4 min-h-[300px] flex flex-col">
+                    <h2 className="text-2xl font-bold text-center">
+                      {slides[currentSlide].title}
+                    </h2>
+                    <div className="flex-grow">
+                      {typeof slides[currentSlide].content === 'string' ? (
+                        <p className="text-lg text-center text-muted-foreground mt-4">
+                          {slides[currentSlide].content}
+                        </p>
+                      ) : (
+                        <ul className="list-disc pl-6 space-y-3 mt-4">
+                          {slides[currentSlide].content.map((point, index) => (
+                            <li key={index} className="text-lg">
+                              {point}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
-                  </Card>
-                ))}
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const presentationText = slides
-                      .map((slide, index) => {
-                        const content = Array.isArray(slide.content)
-                          ? '• ' + slide.content.join('\n• ')
-                          : slide.content;
-                        return `Slide ${index + 1} (${slide.type})\n${slide.title}\n\n${content}`;
-                      })
-                      .join('\n\n---\n\n');
-                    navigator.clipboard.writeText(presentationText);
-                    toast.success("Presentation copied to clipboard!");
-                  }}
-                >
-                  Copy All Slides
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearForm}
-                >
-                  New Presentation
-                </Button>
-              </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyToClipboard}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={downloadPresentation}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearForm}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      New Presentation
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
         </form>

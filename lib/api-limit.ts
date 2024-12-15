@@ -92,6 +92,12 @@ export const checkApiLimit = async () => {
       return true; // Allow access for public routes
     }
 
+    // Check if user is subscribed
+    const isPro = await checkSubscription();
+    if (isPro) {
+      return true; // Pro users have unlimited access
+    }
+
     // Ensure user exists
     const user = await prismadb.user.findUnique({
       where: { id: userId }
@@ -101,29 +107,21 @@ export const checkApiLimit = async () => {
       await prismadb.user.create({
         data: { id: userId }
       });
-      return true; // New users get free credits
-    }
-
-    const isPro = await checkSubscription();
-    
-    if (isPro) {
-      return true;
+      return true; // First time users get free credits
     }
 
     const userApiLimit = await prismadb.userApiLimit.findUnique({
-      where: {
-        userId,
-      },
+      where: { userId }
     });
 
-    if (!userApiLimit || userApiLimit.count < FREE_CREDITS) {
-      return true;
+    if (!userApiLimit) {
+      return true; // No usage yet, they have free credits
     }
 
-    return false;
+    return userApiLimit.count < FREE_CREDITS;
   } catch (error) {
     console.error("Error checking API limit:", error);
-    return true; // Allow access on error
+    return true; // On error, allow access to avoid blocking users
   }
 };
 
