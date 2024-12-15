@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy, RefreshCw } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
 
 export default function StudyPage() {
   const [query, setQuery] = useState("");
@@ -37,15 +38,15 @@ export default function StudyPage() {
       setAnswer("");
       const response = await api.getStudyHelp(query);
       
-      if (!response.data?.data?.answer) {
+      if (!response?.data?.answer) {
         throw new Error("Invalid response from server");
       }
 
-      setAnswer(response.data.data.answer);
+      setAnswer(response.data.answer);
       toast.success("Answer generated!");
     } catch (error: any) {
       console.error("Study error:", error);
-      const errorMessage = error.response?.data || error.message || "Something went wrong";
+      const errorMessage = error.response?.data?.error || error.message || "Something went wrong";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -54,12 +55,12 @@ export default function StudyPage() {
   };
 
   const suggestionTopics = [
-    "Explain quantum mechanics",
-    "Help me understand photosynthesis",
-    "Explain the French Revolution",
-    "How does the human immune system work?",
-    "What are the key principles of economics?",
-    "Explain machine learning concepts"
+    "Explain quantum mechanics in simple terms",
+    "How does photosynthesis work?",
+    "Summarize the key events of the French Revolution",
+    "Explain how the human immune system works",
+    "What are the fundamental principles of economics?",
+    "Explain machine learning for beginners"
   ];
 
   const clearForm = () => {
@@ -81,6 +82,7 @@ export default function StudyPage() {
                 setQuery(topic);
                 setError(null);
               }}
+              disabled={isLoading}
             >
               {topic}
             </Button>
@@ -98,7 +100,7 @@ export default function StudyPage() {
                   setQuery(e.target.value);
                   setError(null);
                 }}
-                className="h-32"
+                className="h-32 resize-none"
                 disabled={isLoading}
               />
               {query && (
@@ -130,29 +132,35 @@ export default function StudyPage() {
           )}
 
           {answer && (
-            <Card className="p-4 space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Answer:</h3>
-                <div className="text-sm prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-                  {answer}
+            <Card className="p-6 space-y-4">
+              <div className="space-y-4">
+                <h3 className="font-medium text-lg">Answer:</h3>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown>
+                    {answer}
+                  </ReactMarkdown>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     navigator.clipboard.writeText(answer);
                     toast.success("Copied to clipboard!");
                   }}
                 >
+                  <Copy className="h-4 w-4 mr-2" />
                   Copy Answer
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={clearForm}
                 >
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   New Question
                 </Button>
               </div>

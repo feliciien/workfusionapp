@@ -42,6 +42,7 @@
     "next": "^13.4.19",
     "openai": "^4.76.2",
     "postcss": "8.4.27",
+    "pptxgenjs": "^3.12.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.45.2",

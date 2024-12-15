@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,28 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2, ChevronRight, ChevronLeft, Download, Copy, RefreshCw } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft, Download, Copy, RefreshCw, FileDown } from "lucide-react";
 import { Slide } from "@/lib/api-client";
+
+// We'll load pptxgenjs dynamically only when needed
+let PptxGenJS: any;
 
 export default function PresentationPage() {
   const [topic, setTopic] = useState("");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
+
+  // Update current slide when slides or index changes
+  useEffect(() => {
+    if (slides.length > 0 && currentSlideIndex < slides.length) {
+      setCurrentSlide(slides[currentSlideIndex]);
+    } else {
+      setCurrentSlide(null);
+    }
+  }, [slides, currentSlideIndex]);
 
   const tool = tools.find(t => t.label === "Presentation Creator")!;
 
@@ -37,7 +50,8 @@ export default function PresentationPage() {
     try {
       setIsLoading(true);
       setSlides([]);
-      setCurrentSlide(0);
+      setCurrentSlideIndex(0);
+      setCurrentSlide(null);
       
       console.log("Generating presentation for topic:", topic);
       const response = await api.generatePresentation(topic);
@@ -60,6 +74,8 @@ export default function PresentationPage() {
       }
 
       setSlides(validSlides);
+      setCurrentSlideIndex(0);
+      setCurrentSlide(validSlides[0]);
       toast.success("Presentation generated!");
     } catch (error: any) {
       console.error("Presentation error:", error);
@@ -84,43 +100,106 @@ export default function PresentationPage() {
     setTopic("");
     setSlides([]);
     setError(null);
-    setCurrentSlide(0);
+    setCurrentSlideIndex(0);
+    setCurrentSlide(null);
   }, []);
 
   const nextSlide = useCallback(() => {
-    if (currentSlide < slides.length - 1) {
-      setCurrentSlide(prev => prev + 1);
+    if (currentSlideIndex < slides.length - 1) {
+      setCurrentSlideIndex(prev => prev + 1);
     }
-  }, [currentSlide, slides.length]);
+  }, [currentSlideIndex, slides.length]);
 
   const previousSlide = useCallback(() => {
-    if (currentSlide > 0) {
-      setCurrentSlide(prev => prev - 1);
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(prev => prev - 1);
     }
-  }, [currentSlide]);
+  }, [currentSlideIndex]);
 
-  const downloadPresentation = useCallback(() => {
+  const generatePowerPoint = useCallback(async () => {
     if (!slides.length) return;
-    
-    const presentationText = slides
-      .map((slide, index) => {
-        const content = Array.isArray(slide.content)
-          ? '• ' + slide.content.join('\n• ')
-          : slide.content;
-        return `Slide ${index + 1} (${slide.type})\n${slide.title}\n\n${content}`;
-      })
-      .join('\n\n---\n\n');
 
-    const blob = new Blob([presentationText], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    toast.success("Presentation downloaded!");
+    try {
+      // Dynamically import pptxgenjs only when needed
+      if (!PptxGenJS) {
+        const pptxgen = await import('pptxgenjs');
+        PptxGenJS = pptxgen.default;
+      }
+
+      const pres = new PptxGenJS();
+
+      // Set presentation properties
+      pres.author = 'SynthAI';
+      pres.company = 'SynthAI';
+      pres.revision = '1';
+      pres.subject = topic;
+      pres.title = topic;
+
+      // Add slides
+      slides.forEach((slide) => {
+        const pptSlide = pres.addSlide();
+
+        // Add title to all slides
+        pptSlide.addText(slide.title, {
+          x: '5%',
+          y: '5%',
+          w: '90%',
+          h: '15%',
+          fontSize: slide.type === 'title' ? 44 : 32,
+          bold: true,
+          align: 'center',
+          color: '363636',
+        });
+
+        // Add content based on slide type
+        if (typeof slide.content === 'string') {
+          // Title slide subtitle
+          pptSlide.addText(slide.content, {
+            x: '10%',
+            y: '30%',
+            w: '80%',
+            h: '40%',
+            fontSize: 28,
+            align: 'center',
+            color: '666666',
+          });
+        } else {
+          // Bullet points for other slides
+          const bulletPoints = slide.content.map(point => ({ text: point }));
+          pptSlide.addText(bulletPoints, {
+            x: '10%',
+            y: '25%',
+            w: '80%',
+            h: '70%',
+            fontSize: 24,
+            bullet: { type: 'bullet' },
+            color: '363636',
+            lineSpacing: 32,
+          });
+        }
+
+        // Add slide number except for title slide
+        if (slide.type !== 'title') {
+          pptSlide.addText(`${slides.indexOf(slide)}/${slides.length - 1}`, {
+            x: '90%',
+            y: '95%',
+            w: '10%',
+            h: '5%',
+            fontSize: 12,
+            color: '666666',
+            align: 'right',
+          });
+        }
+      });
+
+      // Save the presentation
+      const fileName = `${topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.pptx`;
+      await pres.writeFile({ fileName });
+      toast.success("PowerPoint presentation downloaded!");
+    } catch (error) {
+      console.error("Error generating PowerPoint:", error);
+      toast.error("Failed to generate PowerPoint presentation");
+    }
   }, [slides, topic]);
 
   const copyToClipboard = useCallback(() => {
@@ -201,21 +280,21 @@ export default function PresentationPage() {
             </Card>
           )}
 
-          {slides.length > 0 && currentSlide < slides.length && (
+          {currentSlide && (
             <div className="space-y-6">
               <Card className="p-6">
                 <div className="space-y-4">
                   {/* Slide Navigation */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm text-muted-foreground">
-                      Slide {currentSlide + 1} of {slides.length} • {slides[currentSlide].type}
+                      Slide {currentSlideIndex + 1} of {slides.length} • {currentSlide.type}
                     </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={previousSlide}
-                        disabled={currentSlide === 0}
+                        disabled={currentSlideIndex === 0}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -223,7 +302,7 @@ export default function PresentationPage() {
                         variant="outline"
                         size="sm"
                         onClick={nextSlide}
-                        disabled={currentSlide === slides.length - 1}
+                        disabled={currentSlideIndex === slides.length - 1}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -233,16 +312,16 @@ export default function PresentationPage() {
                   {/* Current Slide */}
                   <div className="space-y-4 min-h-[300px] flex flex-col">
                     <h2 className="text-2xl font-bold text-center">
-                      {slides[currentSlide].title}
+                      {currentSlide.title}
                     </h2>
                     <div className="flex-grow">
-                      {typeof slides[currentSlide].content === 'string' ? (
+                      {typeof currentSlide.content === 'string' ? (
                         <p className="text-lg text-center text-muted-foreground mt-4">
-                          {slides[currentSlide].content}
+                          {currentSlide.content}
                         </p>
                       ) : (
                         <ul className="list-disc pl-6 space-y-3 mt-4">
-                          {slides[currentSlide].content.map((point, index) => (
+                          {currentSlide.content.map((point, index) => (
                             <li key={index} className="text-lg">
                               {point}
                             </li>
@@ -266,10 +345,10 @@ export default function PresentationPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={downloadPresentation}
+                        onClick={generatePowerPoint}
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download PPTX
                       </Button>
                     </div>
                     <Button

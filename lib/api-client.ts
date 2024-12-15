@@ -105,7 +105,7 @@ export const api = {
   },
 
   // Learning
-  async getStudyHelp(query: string): Promise<ApiResponse<{ data: { answer: string } }>> {
+  async getStudyHelp(query: string): Promise<{ data: { answer: string } }> {
     const response = await apiClient.post('/study', { query });
     return response.data;
   },

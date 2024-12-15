@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 60; // Maximum allowed duration for hobby plan
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -66,22 +66,17 @@ export async function POST(req: Request) {
       await increaseApiLimit();
     }
 
-    return new NextResponse(JSON.stringify({
+    return NextResponse.json({
       data: {
         answer: response.choices[0].message.content
-      }
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate'
       }
     });
 
   } catch (error: any) {
     console.error("[STUDY_ERROR]", error);
-    if (error.code === "P2003") {
-      return new NextResponse("User authentication error. Please try logging out and back in.", { status: 401 });
-    }
-    return new NextResponse(error.message || "Internal Error", { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Internal Error" },
+      { status: error.code === "P2003" ? 401 : 500 }
+    );
   }
 }
