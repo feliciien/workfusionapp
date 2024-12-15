@@ -9,10 +9,18 @@ export default authMiddleware({
     "/api/webhook",
     "/paypal-success",
     "/updates",
-    "/analytics"
+    "/analytics",
+    "/presentation",
+    "/api/presentation",
+    "/code-analysis",
+    "/api/code-analysis"
   ]
 });
 
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!.*\\..*|_next).*)",
+    "/",
+    "/(api|trpc)(.*)"
+  ]
 };

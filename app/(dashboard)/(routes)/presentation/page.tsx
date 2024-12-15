@@ -9,12 +9,7 @@ import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-
-interface Slide {
-  type: 'title' | 'intro' | 'content' | 'conclusion';
-  title: string;
-  content: string | string[];
-}
+import { Slide } from "@/lib/api-client";
 
 export default function PresentationPage() {
   const [topic, setTopic] = useState("");
@@ -41,16 +36,40 @@ export default function PresentationPage() {
     try {
       setIsLoading(true);
       setSlides([]);
-      const response = await api.generatePresentation(topic);
       
+      console.log("Generating presentation for topic:", topic);
+      const response = await api.generatePresentation(topic);
       console.log("API Response:", response);
 
-      if (!response?.data?.data?.slides || !Array.isArray(response.data.data.slides)) {
+      if (!response?.data?.data?.slides) {
         console.error("Invalid response structure:", response);
-        throw new Error("Invalid response from server");
+        throw new Error("Invalid response structure: missing slides");
       }
 
-      setSlides(response.data.data.slides);
+      const receivedSlides = response.data.data.slides;
+      console.log("Received slides:", receivedSlides);
+
+      const validSlides = receivedSlides.filter(slide => {
+        const isValid = 
+          slide && 
+          typeof slide === 'object' &&
+          ['title', 'intro', 'content', 'conclusion'].includes(slide.type) &&
+          typeof slide.title === 'string' &&
+          (typeof slide.content === 'string' || Array.isArray(slide.content));
+        
+        if (!isValid) {
+          console.warn('Invalid slide:', slide);
+        }
+        return isValid;
+      });
+
+      console.log("Valid slides:", validSlides);
+
+      if (validSlides.length === 0) {
+        throw new Error("No valid slides in response");
+      }
+
+      setSlides(validSlides);
       toast.success("Presentation generated!");
     } catch (error: any) {
       console.error("Presentation error:", error);

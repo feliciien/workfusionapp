@@ -19,9 +19,7 @@ export interface Slide {
 }
 
 export interface PresentationResponse {
-  data: {
-    slides: Slide[];
-  };
+  slides: Slide[];
 }
 
 export const api = {
@@ -63,9 +61,22 @@ export const api = {
     return response.data;
   },
 
-  async analyzeCode(code: string): Promise<ApiResponse<{ data: any }>> {
-    const response = await apiClient.post('/code-analysis', { code });
-    return response.data;
+  async analyzeCode(code: string): Promise<ApiResponse<{ score: number; issues: Array<{ severity: string; message: string; line?: number }>; suggestions: string[] }>> {
+    try {
+      console.log('Sending code analysis request');
+      const response = await apiClient.post('/code-analysis', { code });
+      console.log('Code analysis response:', response);
+      
+      if (!response.data?.data) {
+        console.error('Invalid response structure:', response.data);
+        throw new Error('Invalid response structure from server');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Code analysis error:', error);
+      throw error;
+    }
   },
 
   // Business
@@ -75,8 +86,22 @@ export const api = {
   },
 
   async generatePresentation(topic: string): Promise<ApiResponse<PresentationResponse>> {
-    const response = await apiClient.post('/presentation', { topic });
-    return response.data;
+    try {
+      console.log('Sending presentation request for topic:', topic);
+      const response = await apiClient.post('/presentation', { topic });
+      console.log('Raw presentation response:', response);
+      
+      // Ensure the response has the correct structure
+      if (!response.data?.data?.slides) {
+        console.error('Invalid response structure:', response.data);
+        throw new Error('Invalid response structure: missing slides');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Presentation API error:', error);
+      throw error;
+    }
   },
 
   // Learning

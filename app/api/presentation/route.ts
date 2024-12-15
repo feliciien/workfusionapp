@@ -16,7 +16,6 @@ interface Slide {
 }
 
 const transformSlideType = (slide: any): Slide => {
-  // Transform 'main' type to 'content'
   return {
     ...slide,
     type: slide.type === 'main' ? 'content' : slide.type
@@ -25,15 +24,19 @@ const transformSlideType = (slide: any): Slide => {
 
 const formatSlides = (content: string): Slide[] => {
   try {
+    console.log('Formatting slides from content:', content);
     const parsed = JSON.parse(content);
-    if (Array.isArray(parsed.slides)) {
-      // Transform each slide to ensure correct type
-      return parsed.slides.map(transformSlideType);
+    
+    if (!parsed.slides || !Array.isArray(parsed.slides)) {
+      console.error('Invalid slides format:', parsed);
+      throw new Error("Invalid slides format");
     }
-    throw new Error("Invalid slides format");
+    
+    const transformedSlides = parsed.slides.map(transformSlideType);
+    console.log('Transformed slides:', transformedSlides);
+    return transformedSlides;
   } catch (error) {
     console.error("Failed to parse slides:", error);
-    // Fallback: create basic slides from text
     const lines = content.split('\n').filter(line => line.trim());
     return [
       {
@@ -66,8 +69,17 @@ export async function POST(req: Request) {
       return new NextResponse("Topic is too long. Maximum length is 1000 characters", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    let freeTrial = true;
+    let isPro = false;
+
+    try {
+      freeTrial = await checkApiLimit();
+      isPro = await checkSubscription();
+    } catch (error) {
+      console.error("Error checking API limits:", error);
+      freeTrial = true;
+      isPro = false;
+    }
 
     if (!freeTrial && !isPro) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
@@ -135,8 +147,16 @@ export async function POST(req: Request) {
     const slides = formatSlides(response.choices[0].message.content);
     console.log("Formatted slides:", slides);
 
+    if (!slides || !Array.isArray(slides) || slides.length === 0) {
+      throw new Error("Failed to generate valid slides");
+    }
+
     if (!isPro) {
-      await increaseApiLimit();
+      try {
+        await increaseApiLimit();
+      } catch (error) {
+        console.error("Error increasing API limit:", error);
+      }
     }
 
     return NextResponse.json({
@@ -147,6 +167,14 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("[PRESENTATION_ERROR]", error);
+    if (error.code === "P2024") {
+      return NextResponse.json({
+        data: {
+          slides: []
+        },
+        error: "Database connection error. Please try again."
+      }, { status: 500 });
+    }
     if (error.code === "P2003") {
       return new NextResponse("User authentication error. Please try logging out and back in.", { status: 401 });
     }
