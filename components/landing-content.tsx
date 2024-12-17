@@ -130,7 +130,7 @@ export const LandingContent = () => {
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-gray-700 leading-relaxed">
-                  "{item.description}"
+                  &ldquo;{item.description}&rdquo;
                 </p>
               </CardContent>
             </Card>
