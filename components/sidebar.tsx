@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Montserrat } from 'next/font/google';
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { 
   Code, 
   ImageIcon, 
@@ -49,7 +50,7 @@ const routes = [
     icon: ImageIcon,
     color: "text-pink-700",
     href: '/image',
-    description: "Create unique images and illustrations from your prompts."
+    description: "Generate unique images using AI"
   },
   {
     label: 'Video Creation',
@@ -112,6 +113,7 @@ const Sidebar = ({
   isPro = false,
 }: SidebarProps) => {
   const pathname = usePathname();
+  const [hoveredRoute, setHoveredRoute] = useState<string | null>(null);
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
@@ -121,7 +123,7 @@ const Sidebar = ({
             <Image fill alt="Logo" src="/logo.png" />
           </div>
           <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-            WorkFusion
+            SynthAI
           </h1>
         </Link>
         <div className="space-y-1">
@@ -130,26 +132,45 @@ const Sidebar = ({
               key={route.href}
               href={route.href}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition relative",
                 pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
+              onMouseEnter={() => setHoveredRoute(route.href)}
+              onMouseLeave={() => setHoveredRoute(null)}
             >
-              <div className="flex items-center flex-1">
+              <div className={cn("flex items-center flex-1")}>
                 <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
                 {route.label}
               </div>
-              {/* Show description on hover */}
-              <div className="absolute left-full ml-2 p-2 bg-gray-900 rounded-md w-64 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 hidden lg:block">
-                {route.description}
-              </div>
+              {hoveredRoute === route.href && (
+                <div className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-sm rounded shadow-lg z-50 w-48">
+                  {route.description}
+                </div>
+              )}
+              {pathname === route.href && (
+                <div className="w-1 h-full absolute right-0 top-0 bg-primary rounded-l" />
+              )}
             </Link>
           ))}
         </div>
       </div>
-      <FreeCounter 
-        apiLimitCount={apiLimitCount} 
-        isPro={isPro}
-      />
+
+      <div className="mt-auto px-3">
+        {!isPro && (
+          <div className="p-4 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 mb-4">
+            <p className="text-white text-sm mb-2">
+              Upgrade to Pro for unlimited access
+            </p>
+            <Link
+              href="/settings"
+              className="w-full bg-white text-black rounded-lg p-2 text-center text-sm font-medium hover:bg-gray-100 transition"
+            >
+              Upgrade Now
+            </Link>
+          </div>
+        )}
+        <FreeCounter apiLimitCount={apiLimitCount} isPro={isPro} />
+      </div>
     </div>
   );
 };

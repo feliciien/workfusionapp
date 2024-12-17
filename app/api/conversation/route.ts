@@ -13,9 +13,9 @@ const openai = new OpenAI({
 export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
 export async function POST(req: Request) {
-  const { userId } = auth();
-
   try {
+    const { userId } = await auth();
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     const isPro = await checkSubscription();
 
     if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired", { status: 403 });
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
     // Track API call attempt
@@ -141,6 +141,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(assistantMessage);
   } catch (error) {
+    const { userId } = await auth();
     // Track error
     if (userId) {
       await trackEvent(userId, "error", {

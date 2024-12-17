@@ -6,41 +6,31 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Fetch conversations with their latest message
     const conversations = await prismadb.conversation.findMany({
       where: {
-        userId: userId,
+        userId
+      },
+      orderBy: {
+        createdAt: 'desc'
       },
       include: {
         messages: {
           orderBy: {
-            createdAt: 'desc'
-          },
-          take: 1,
-        },
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      },
+            createdAt: 'asc'
+          }
+        }
+      }
     });
 
-    // Format the conversations for the frontend
-    const formattedConversations = conversations.map(conversation => ({
-      id: conversation.id,
-      title: conversation.title,
-      timestamp: conversation.updatedAt,
-      preview: conversation.messages[0]?.content || "No messages yet",
-    }));
-
-    return NextResponse.json(formattedConversations);
+    return NextResponse.json(conversations);
   } catch (error) {
-    console.error('[CONVERSATION_HISTORY_ERROR]', error);
+    console.error("[CONVERSATION_HISTORY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -11,9 +11,10 @@ interface ToolPageProps {
   tool: Tool;
   children: React.ReactNode;
   isLoading?: boolean;
+  error?: string | null;
 }
 
-export function ToolPage({ tool, children, isLoading }: ToolPageProps) {
+export function ToolPage({ tool, children, isLoading, error }: ToolPageProps) {
   return (
     <div>
       <div className="mb-8 space-y-4">
@@ -30,12 +31,12 @@ export function ToolPage({ tool, children, isLoading }: ToolPageProps) {
           tool.bgColor,
           "p-6 rounded-lg border-none shadow-md"
         )}>
+          {children}
           {isLoading && (
             <div className="p-8 rounded-lg w-full flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           )}
-          {!isLoading && children}
         </Card>
       </div>
     </div>

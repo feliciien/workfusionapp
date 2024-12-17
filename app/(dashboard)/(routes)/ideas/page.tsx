@@ -37,8 +37,6 @@ export default function IdeasPage() {
       setIdeas([]);
       const response = await api.generateIdeas(topic);
       
-      console.log("Raw API Response:", response);
-      
       if (response.status === "error") {
         throw new Error(response.message || "Failed to generate ideas");
       }
@@ -52,9 +50,20 @@ export default function IdeasPage() {
       toast.success("Ideas generated!");
     } catch (error: any) {
       console.error("Ideas error:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
+      let errorMessage = error.response?.data || error.message || "Something went wrong";
+      
+      // Handle specific error cases
+      if (error.response?.status === 403) {
+        errorMessage = "Free trial has expired. Please upgrade to Pro for unlimited access.";
+        toast.error(errorMessage, {
+          duration: 5000
+        });
+        window.location.href = "/settings";
+      } else {
+        toast.error(errorMessage);
+      }
+      
       setError(errorMessage);
-      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +85,11 @@ export default function IdeasPage() {
   };
 
   return (
-    <ToolPage tool={tool} isLoading={isLoading}>
+    <ToolPage
+      tool={tool}
+      isLoading={isLoading}
+      error={error}
+    >
       <div className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {categories.map((category) => (
@@ -100,17 +113,28 @@ export default function IdeasPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">What kind of ideas are you looking for?</label>
               <Input
-                placeholder="Enter a topic or category..."
+                placeholder="Enter a topic to generate ideas for..."
                 value={topic}
-                onChange={(e) => {
-                  setTopic(e.target.value);
-                  setError(null);
-                }}
+                onChange={(e) => setTopic(e.target.value)}
                 disabled={isLoading}
               />
               {topic && (
                 <div className="text-xs text-muted-foreground">
                   {topic.length}/1000 characters
+                </div>
+              )}
+              {error && (
+                <div className="text-sm text-red-500">
+                  {error}
+                  {error.includes("free trial") && (
+                    <Button
+                      variant="link"
+                      className="pl-2 text-primary"
+                      onClick={() => window.location.href = "/settings"}
+                    >
+                      Upgrade to Pro
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -129,12 +153,6 @@ export default function IdeasPage() {
               )}
             </Button>
           </div>
-
-          {error && (
-            <Card className="p-4 border-destructive">
-              <div className="text-sm text-destructive">{error}</div>
-            </Card>
-          )}
 
           {ideas.length > 0 && (
             <Card className="p-4">

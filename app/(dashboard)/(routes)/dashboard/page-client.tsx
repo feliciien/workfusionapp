@@ -26,6 +26,9 @@ interface UsageStats {
   used: number;
   total: number;
   lastUsed?: string;
+  dailyUsage: number[];
+  popularTools: string[];
+  efficiency: number;
 }
 
 export default function DashboardClient() {
@@ -35,22 +38,33 @@ export default function DashboardClient() {
   const [recentTools, setRecentTools] = useState<Tool[]>([]);
   const [usageStats, setUsageStats] = useState<UsageStats>({
     used: 0,
-    total: 100
+    total: 100,
+    dailyUsage: Array(7).fill(0),
+    popularTools: [],
+    efficiency: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading data
     const loadData = async () => {
       try {
-        // TODO: Load actual usage stats from API
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Simulate loading data
+        const mockData = {
+          used: 45,
+          total: 100,
+          dailyUsage: [12, 15, 8, 20, 18, 25, 30],
+          popularTools: ['Conversation', 'Image Generation', 'Code'],
+          efficiency: 85
+        };
+        
+        setUsageStats(mockData);
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
         setIsLoading(false);
       }
     };
+    
     loadData();
   }, []);
 
@@ -102,6 +116,74 @@ export default function DashboardClient() {
               <span className="text-sm text-muted-foreground">{usageStats.used}/{usageStats.total}</span>
             </div>
             <Progress value={(usageStats.used / usageStats.total) * 100} />
+          </div>
+        </Card>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-8">
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Daily Usage</h3>
+            <BarChart2 className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="mt-4 h-32 flex items-end justify-between">
+            {usageStats.dailyUsage.map((usage, index) => (
+              <div
+                key={index}
+                className="w-8 bg-gradient-to-t from-primary/50 to-primary rounded-t"
+                style={{ height: `${(usage / Math.max(...usageStats.dailyUsage)) * 100}%` }}
+              />
+            ))}
+          </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Popular Tools</h3>
+            <Star className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="mt-4">
+            {usageStats.popularTools.map((tool, index) => (
+              <div key={index} className="flex items-center justify-between mt-2">
+                <span>{tool}</span>
+                <Progress value={(100 - index * 20)} className="w-32" />
+              </div>
+            ))}
+          </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Efficiency Score</h3>
+            <Clock className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="mt-4 flex flex-col items-center">
+            <div className="relative h-32 w-32">
+              <svg className="transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  strokeWidth="10"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  strokeDasharray={`${usageStats.efficiency * 2.83} 283`}
+                  className="text-primary"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-2xl font-bold">{usageStats.efficiency}%</span>
+              </div>
+            </div>
           </div>
         </Card>
       </div>

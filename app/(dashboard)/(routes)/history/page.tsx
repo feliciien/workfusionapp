@@ -15,7 +15,8 @@ interface Conversation {
   id: string;
   title: string;
   featureType: string;
-  timestamp: Date;
+  createdAt: string;
+  updatedAt: string;
   preview: string;
 }
 
@@ -32,7 +33,15 @@ export default function HistoryPage() {
     try {
       setLoading(true);
       const response = await axios.get("/api/conversation/history");
-      setConversations(response.data);
+      
+      // Ensure dates are properly formatted
+      const formattedConversations = response.data.map((conv: any) => ({
+        ...conv,
+        createdAt: new Date(conv.createdAt).toISOString(),
+        updatedAt: new Date(conv.updatedAt).toISOString()
+      }));
+      
+      setConversations(formattedConversations);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     } finally {
@@ -131,7 +140,7 @@ export default function HistoryPage() {
                         </p>
                       </div>
                       <Badge variant="secondary" className="ml-2">
-                        {format(new Date(conversation.timestamp), "MMM d, yyyy")}
+                        {format(new Date(conversation.updatedAt), "MMM d, yyyy")}
                       </Badge>
                     </div>
                   </Card>
