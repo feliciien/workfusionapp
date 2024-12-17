@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Montserrat } from 'next/font/google';
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Code, 
   ImageIcon, 
@@ -16,7 +16,9 @@ import {
   Mic2,
   Palette,
   Brain,
-  History
+  History,
+  Moon,
+  Sun
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
@@ -114,6 +116,20 @@ const Sidebar = ({
 }: SidebarProps) => {
   const pathname = usePathname();
   const [hoveredRoute, setHoveredRoute] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(prefersDark);
+    if (prefersDark) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle('dark');
+  };
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
@@ -132,13 +148,13 @@ const Sidebar = ({
               key={route.href}
               href={route.href}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition relative",
+                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
                 pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
               onMouseEnter={() => setHoveredRoute(route.href)}
               onMouseLeave={() => setHoveredRoute(null)}
             >
-              <div className={cn("flex items-center flex-1")}>
+              <div className="flex items-center flex-1">
                 <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
                 {route.label}
               </div>
@@ -152,6 +168,19 @@ const Sidebar = ({
               )}
             </Link>
           ))}
+          <button
+            onClick={toggleDarkMode}
+            className="text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition text-zinc-400"
+          >
+            <div className="flex items-center flex-1">
+              {darkMode ? (
+                <Sun className="h-5 w-5 mr-3 text-yellow-500" />
+              ) : (
+                <Moon className="h-5 w-5 mr-3 text-blue-500" />
+              )}
+              {darkMode ? "Light Mode" : "Dark Mode"}
+            </div>
+          </button>
         </div>
       </div>
 

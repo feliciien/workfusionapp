@@ -33,6 +33,7 @@ export default function ConversationPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Only run client-side
   useEffect(() => {
@@ -61,14 +62,15 @@ export default function ConversationPage() {
   const loadConversation = async (id: string) => {
     try {
       setLoading(true);
+      setError(null);
       const response = await axios.get(`/api/conversation/${id}`);
       const formattedMessages = response.data.messages.map((msg: any) => ({
         role: msg.role,
         content: typeof msg.content === 'string' ? msg.content : msg.content.text || '',
       }));
       setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load conversation');
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,21 @@ export default function ConversationPage() {
 
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
-    return null;
+    return <Loader />;
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 lg:px-8">
+        <Heading
+          title="Error"
+          description={error}
+          icon={MessageSquare}
+          iconColor="text-red-500"
+          bgColor="bg-red-500/10"
+        />
+      </div>
+    );
   }
 
   return (
