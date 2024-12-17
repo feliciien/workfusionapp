@@ -40,6 +40,8 @@ body,
     --ring: 215 20.2% 65.1%;
 
     --radius: 0.5rem;
+
+    --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 
   .dark {
@@ -80,6 +82,12 @@ body,
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
   }
 }
 

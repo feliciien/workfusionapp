@@ -30,8 +30,13 @@ export const LandingNabvbar = () => {
   return (
     <nav className="p-4 bg-transparent flex items-center justify-between">
       <Link href="/" className="flex items-center">
-        <div className="relative h-8 w-8 mr-4">
-          <Image fill src="/logo.png" alt="Logo" />
+        <div className="relative h-8 w-8 mr-4 rounded-lg overflow-hidden bg-white/10 p-1 backdrop-blur-sm">
+          <Image 
+            fill 
+            src="/logo.png" 
+            alt="Logo"
+            className="object-contain"
+          />
         </div>
         <h1 className={cn("text-2xl font-bold text-white", font.className)}>workfusionapp</h1>
       </Link>
