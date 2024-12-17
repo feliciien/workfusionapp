@@ -37,18 +37,22 @@ export default function IdeasPage() {
       setIdeas([]);
       const response = await api.generateIdeas(topic);
       
-      console.log("API Response:", response);
-
-      if (!response?.data?.data?.ideas || !Array.isArray(response.data.data.ideas)) {
+      console.log("Raw API Response:", response);
+      
+      if (response.status === "error") {
+        throw new Error(response.message || "Failed to generate ideas");
+      }
+      
+      if (!response?.data?.ideas || !Array.isArray(response.data.ideas)) {
         console.error("Invalid response structure:", response);
         throw new Error("Invalid response from server");
       }
 
-      setIdeas(response.data.data.ideas);
+      setIdeas(response.data.ideas);
       toast.success("Ideas generated!");
     } catch (error: any) {
       console.error("Ideas error:", error);
-      const errorMessage = error.response?.data || error.message || "Something went wrong";
+      const errorMessage = error.response?.data?.message || error.message || "Something went wrong";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

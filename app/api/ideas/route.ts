@@ -91,21 +91,18 @@ export async function POST(req: Request) {
       await increaseApiLimit();
     }
 
-    const responseData = {
+    return NextResponse.json({
+      status: "success",
       data: {
         ideas: ideas
       }
-    };
-
-    console.log("Final response:", responseData);
-
-    return NextResponse.json(responseData);
+    });
 
   } catch (error: any) {
     console.error("[IDEAS_ERROR]", error);
-    if (error.code === "P2003") {
-      return new NextResponse("User authentication error. Please try logging out and back in.", { status: 401 });
-    }
-    return new NextResponse(error.message || "Internal Error", { status: 500 });
+    return NextResponse.json({
+      status: "error",
+      message: error?.message || "Internal Server Error"
+    }, { status: 500 });
   }
 }

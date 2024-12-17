@@ -30,19 +30,29 @@ const publicRoutes = [
 
 export default authMiddleware({
   publicRoutes,
-  afterAuth(auth, req) {
+  async afterAuth(auth, req) {
     // Handle CORS preflight requests
     if (req.method === "OPTIONS") {
-      return new NextResponse(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Credentials": "true",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
-          "Access-Control-Allow-Headers": "*",
-        },
-      });
+      const headers = {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+        "Access-Control-Allow-Headers": "*",
+      };
+
+      return NextResponse.json({}, { headers });
     }
+
+    // Add auth to the request
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-auth-userId', auth.userId ?? '');
+    requestHeaders.set('x-auth-orgId', auth.orgId ?? '');
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 });
 

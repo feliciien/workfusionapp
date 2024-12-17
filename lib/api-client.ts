@@ -8,8 +8,9 @@ const apiClient = axios.create({
 });
 
 export interface ApiResponse<T> {
-  data: T;
-  error?: string;
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
 }
 
 export interface Slide {
@@ -110,9 +111,18 @@ export const api = {
     return response.data;
   },
 
-  async generateIdeas(topic: string): Promise<ApiResponse<{ data: { ideas: string[] } }>> {
-    const response = await apiClient.post('/ideas', { topic });
-    return response.data;
+  async generateIdeas(topic: string): Promise<ApiResponse<{ ideas: string[] }>> {
+    try {
+      const response = await apiClient.post('/ideas', { topic });
+      if (!response.data?.data) {
+        console.error('Invalid response structure:', response.data);
+        throw new Error('Invalid response structure from server');
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Ideas API error:', error);
+      throw error;
+    }
   },
 };
 
