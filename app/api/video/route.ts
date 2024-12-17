@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
 import Replicate from "replicate";
 
 if (!process.env.REPLICATE_API_TOKEN) {
@@ -9,16 +9,16 @@ if (!process.env.REPLICATE_API_TOKEN) {
 }
 
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
+  auth: process.env.REPLICATE_API_TOKEN!,
 });
 
 export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
-export async function POST(req: Request): Promise<NextResponse> {
+export async function POST(req: Request) {
   try {
     const { userId } = auth();
     const body = await req.json();
-    const { prompt } = body;
+    const { prompt, num_frames = 14, fps = 6 } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -35,33 +35,29 @@ export async function POST(req: Request): Promise<NextResponse> {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    console.log("Starting video generation with prompt:", prompt);
-
-    // Use the text-to-video-zero model
-    const prediction = await replicate.run(
-      "anotherjesse/zeroscope-v2-xl:71996d331e8ede8ef7bd76eba9fae076d31792e4ddf4ad057779b443d6aea62f",
+    console.log("Making request to Replicate API...");
+    
+    const response = await replicate.run(
+      "stability-ai/stable-video-diffusion:3d60c49b398705475c457f87f3f0c284cc29fcc05fed9f1ae489003ddc1634b1",
       {
         input: {
           prompt,
-          num_frames: 24,
-          fps: 12
+          num_frames,
+          fps,
         }
       }
     );
-
-    console.log("Generation completed. Output:", prediction);
 
     if (!isPro) {
       await increaseApiLimit();
     }
 
-    return NextResponse.json(prediction);
-
-  } catch (error) {
-    console.error('[VIDEO_ERROR] Full error:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
+    return NextResponse.json(response);
+  } catch (error: any) {
+    console.error("Error in video generation:", error);
+    if (error.response?.status === 422) {
+      return new NextResponse("Invalid model configuration. Please try different parameters.", { status: 422 });
     }
-    return new NextResponse(error instanceof Error ? error.message : "Internal Error", { status: 500 });
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export const checkSubscription = async (): Promise<boolean> => {
   try {
-    const { userId } = await auth();
+    const { userId } = auth();
 
     if (!userId) {
       return false;
@@ -16,10 +16,10 @@ export const checkSubscription = async (): Promise<boolean> => {
         userId: userId
       },
       select: {
-        paypalStatus: true,
+        userId: true,
         paypalCurrentPeriodEnd: true,
+        paypalStatus: true,
         paypalSubscriptionId: true,
-        paypalPlanId: true
       }
     });
 
@@ -27,15 +27,13 @@ export const checkSubscription = async (): Promise<boolean> => {
       return false;
     }
 
-    const isValid = 
+    const isValid =
       userSubscription.paypalStatus === "ACTIVE" &&
-      userSubscription.paypalCurrentPeriodEnd !== null &&
-      userSubscription.paypalCurrentPeriodEnd.getTime() + DAY_IN_MS > Date.now();
+      userSubscription.paypalCurrentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now();
 
     return !!isValid;
-
   } catch (error) {
-    console.error("[SUBSCRIPTION_ERROR]", error);
+    console.error('Error checking subscription:', error);
     return false;
   }
 };
