@@ -9,7 +9,8 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { materialLight, materialDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import type { SyntaxHighlighterProps } from 'react-syntax-highlighter';
 import * as z from "zod";
 import { BotAvatar } from "@/components/bot-avatar";
 import { UserAvatar } from "@/components/user-avatar";
@@ -20,6 +21,40 @@ import { toast } from "react-hot-toast";
 import { formSchema } from "./constants";
 import { cn } from "@/lib/utils";
 import useProModal from "@/hooks/use-pro-modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface CodeBlockProps {
+  code: string;
+  language: string;
+  theme: string;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, theme }) => (
+  <div className="relative">
+    <Button
+      variant="ghost"
+      size="sm"
+      className="absolute top-2 right-2"
+      onClick={() => navigator.clipboard.writeText(code).then(() => toast.success("Code copied!"))}
+    >
+      Copy
+    </Button>
+    <div className="rounded-md overflow-hidden">
+      <pre style={{ margin: 0, background: 'transparent' }}>
+        <code className={`language-${language}`}>
+          <SyntaxHighlighter
+            PreTag="div"
+            language={language}
+            style={theme === "materialLight" ? materialLight : materialDark}
+            customStyle={{ margin: 0, background: 'transparent' }}
+          >
+            {code}
+          </SyntaxHighlighter>
+        </code>
+      </pre>
+    </div>
+  </div>
+);
 
 const CodePage = () => {
   const proModal = useProModal();
@@ -28,6 +63,9 @@ const CodePage = () => {
   const [sandboxCode, setSandboxCode] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [language, setLanguage] = useState("javascript");
+  const [theme, setTheme] = useState("materialLight");
+  const [autoFormat, setAutoFormat] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -101,6 +139,44 @@ const CodePage = () => {
     }
   };
 
+  const formatCode = (code: string): string => {
+    // Simple indentation-based formatting
+    try {
+      const lines = code.split('\n');
+      let indentLevel = 0;
+      const indentSize = 2;
+      
+      return lines.map(line => {
+        // Decrease indent for closing braces/brackets
+        if (line.trim().match(/^[}\])]/) && indentLevel > 0) {
+          indentLevel--;
+        }
+        
+        // Add current indentation
+        const formatted = ' '.repeat(indentLevel * indentSize) + line.trim();
+        
+        // Increase indent for opening braces/brackets
+        if (line.trim().match(/[{\[(]$/)) {
+          indentLevel++;
+        }
+        
+        return formatted;
+      }).join('\n');
+    } catch (error) {
+      console.error('Error formatting code:', error);
+      return code;
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Code copied to clipboard!");
+    } catch (error) {
+      toast.error("Failed to copy code");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center p-4 bg-white dark:bg-gray-800 shadow-md">
@@ -116,45 +192,70 @@ const CodePage = () => {
         )}
 
         <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center space-x-4">
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  <SelectItem value="typescript">TypeScript</SelectItem>
+                  <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="java">Java</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAutoFormat(!autoFormat)}
+                className={cn(
+                  "text-xs",
+                  autoFormat && "text-green-500"
+                )}
+              >
+                Auto Format
+              </Button>
+            </div>
+          </div>
           {messages.map((message, index) => (
-            <div
+            <div 
               key={index}
               className={cn(
-                "flex items-start",
-                message.role === "user" ? "justify-end" : "justify-start"
+                "flex items-start gap-x-4 rounded-lg p-4",
+                message.role === "user" ? "bg-white dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-700"
               )}
             >
               {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-              <div
-                className={cn(
-                  "max-w-lg mx-2 p-4 rounded-lg shadow-md transition-all duration-300",
-                  message.role === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                )}
-              >
+              <div className="flex-1 space-y-2">
                 <ReactMarkdown
-                  className="prose prose-sm dark:prose-dark"
                   components={{
-                    pre: ({ node, ...props }) => (
-                      <div className="overflow-auto my-2 bg-black/10 p-2 rounded-lg">
-                        <pre {...props} />
-                      </div>
-                    ),
-                    code: ({ node, ...props }) => (
-                      <SyntaxHighlighter
-                        language="javascript"
-                        style={materialLight}
-                        className="rounded-lg p-2"
-                      >
-                        {String(props.children)}
-                      </SyntaxHighlighter>
-                    ),
+                    code({ node, inline, className, children, ...props }) {
+                      if (inline) {
+                        return (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      }
+                      
+                      const match = /language-(\w+)/.exec(className || "");
+                      const codeString = Array.isArray(children) ? children.join("") : String(children);
+                      const lang = match ? match[1] : language;
+                      const formattedCode = formatCode(codeString);
+                      
+                      return (
+                        <CodeBlock
+                          code={formattedCode}
+                          language={lang}
+                          theme={theme}
+                        />
+                      );
+                    },
                   }}
                 >
-                  {typeof message.content === 'string' ? message.content : ''}
+                  {message.content as string}
                 </ReactMarkdown>
-                {/* Optional: Add timestamps here */}
               </div>
             </div>
           ))}
