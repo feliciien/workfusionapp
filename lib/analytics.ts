@@ -69,7 +69,7 @@ export async function getApiUsageStats(userId: string) {
   });
 
   // Group by date
-  const dailyUsage = apiCalls.reduce<Record<string, number>>((acc, { createdAt }) => {
+  const dailyUsage = apiCalls.reduce((acc: Record<string, number>, { createdAt }: { createdAt: Date }) => {
     const date = createdAt.toISOString().split("T")[0];
     acc[date] = (acc[date] || 0) + 1;
     return acc;
