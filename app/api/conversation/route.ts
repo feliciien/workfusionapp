@@ -42,7 +42,14 @@ export async function POST(req: Request) {
     }
 
     if (!openai.apiKey) {
+      console.error("[OPENAI_ERROR] API key not configured");
       return new NextResponse("OpenAI API Key not configured", { status: 500 });
+    }
+
+    // Validate API key format
+    if (!openai.apiKey.startsWith('sk-')) {
+      console.error("[OPENAI_ERROR] Invalid API key format");
+      return new NextResponse("Invalid OpenAI API key format", { status: 500 });
     }
 
     const freeTrial = await checkApiLimit();
@@ -100,7 +107,6 @@ export async function POST(req: Request) {
           data: {
             userId: userId,
             title: messages[0].content.slice(0, 100),
-            featureType: featureType,
             messages: {
               create: [
                 {
