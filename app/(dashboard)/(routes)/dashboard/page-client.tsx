@@ -118,122 +118,37 @@ export default function DashboardClient() {
             />
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">API Usage</span>
-              <span className="text-sm text-muted-foreground">{usageStats.used}/{usageStats.total}</span>
-            </div>
-            <Progress value={(usageStats.used / usageStats.total) * 100} />
-          </div>
-        </Card>
+      </div>
+
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
       </div>
 
       {/* Analytics Section */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-8">
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Daily Usage</h3>
-            <BarChart2 className="h-5 w-5 text-gray-500" />
+            <p className="text-sm font-medium">Success Rate</p>
+            <h3 className="text-2xl font-bold">{usageStats.successRate}%</h3>
           </div>
-          <div className="mt-4 h-32 flex items-end justify-between">
-            {usageStats.dailyUsage.map((usage, index) => (
-              <div
-                key={index}
-                className="w-8 bg-gradient-to-t from-primary/50 to-primary rounded-t"
-                style={{ height: `${(usage / Math.max(...usageStats.dailyUsage)) * 100}%` }}
-              />
-            ))}
-          </div>
+          <Progress value={usageStats.successRate} className="mt-4" />
         </Card>
         
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Popular Tools</h3>
-            <Star className="h-5 w-5 text-gray-500" />
+            <p className="text-sm font-medium">AI Accuracy</p>
+            <h3 className="text-2xl font-bold">{usageStats.aiAccuracy}%</h3>
           </div>
-          <div className="mt-4">
-            {usageStats.popularTools.map((tool, index) => (
-              <div key={index} className="flex items-center justify-between mt-2">
-                <span>{tool}</span>
-                <Progress value={(100 - index * 20)} className="w-32" />
-              </div>
-            ))}
-          </div>
+          <Progress value={usageStats.aiAccuracy} className="mt-4" />
         </Card>
-        
+
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Efficiency Score</h3>
-            <Clock className="h-5 w-5 text-gray-500" />
-          </div>
-          <div className="mt-4 flex flex-col items-center">
-            <div className="relative h-32 w-32">
-              <svg className="transform -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#e5e7eb"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="10"
-                  strokeDasharray={`${usageStats.efficiency * 2.83} 283`}
-                  className="text-primary"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold">{usageStats.efficiency}%</span>
-              </div>
-            </div>
+            <p className="text-sm font-medium">Avg Response Time</p>
+            <h3 className="text-2xl font-bold">
+              {(usageStats.responseTime.reduce((a, b) => a + b, 0) / usageStats.responseTime.length).toFixed(2)}s
+            </h3>
           </div>
         </Card>
-      </div>
-
-      <div className="space-y-4 mt-8">
-        <h2 className="text-2xl font-bold">Performance Metrics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Success Rate</p>
-                <h3 className="text-2xl font-bold">{usageStats.successRate}%</h3>
-              </div>
-              <BarChart2 className="h-8 w-8 text-green-500" />
-            </div>
-            <Progress value={usageStats.successRate} className="mt-4" />
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">AI Accuracy</p>
-                <h3 className="text-2xl font-bold">{usageStats.aiAccuracy}%</h3>
-              </div>
-              <Star className="h-8 w-8 text-yellow-500" />
-            </div>
-            <Progress value={usageStats.aiAccuracy} className="mt-4" />
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Avg Response Time</p>
-                <h3 className="text-2xl font-bold">
-                  {(usageStats.responseTime.reduce((a, b) => a + b, 0) / usageStats.responseTime.length).toFixed(2)}s
-                </h3>
-              </div>
-              <Clock className="h-8 w-8 text-blue-500" />
-            </div>
-          </Card>
-        </div>
       </div>
 
       {/* Quick Access Section */}
