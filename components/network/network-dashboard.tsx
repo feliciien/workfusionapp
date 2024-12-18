@@ -2,15 +2,10 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Network, AlertTriangle, ArrowUp, ArrowDown, Activity, Clock } from "lucide-react";
 import { NetworkMetrics } from "@/lib/network-metrics";
-import { useState } from "react";
-import cn from "classnames";
+import { NetworkRecommendations } from "./network-recommendations";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Network, Activity, TrendingUp, TrendingDown } from "lucide-react";
 
 interface NetworkDashboardProps {
   dailyMetrics: NetworkMetrics;
@@ -25,75 +20,29 @@ export function NetworkDashboard({
   monthlyMetrics,
   isPro
 }: NetworkDashboardProps) {
-  const [timeframe, setTimeframe] = useState<"day" | "week" | "month">("day");
-
-  const metrics = {
-    day: dailyMetrics,
-    week: weeklyMetrics,
-    month: monthlyMetrics
-  }[timeframe];
-
-  const getHealthStatus = (score: number) => {
-    if (score >= 90) return { label: "Excellent", color: "text-green-500" };
-    if (score >= 70) return { label: "Good", color: "text-blue-500" };
-    if (score >= 50) return { label: "Fair", color: "text-yellow-500" };
-    return { label: "Poor", color: "text-red-500" };
+  const formatData = (metrics: NetworkMetrics) => {
+    return metrics.timestamps.map((time, i) => ({
+      time,
+      latency: metrics.latency[i],
+      bandwidth: metrics.bandwidth[i]
+    }));
   };
 
-  const healthStatus = getHealthStatus(metrics.healthScore);
-
-  return (
-    <div className="space-y-4">
+  const renderMetricsCards = (metrics: NetworkMetrics) => {
+    const currentLatency = metrics.latency[metrics.latency.length - 1];
+    const currentBandwidth = metrics.bandwidth[metrics.bandwidth.length - 1];
+    
+    return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Network Health</CardTitle>
-            <Activity className={healthStatus.color} />
+            <CardTitle className="text-sm font-medium">Latency</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center">
-              <div className="text-2xl font-bold">{metrics.healthScore.toFixed(1)}%</div>
-              <Badge className={`ml-2 ${healthStatus.color}`}>{healthStatus.label}</Badge>
-            </div>
-            <Progress 
-              value={metrics.healthScore} 
-              className={cn(
-                "mt-2",
-                healthStatus.color === "text-green-500" && "bg-green-100 [&>div]:bg-green-500",
-                healthStatus.color === "text-blue-500" && "bg-blue-100 [&>div]:bg-blue-500",
-                healthStatus.color === "text-yellow-500" && "bg-yellow-100 [&>div]:bg-yellow-500",
-                healthStatus.color === "text-red-500" && "bg-red-100 [&>div]:bg-red-500"
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
-            <Clock className="text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.uptime.toFixed(2)}%</div>
+            <div className="text-2xl font-bold">{currentLatency.toFixed(1)}ms</div>
             <p className="text-xs text-muted-foreground">
-              Last {timeframe}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
-            <Network className="text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {metrics.latency.length > 0
-                ? (metrics.latency.reduce((a, b) => a + b, 0) / metrics.latency.length).toFixed(1)
-                : "0"} ms
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Response time
+              {currentLatency < 50 ? "Excellent" : currentLatency < 100 ? "Good" : "Poor"}
             </p>
           </CardContent>
         </Card>
@@ -101,82 +50,138 @@ export function NetworkDashboard({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Bandwidth</CardTitle>
-            <div className="flex space-x-2">
-              <ArrowUp className="text-green-500" />
-              <ArrowDown className="text-blue-500" />
-            </div>
+            <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {metrics.bandwidth.length > 0
-                ? metrics.bandwidth[metrics.bandwidth.length - 1].toFixed(1)
-                : "0"} Mbps
-            </div>
+            <div className="text-2xl font-bold">{currentBandwidth.toFixed(1)} Mbps</div>
             <p className="text-xs text-muted-foreground">
-              Current usage
+              {currentBandwidth > 50 ? "High Speed" : currentBandwidth > 25 ? "Good" : "Limited"}
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Upload</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(currentBandwidth * 0.2).toFixed(1)} Mbps</div>
+            <p className="text-xs text-muted-foreground">Upload Speed</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.uptime.toFixed(2)}%</div>
+            <p className="text-xs text-muted-foreground">Network Availability</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex-1 space-y-4 p-4 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Network Monitor</h2>
       </div>
 
-      <Card className="col-span-4">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Performance Metrics</CardTitle>
-            <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as typeof timeframe)}>
-              <TabsList>
-                <TabsTrigger value="day">24h</TabsTrigger>
-                <TabsTrigger value="week">7d</TabsTrigger>
-                <TabsTrigger value="month">30d</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={metrics.timestamps.map((time, i) => ({
-                  time,
-                  latency: metrics.latency[i],
-                  bandwidth: metrics.bandwidth[i]
-                }))}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="latency"
-                  stroke="#ff9800"
-                  name="Latency (ms)"
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="bandwidth"
-                  stroke="#2196f3"
-                  name="Bandwidth (Mbps)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="daily" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="daily">Daily</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly</TabsTrigger>
+        </TabsList>
 
-      {!isPro && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Pro Feature</AlertTitle>
-          <AlertDescription>
-            Upgrade to Pro to access advanced network monitoring features and historical data.
-          </AlertDescription>
-        </Alert>
-      )}
+        <TabsContent value="daily" className="space-y-4">
+          {renderMetricsCards(dailyMetrics)}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Network Performance</CardTitle>
+                <CardDescription>
+                  24-hour network metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={formatData(dailyMetrics)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Line yAxisId="left" type="monotone" dataKey="latency" stroke="#8884d8" name="Latency (ms)" />
+                    <Line yAxisId="right" type="monotone" dataKey="bandwidth" stroke="#82ca9d" name="Bandwidth (Mbps)" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <NetworkRecommendations metrics={dailyMetrics} isPro={isPro} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="weekly" className="space-y-4">
+          {renderMetricsCards(weeklyMetrics)}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Network Performance</CardTitle>
+                <CardDescription>
+                  7-day network metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={formatData(weeklyMetrics)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Line yAxisId="left" type="monotone" dataKey="latency" stroke="#8884d8" name="Latency (ms)" />
+                    <Line yAxisId="right" type="monotone" dataKey="bandwidth" stroke="#82ca9d" name="Bandwidth (Mbps)" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <NetworkRecommendations metrics={weeklyMetrics} isPro={isPro} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="monthly" className="space-y-4">
+          {renderMetricsCards(monthlyMetrics)}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Network Performance</CardTitle>
+                <CardDescription>
+                  30-day network metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={formatData(monthlyMetrics)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Line yAxisId="left" type="monotone" dataKey="latency" stroke="#8884d8" name="Latency (ms)" />
+                    <Line yAxisId="right" type="monotone" dataKey="bandwidth" stroke="#82ca9d" name="Bandwidth (Mbps)" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <NetworkRecommendations metrics={monthlyMetrics} isPro={isPro} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

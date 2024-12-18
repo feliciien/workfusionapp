@@ -1,23 +1,25 @@
 import { Network } from "lucide-react";
 import { Heading } from "@/components/heading";
 import { NetworkDashboard } from "@/components/network/network-dashboard";
-import { getNetworkMetrics } from "@/lib/network-metrics";
 import { checkSubscription } from "@/lib/subscription";
+import { getNetworkMetrics } from "@/lib/network-metrics";
+import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs";
 
 export default async function NetworkPage() {
-  const { userId } = auth();
-  const isPro = await checkSubscription();
-
-  if (!userId) {
-    return null;
+  const session = await auth();
+  
+  if (!session?.userId) {
+    redirect("/sign-in");
   }
+
+  const isPro = await checkSubscription();
 
   // Fetch network metrics for different timeframes
   const [dailyMetrics, weeklyMetrics, monthlyMetrics] = await Promise.all([
-    getNetworkMetrics(userId, "day"),
-    getNetworkMetrics(userId, "week"),
-    getNetworkMetrics(userId, "month"),
+    getNetworkMetrics(session.userId, "day"),
+    getNetworkMetrics(session.userId, "week"),
+    getNetworkMetrics(session.userId, "month"),
   ]);
 
   return (
