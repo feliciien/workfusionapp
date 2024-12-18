@@ -15,6 +15,7 @@ model User {
   apiLimit      UserApiLimit?
   subscription  UserSubscription?
   analytics     Analytics[]
+  networkMetrics NetworkMetrics[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 }
@@ -88,4 +89,19 @@ model Analytics {
 
   @@index([userId, eventType])
   @@index([createdAt])
+}
+
+model NetworkMetrics {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  timestamp   DateTime @default(now())
+  latency     Float
+  bandwidth   Float
+  packetLoss  Float    @default(0)
+  status      String   @default("active")
+  metadata    Json?
+
+  @@index([userId])
+  @@index([timestamp])
 }

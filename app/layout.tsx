@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "WorkFusion App - Advanced AI Platform for Business Automation",
   description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
   manifest: "/manifest.json",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   icons: {
     apple: "/icon.png",
   },

@@ -18,7 +18,8 @@ import {
   Brain,
   History,
   Moon,
-  Sun
+  Sun,
+  Network
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
@@ -32,6 +33,13 @@ const routes = [
     href: '/dashboard',
     color: "text-sky-500",
     description: "Overview of your AI workspace and activities."
+  },
+  {
+    label: 'Network Monitor',
+    icon: Network,
+    href: '/network',
+    color: "text-emerald-500",
+    description: "Monitor and analyze network performance metrics."
   },
   {
     label: 'Conversation',

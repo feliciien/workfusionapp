@@ -63,11 +63,14 @@ export async function getApiUsageStats(userId: string) {
         gte: thirtyDaysAgo,
       },
     },
+    select: {
+      createdAt: true,
+    }
   });
 
   // Group by date
-  const dailyUsage = apiCalls.reduce((acc: Record<string, number>, call) => {
-    const date = call.createdAt.toISOString().split("T")[0];
+  const dailyUsage = apiCalls.reduce<Record<string, number>>((acc, { createdAt }) => {
+    const date = createdAt.toISOString().split("T")[0];
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
