@@ -2,12 +2,18 @@ import Navbar from "@/components/navbar-server";
 import Sidebar from "@/components/sidebar";
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { auth } from "@clerk/nextjs/server";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { userId } = auth();
+  if (!userId) {
+    return null;
+  }
+  
   const apiLimitCount = await getApiLimitCount();
   const isPro = await checkSubscription();
 

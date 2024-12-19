@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { auth } from "@/lib/auth"; // Import the auth function
+import { headers } from "next/headers";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -29,7 +30,9 @@ const formatIdeas = (content: string): string[] => {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth(); // Call the auth function
+    // Initialize headers first
+    headers();
+    const { userId } = await auth();
     
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });

@@ -3,6 +3,7 @@ import { SubscriptionButton } from "@/components/subscription-button";
 import { checkSubscription } from "@/lib/subscription";
 import { Settings } from "lucide-react";
 import { Analytics } from '@vercel/analytics/react';
+
 const SettingsPage = async () => {
   const isPro = await checkSubscription();
 
@@ -15,6 +16,7 @@ const SettingsPage = async () => {
         </div>
         <SubscriptionButton isPro={isPro} />
       </div>
+      <Analytics />
     </div>
   );
 };

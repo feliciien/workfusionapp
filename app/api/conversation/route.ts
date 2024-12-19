@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/api-limit";
@@ -14,9 +15,11 @@ export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    // Initialize headers first
+    headers();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -27,14 +30,14 @@ export async function POST(req: Request) {
       return new NextResponse("Messages are required", { status: 400 });
     }
 
-    console.log("[CONVERSATION] Processing request for user:", userId);
+    console.log("[CONVERSATION] Processing request for user:", session.userId);
 
     try {
       // Try to create user if they don't exist
       await prismadb.user.upsert({
-        where: { id: userId },
+        where: { id: session.userId },
         update: {},
-        create: { id: userId }
+        create: { id: session.userId }
       });
     } catch (error) {
       console.error("[USER_CREATE_ERROR]", error);
@@ -60,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     // Track API call attempt
-    await trackEvent(userId, "api_call", {
+    await trackEvent(session.userId, "api_call", {
       endpoint: "/api/conversation",
       messageCount: messages.length,
       status: "attempt"
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
         conversation = await prismadb.conversation.update({
           where: {
             id: conversationId,
-            userId: userId,
+            userId: session.userId,
           },
           data: {
             updatedAt: new Date(),
@@ -101,11 +104,11 @@ export async function POST(req: Request) {
           },
         });
       } else {
-        console.log("[CONVERSATION] Creating new conversation for user:", userId);
+        console.log("[CONVERSATION] Creating new conversation for user:", session.userId);
         // Create new conversation
         conversation = await prismadb.conversation.create({
           data: {
-            userId: userId,
+            userId: session.userId,
             title: messages[0].content.slice(0, 100),
             messages: {
               create: [
@@ -126,7 +129,7 @@ export async function POST(req: Request) {
     } catch (error) {
       console.error("[CONVERSATION_DB_ERROR]", {
         error: error instanceof Error ? error.message : String(error),
-        userId,
+        userId: session.userId,
         conversationId,
         stack: error instanceof Error ? error.stack : undefined
       });
@@ -138,7 +141,7 @@ export async function POST(req: Request) {
     }
 
     // Track successful API call
-    await trackEvent(userId, "api_call", {
+    await trackEvent(session.userId, "api_call", {
       endpoint: "/api/conversation",
       status: "success",
       tokens: response.usage?.total_tokens,
@@ -147,10 +150,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json(assistantMessage);
   } catch (error) {
-    const { userId } = await auth();
-    // Track error
-    if (userId) {
-      await trackEvent(userId, "error", {
+    // Initialize headers first
+    headers();
+    const authCheck = await auth();
+
+    if (authCheck?.userId) {
+      // Track error
+      await trackEvent(authCheck.userId, "error", {
         endpoint: "/api/conversation",
         error: error instanceof Error ? error.message : "Unknown error"
       });
@@ -163,9 +169,11 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    // Initialize headers first
+    headers();
+    const authSession = await auth();
 
-    if (!userId) {
+    if (!authSession?.userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -179,7 +187,7 @@ export async function GET(req: Request) {
     const conversation = await prismadb.conversation.findUnique({
       where: {
         id: conversationId,
-        userId: userId,
+        userId: authSession.userId,
       },
       include: {
         messages: {

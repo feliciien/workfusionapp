@@ -1,15 +1,34 @@
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
 
 export const checkSubscription = async (): Promise<boolean> => {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    const { userId } = auth();
+    if (!userId) {
       return false;
     }
 
-    // TODO: Implement proper subscription check once database is set up
-    // For now, return true to enable all features
-    return true;
+    // Check if user has an active subscription in the database
+    const subscription = await db.userSubscription.findUnique({
+      where: {
+        userId: userId,
+      },
+      select: {
+        paypalSubscriptionId: true,
+        paypalCurrentPeriodEnd: true,
+      }
+    });
+
+    if (!subscription) {
+      return false;
+    }
+
+    // Check if subscription is active and not expired
+    return Boolean(
+      subscription.paypalSubscriptionId && 
+      subscription.paypalCurrentPeriodEnd &&
+      subscription.paypalCurrentPeriodEnd.getTime() > Date.now()
+    );
   } catch (error) {
     console.error("Error checking subscription:", error);
     return false;

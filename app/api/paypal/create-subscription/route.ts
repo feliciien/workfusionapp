@@ -7,12 +7,14 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
 // Replace these with your actual PayPal plan IDs
-const PLAN_DETAILS: Record<string, { plan_id: string }> = {
+const PLAN_DETAILS = {
   monthly: { plan_id: "P-8Y551355TK076831TM5M7OZA" }, // Your actual Monthly Plan ID
   yearly: { plan_id: "P-67X44179VA3351546M5M7P5I" },  // Your actual Yearly Plan ID
-};
+} as const;
 
-async function createSubscription(plan: string, userId: string) {
+type PlanType = keyof typeof PLAN_DETAILS;
+
+async function createSubscription(plan: PlanType, userId: string) {
   try {
     // Create Access Token
     const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
@@ -45,12 +47,12 @@ async function createSubscription(plan: string, userId: string) {
         plan_id: PLAN_DETAILS[plan].plan_id,
         custom_id: userId,
         application_context: {
-          brand_name: "WorkFusion",
+          brand_name: "SynthAI",
           locale: "en-US",
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",
-          return_url: `${process.env.NEXT_PUBLIC_APP_URL}/paypal-success`,
-          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+          return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
         },
       }),
     });
@@ -61,11 +63,10 @@ async function createSubscription(plan: string, userId: string) {
       throw new Error("Failed to create PayPal subscription");
     }
 
-    const subscriptionData = await subscriptionResponse.json();
-    return { success: true, data: subscriptionData };
+    return await subscriptionResponse.json();
   } catch (error) {
-    console.error("Subscription creation error:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error occurred" };
+    console.error("Error in createSubscription:", error);
+    throw error;
   }
 }
 
@@ -80,7 +81,7 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const plan = searchParams.get('plan') || 'monthly'; // Default to monthly if not specified
+    const plan = searchParams.get('plan') as PlanType || 'monthly';
 
     if (!PLAN_DETAILS[plan]) {
       return new NextResponse(
@@ -114,33 +115,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { plan } = body;
+    const { plan } = await req.json();
     
-    if (!plan || !PLAN_DETAILS[plan]) {
+    if (!plan || !PLAN_DETAILS[plan as PlanType]) {
       return new NextResponse(
         JSON.stringify({ error: "Invalid subscription plan" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const result = await createSubscription(plan, user.id);
-    
-    if (!result.success) {
-      return new NextResponse(
-        JSON.stringify({ error: result.error }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    const subscription = await createSubscription(plan as PlanType, user.id);
 
     return new NextResponse(
-      JSON.stringify(result.data),
+      JSON.stringify(subscription),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("Error creating subscription:", error);
     return new NextResponse(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: "Failed to create subscription" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
