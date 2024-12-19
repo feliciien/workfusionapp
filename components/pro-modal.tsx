@@ -10,7 +10,7 @@ import { toast } from "react-hot-toast";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export const ProModal = () => {
   const proModal = useProModal();
@@ -49,15 +49,13 @@ export const ProModal = () => {
     },
   ];
 
-  const onSubscribe = async () => {
+  const onSubscribe = () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/paypal");
-
-      // Redirect the user to the PayPal approval URL
-      window.location.href = response.data.url;
+      proModal.onClose();
+      window.location.href = "/settings";
     } catch (error) {
-      console.log("[PAYPAL_CLIENT_ERROR]", error);
+      console.log("Error redirecting to settings:", error);
       toast.error("Something went wrong.");
     } finally {
       setLoading(false);
@@ -76,7 +74,7 @@ export const ProModal = () => {
               </Badge>
             </div>
           </DialogTitle>
-          <DialogDescription className="text-center pt-2 space-y-2 text-zinc-900 font-medium">
+          <div className="text-center pt-2 space-y-2 text-zinc-900 font-medium">
             {tools.map((tool) => (
               <Card key={tool.label} className="p-3 border-black/5 flex items-center justify-between">
                 <div className="flex items-center gap-x-4">
@@ -88,7 +86,7 @@ export const ProModal = () => {
                 <Check className="text-primary w-5 h-5" />
               </Card>
             ))}
-          </DialogDescription>
+          </div>
         </DialogHeader>
         <DialogFooter>
           <Button disabled={loading} size="lg" variant="premium" className="w-full" onClick={onSubscribe}>
