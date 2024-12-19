@@ -29,9 +29,6 @@ interface UsageStats {
   dailyUsage: number[];
   popularTools: string[];
   efficiency: number;
-  responseTime: number[];
-  successRate: number;
-  aiAccuracy: number;
 }
 
 export default function DashboardClient() {
@@ -44,10 +41,7 @@ export default function DashboardClient() {
     total: 100,
     dailyUsage: Array(7).fill(0),
     popularTools: [],
-    efficiency: 0,
-    responseTime: Array(7).fill(0),
-    successRate: 85,
-    aiAccuracy: 92
+    efficiency: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,10 +54,7 @@ export default function DashboardClient() {
           total: 100,
           dailyUsage: [12, 15, 8, 20, 18, 25, 30],
           popularTools: ['Conversation', 'Image Generation', 'Code'],
-          efficiency: 85,
-          responseTime: [1.2, 1.5, 1.8, 2.1, 2.3, 2.5, 2.8],
-          successRate: 85,
-          aiAccuracy: 92
+          efficiency: 85
         };
         
         setUsageStats(mockData);
@@ -125,30 +116,6 @@ export default function DashboardClient() {
 
       {/* Analytics Section */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-8">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Success Rate</p>
-            <h3 className="text-2xl font-bold">{usageStats.successRate}%</h3>
-          </div>
-          <Progress value={usageStats.successRate} className="mt-4" />
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">AI Accuracy</p>
-            <h3 className="text-2xl font-bold">{usageStats.aiAccuracy}%</h3>
-          </div>
-          <Progress value={usageStats.aiAccuracy} className="mt-4" />
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Avg Response Time</p>
-            <h3 className="text-2xl font-bold">
-              {(usageStats.responseTime.reduce((a, b) => a + b, 0) / usageStats.responseTime.length).toFixed(2)}s
-            </h3>
-          </div>
-        </Card>
       </div>
 
       {/* Quick Access Section */}
