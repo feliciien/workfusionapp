@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -8,258 +8,157 @@ import axios from "axios";
 
 declare global {
   interface Window {
-    paypal?: {
-      Buttons: (config: PayPalButtonsConfig) => { render: (containerId: string) => void };
-    };
+    paypal?: any;
   }
 }
 
-interface PayPalButtonsConfig {
-  style: {
-    shape: string;
-    color: string;
-    layout: string;
-    label: string;
-  };
-  createSubscription: (data: unknown, actions: {
-    subscription: {
-      create: (data: { plan_id: string }) => Promise<string>;
-    };
-  }) => Promise<string>;
-  onApprove: (data: { subscriptionID: string }, actions: unknown) => void;
-  onError: (err: Error) => void;
-}
+const MONTHLY_BUTTON_ID = 'paypal-monthly-button';
+const YEARLY_BUTTON_ID = 'paypal-yearly-button';
 
 interface SubscriptionButtonProps {
   isPro: boolean;
 }
 
-const MONTHLY_BUTTON_ID = 'paypal-monthly';
-const YEARLY_BUTTON_ID = 'paypal-yearly';
-
-export const SubscriptionButton: React.FC<SubscriptionButtonProps> = ({ isPro = false }) => {
+export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [buttonsRendered, setButtonsRendered] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const cleanupPayPalScript = () => {
-    const script = document.querySelector('script[src*="paypal"]');
-    if (script) {
-      script.remove();
-    }
-    if (window.paypal) {
-      window.paypal = undefined;
-    }
-  };
-
-  const renderPayPalButtons = async () => {
-    if (!window.paypal) {
-      console.error("PayPal SDK not loaded");
-      return;
-    }
-
-    try {
-      // Monthly Plan Button
-      const monthlyButton = window.paypal.Buttons({
-        style: {
-          shape: 'rect',
-          color: 'gold',
-          layout: 'vertical',
-          label: 'subscribe'
-        },
-        createSubscription: async (data, actions) => {
-          try {
-            setLoading(true);
-            const response = await axios.get("/api/paypal/create-subscription?plan=monthly");
-            const { planId } = response.data;
-            
-            if (!planId) {
-              throw new Error("No plan ID received");
-            }
-
-            return actions.subscription.create({
-              plan_id: planId
-            });
-          } catch (error) {
-            console.error("Error:", error);
-            if (axios.isAxiosError(error) && error.response?.data?.error) {
-              toast.error(error.response.data.error);
-            } else {
-              toast.error("Something went wrong");
-            }
-            throw error;
-          } finally {
-            setLoading(false);
-          }
-        },
-        onApprove: async (data) => {
-          try {
-            setLoading(true);
-            await axios.post('/api/paypal/capture-subscription', {
-              subscriptionId: data.subscriptionID
-            });
-            
-            toast.success("Successfully subscribed!");
-            window.location.href = '/dashboard';
-          } catch (error) {
-            console.error("Error capturing subscription:", error);
-            toast.error("Failed to activate subscription. Please contact support.");
-          } finally {
-            setLoading(false);
-          }
-        },
-        onError: (err) => {
-          console.error("PayPal Buttons Error:", err);
-          toast.error("An error occurred during the subscription process.");
-          setLoading(false);
-        }
-      });
-
-      // Yearly Plan Button
-      const yearlyButton = window.paypal.Buttons({
-        style: {
-          shape: 'rect',
-          color: 'gold',
-          layout: 'vertical',
-          label: 'subscribe'
-        },
-        createSubscription: async (data, actions) => {
-          try {
-            setLoading(true);
-            const response = await axios.get("/api/paypal/create-subscription?plan=yearly");
-            const { planId } = response.data;
-            
-            if (!planId) {
-              throw new Error("No plan ID received");
-            }
-
-            return actions.subscription.create({
-              plan_id: planId
-            });
-          } catch (error) {
-            console.error("Error:", error);
-            if (axios.isAxiosError(error) && error.response?.data?.error) {
-              toast.error(error.response.data.error);
-            } else {
-              toast.error("Something went wrong");
-            }
-            throw error;
-          } finally {
-            setLoading(false);
-          }
-        },
-        onApprove: async (data) => {
-          try {
-            setLoading(true);
-            await axios.post('/api/paypal/capture-subscription', {
-              subscriptionId: data.subscriptionID
-            });
-            
-            toast.success("Successfully subscribed!");
-            window.location.href = '/dashboard';
-          } catch (error) {
-            console.error("Error capturing subscription:", error);
-            toast.error("Failed to activate subscription. Please contact support.");
-          } finally {
-            setLoading(false);
-          }
-        },
-        onError: (err) => {
-          console.error("PayPal Buttons Error:", err);
-          toast.error("An error occurred during the subscription process.");
-          setLoading(false);
-        }
-      });
-
-      // Wait for containers to be ready
-      const waitForContainers = async () => {
-        return new Promise<void>((resolve) => {
-          const checkContainers = () => {
-            const monthlyContainer = document.getElementById(MONTHLY_BUTTON_ID);
-            const yearlyContainer = document.getElementById(YEARLY_BUTTON_ID);
-
-            if (monthlyContainer && yearlyContainer) {
-              monthlyContainer.innerHTML = '';
-              yearlyContainer.innerHTML = '';
-              resolve();
-            } else {
-              requestAnimationFrame(checkContainers);
-            }
-          };
-
-          checkContainers();
-        });
-      };
-
-      // Wait for containers and render buttons
-      await waitForContainers();
-      await monthlyButton.render(`#${MONTHLY_BUTTON_ID}`);
-      await yearlyButton.render(`#${YEARLY_BUTTON_ID}`);
-      
-      setButtonsRendered(true);
-    } catch (error) {
-      console.error("Error rendering PayPal buttons:", error);
-      toast.error("Failed to render PayPal buttons. Please refresh the page.");
-    }
-  };
 
   useEffect(() => {
-    if (isPro) return;
+    if (isPro || scriptLoaded) return;
 
     const loadPayPalScript = async () => {
       try {
         setLoading(true);
-        setError(null);
-
-        // Get PayPal configuration
-        const response = await axios.get('/api/paypal/token');
-        const { clientId } = response.data;
-
+        const { data: { clientId } } = await axios.get('/api/paypal/token');
+        
         if (!clientId) {
-          throw new Error("PayPal client ID not available");
+          throw new Error("PayPal client ID not found");
         }
 
         // Remove any existing PayPal script
-        cleanupPayPalScript();
+        const existingScript = document.querySelector('script[src*="paypal"]');
+        if (existingScript) {
+          existingScript.remove();
+        }
 
-        // Load new PayPal script
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
-          script.async = true;
-          
-          script.onload = () => {
-            setScriptLoaded(true);
-            resolve();
-          };
-          
-          script.onerror = () => {
-            reject(new Error("Failed to load PayPal SDK"));
-          };
+        // Load PayPal script
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+        script.async = true;
+        
+        script.onload = () => {
+          setScriptLoaded(true);
+          renderButtons();
+        };
 
-          document.body.appendChild(script);
-        });
+        script.onerror = (error) => {
+          console.error("PayPal script failed to load:", error);
+          toast.error("Failed to load payment system");
+        };
 
-        // Render buttons after script loads
-        await renderPayPalButtons();
+        document.body.appendChild(script);
       } catch (error) {
         console.error("Error loading PayPal:", error);
-        setError(error instanceof Error ? error.message : "Failed to initialize PayPal");
-        toast.error("Failed to initialize PayPal. Please try again later.");
+        toast.error("Something went wrong loading the payment system");
       } finally {
         setLoading(false);
       }
     };
 
+    const renderButtons = () => {
+      if (!window.paypal) return;
+
+      try {
+        // Monthly subscription button
+        window.paypal.Buttons({
+          style: {
+            label: 'subscribe'
+          },
+          createSubscription: async (data: any, actions: any) => {
+            try {
+              const response = await axios.get("/api/paypal/create-subscription?plan=monthly");
+              return actions.subscription.create({
+                plan_id: response.data.planId
+              });
+            } catch (error) {
+              console.error("Error creating subscription:", error);
+              toast.error("Failed to create subscription");
+              throw error;
+            }
+          },
+          onApprove: async (data: any) => {
+            try {
+              setLoading(true);
+              await axios.post('/api/paypal/capture-subscription', {
+                subscriptionId: data.subscriptionID
+              });
+              toast.success("Successfully subscribed!");
+              window.location.reload();
+            } catch (error) {
+              console.error("Error capturing subscription:", error);
+              toast.error("Failed to activate subscription");
+            } finally {
+              setLoading(false);
+            }
+          },
+          onError: (err: any) => {
+            console.error("PayPal error:", err);
+            toast.error("Payment failed. Please try again.");
+          }
+        }).render(`#${MONTHLY_BUTTON_ID}`);
+
+        // Yearly subscription button
+        window.paypal.Buttons({
+          style: {
+            label: 'subscribe'
+          },
+          createSubscription: async (data: any, actions: any) => {
+            try {
+              const response = await axios.get("/api/paypal/create-subscription?plan=yearly");
+              return actions.subscription.create({
+                plan_id: response.data.planId
+              });
+            } catch (error) {
+              console.error("Error creating subscription:", error);
+              toast.error("Failed to create subscription");
+              throw error;
+            }
+          },
+          onApprove: async (data: any) => {
+            try {
+              setLoading(true);
+              await axios.post('/api/paypal/capture-subscription', {
+                subscriptionId: data.subscriptionID
+              });
+              toast.success("Successfully subscribed!");
+              window.location.reload();
+            } catch (error) {
+              console.error("Error capturing subscription:", error);
+              toast.error("Failed to activate subscription");
+            } finally {
+              setLoading(false);
+            }
+          },
+          onError: (err: any) => {
+            console.error("PayPal error:", err);
+            toast.error("Payment failed. Please try again.");
+          }
+        }).render(`#${YEARLY_BUTTON_ID}`);
+      } catch (error) {
+        console.error("Error rendering PayPal buttons:", error);
+        toast.error("Failed to load payment options");
+      }
+    };
+
     loadPayPalScript();
 
-    // Cleanup function
     return () => {
-      cleanupPayPalScript();
+      const script = document.querySelector('script[src*="paypal"]');
+      if (script) {
+        script.remove();
+      }
     };
-  }, [isPro]);
+  }, [isPro, scriptLoaded]);
 
   if (isPro) {
     return (
@@ -270,40 +169,17 @@ export const SubscriptionButton: React.FC<SubscriptionButtonProps> = ({ isPro = 
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Button 
-          onClick={() => window.location.reload()} 
-          variant="outline"
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
-
-  if (loading && !scriptLoaded) {
-    return (
-      <div className="text-center">
-        <p className="mb-4">Loading payment options...</p>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-      </div>
-    );
-  }
-
   return (
-    <div ref={containerRef} className="space-y-8">
+    <div className="space-y-8">
       <div>
-        <h3 className="text-2xl font-bold">Monthly Plan</h3>
-        <p className="text-muted-foreground mt-1">$10/month - Unlimited access</p>
-        <div id={MONTHLY_BUTTON_ID} className="w-full mt-4" />
+        <h3 className="text-2xl font-bold mb-4">Monthly Plan</h3>
+        <p className="text-muted-foreground mb-4">$10/month - Unlimited access</p>
+        <div id={MONTHLY_BUTTON_ID} className="w-full" />
       </div>
       <div>
-        <h3 className="text-2xl font-bold">Yearly Plan</h3>
-        <p className="text-muted-foreground mt-1">$100/year - Save 17%</p>
-        <div id={YEARLY_BUTTON_ID} className="w-full mt-4" />
+        <h3 className="text-2xl font-bold mb-4">Yearly Plan</h3>
+        <p className="text-muted-foreground mb-4">$100/year - Save 17%</p>
+        <div id={YEARLY_BUTTON_ID} className="w-full" />
       </div>
     </div>
   );

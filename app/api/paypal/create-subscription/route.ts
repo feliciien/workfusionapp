@@ -35,6 +35,40 @@ async function createSubscription(plan: PlanType, userId: string) {
 
     const { access_token } = await authResponse.json();
 
+    // Check plan status first
+    const planResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${PLAN_DETAILS[plan].plan_id}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!planResponse.ok) {
+      const errorText = await planResponse.text();
+      console.error("PayPal Plan Error:", errorText);
+      throw new Error("Failed to fetch plan details");
+    }
+
+    const planDetails = await planResponse.json();
+    
+    // If plan is not active, activate it
+    if (planDetails.status !== "ACTIVE") {
+      const activateResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${PLAN_DETAILS[plan].plan_id}/activate`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!activateResponse.ok) {
+        const errorText = await activateResponse.text();
+        console.error("PayPal Plan Activation Error:", errorText);
+        throw new Error("Failed to activate plan");
+      }
+    }
+
     // Create Subscription
     const subscriptionResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions`, {
       method: "POST",
