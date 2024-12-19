@@ -106,11 +106,17 @@ async function createSubscription(plan: PlanType, userId: string) {
 
 export async function GET(req: Request) {
   try {
+    const { headers } = req;
     const user = await currentUser();
     if (!user) {
       return new NextResponse(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 401, 
+          headers: { 
+            "Content-Type": "application/json",
+          } 
+        }
       );
     }
 
@@ -120,41 +126,68 @@ export async function GET(req: Request) {
     if (!PLAN_DETAILS[plan]) {
       return new NextResponse(
         JSON.stringify({ error: "Invalid subscription plan" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 400, 
+          headers: { 
+            "Content-Type": "application/json",
+          } 
+        }
       );
     }
 
+    const subscription = await createSubscription(plan, user.id);
+
     return new NextResponse(
-      JSON.stringify({ 
-        planId: PLAN_DETAILS[plan].plan_id
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      JSON.stringify(subscription),
+      { 
+        status: 200, 
+        headers: { 
+          "Content-Type": "application/json",
+        } 
+      }
     );
   } catch (error) {
-    console.error("Error getting plan ID:", error);
+    console.error("Error creating subscription:", error);
     return new NextResponse(
-      JSON.stringify({ error: "Failed to get plan ID" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { 
+        status: 500, 
+        headers: { 
+          "Content-Type": "application/json",
+        } 
+      }
     );
   }
 }
 
 export async function POST(req: Request) {
   try {
+    const { headers } = req;
     const user = await currentUser();
     if (!user) {
       return new NextResponse(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 401, 
+          headers: { 
+            "Content-Type": "application/json",
+          } 
+        }
       );
     }
 
-    const { plan } = await req.json();
-    
+    const body = await req.json();
+    const { plan } = body;
+
     if (!plan || !PLAN_DETAILS[plan as PlanType]) {
       return new NextResponse(
         JSON.stringify({ error: "Invalid subscription plan" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 400, 
+          headers: { 
+            "Content-Type": "application/json",
+          } 
+        }
       );
     }
 
@@ -162,13 +195,23 @@ export async function POST(req: Request) {
 
     return new NextResponse(
       JSON.stringify(subscription),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { 
+        status: 200, 
+        headers: { 
+          "Content-Type": "application/json",
+        } 
+      }
     );
   } catch (error) {
     console.error("Error creating subscription:", error);
     return new NextResponse(
-      JSON.stringify({ error: "Failed to create subscription" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { 
+        status: 500, 
+        headers: { 
+          "Content-Type": "application/json",
+        } 
+      }
     );
   }
 }
