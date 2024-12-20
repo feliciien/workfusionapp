@@ -6,6 +6,14 @@ html,
 body,
 :root {
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer base {

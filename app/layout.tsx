@@ -100,7 +100,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           <meta name="theme-color" content="#ffffff" />
         </head>
-        <body className={inter.className} suppressHydrationWarning>
+        <body 
+          className={`${inter.className} overflow-x-hidden overscroll-none`} 
+          suppressHydrationWarning
+        >
           <ErrorBoundary>
             <ModalProvider />
             <ToasterProvider />
