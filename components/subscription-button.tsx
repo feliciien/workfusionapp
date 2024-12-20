@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 declare global {
   interface Window {
@@ -15,6 +16,15 @@ declare global {
 const MONTHLY_BUTTON_ID = 'paypal-monthly-button';
 const YEARLY_BUTTON_ID = 'paypal-yearly-button';
 
+const PLAN_DETAILS = {
+  monthly: {
+    plan_id: 'P-8Y551355TK076831TM5M7OZA',
+  },
+  yearly: {
+    plan_id: 'P-9LL83744K0141123KM5RXMMQ',
+  },
+};
+
 interface SubscriptionButtonProps {
   isPro: boolean;
 }
@@ -22,6 +32,7 @@ interface SubscriptionButtonProps {
 export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (isPro || scriptLoaded) return;
@@ -43,7 +54,7 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
 
         // Load PayPal script
         const script = document.createElement('script');
-        script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+        script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription&components=buttons`;
         script.async = true;
         
         script.onload = () => {
@@ -72,13 +83,14 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
         // Monthly subscription button
         window.paypal.Buttons({
           style: {
-            label: 'subscribe'
+            label: 'subscribe',
+            layout: 'vertical',
+            shape: 'rect'
           },
           createSubscription: async (data: any, actions: any) => {
             try {
-              const response = await axios.get("/api/paypal/create-subscription?plan=monthly");
               return actions.subscription.create({
-                plan_id: response.data.planId
+                plan_id: PLAN_DETAILS.monthly.plan_id
               });
             } catch (error) {
               console.error("Error creating subscription:", error);
@@ -88,21 +100,15 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
           },
           onApprove: async (data: any) => {
             try {
-              setLoading(true);
-              await axios.post('/api/paypal/capture-subscription', {
-                subscriptionId: data.subscriptionID
-              });
-              toast.success("Successfully subscribed!");
-              window.location.reload();
+              toast.success("Successfully subscribed! Redirecting to dashboard...");
+              router.push("/dashboard");
             } catch (error) {
-              console.error("Error capturing subscription:", error);
-              toast.error("Failed to activate subscription");
-            } finally {
-              setLoading(false);
+              console.error("Error handling subscription approval:", error);
+              toast.error("Error finalizing subscription");
             }
           },
-          onError: (err: any) => {
-            console.error("PayPal error:", err);
+          onError: (error: any) => {
+            console.error("PayPal Error:", error);
             toast.error("Payment failed. Please try again.");
           }
         }).render(`#${MONTHLY_BUTTON_ID}`);
@@ -110,13 +116,14 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
         // Yearly subscription button
         window.paypal.Buttons({
           style: {
-            label: 'subscribe'
+            label: 'subscribe',
+            layout: 'vertical',
+            shape: 'rect'
           },
           createSubscription: async (data: any, actions: any) => {
             try {
-              const response = await axios.get("/api/paypal/create-subscription?plan=yearly");
               return actions.subscription.create({
-                plan_id: response.data.planId
+                plan_id: PLAN_DETAILS.yearly.plan_id
               });
             } catch (error) {
               console.error("Error creating subscription:", error);
@@ -126,61 +133,49 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
           },
           onApprove: async (data: any) => {
             try {
-              setLoading(true);
-              await axios.post('/api/paypal/capture-subscription', {
-                subscriptionId: data.subscriptionID
-              });
-              toast.success("Successfully subscribed!");
-              window.location.reload();
+              toast.success("Successfully subscribed! Redirecting to dashboard...");
+              router.push("/dashboard");
             } catch (error) {
-              console.error("Error capturing subscription:", error);
-              toast.error("Failed to activate subscription");
-            } finally {
-              setLoading(false);
+              console.error("Error handling subscription approval:", error);
+              toast.error("Error finalizing subscription");
             }
           },
-          onError: (err: any) => {
-            console.error("PayPal error:", err);
+          onError: (error: any) => {
+            console.error("PayPal Error:", error);
             toast.error("Payment failed. Please try again.");
           }
         }).render(`#${YEARLY_BUTTON_ID}`);
       } catch (error) {
         console.error("Error rendering PayPal buttons:", error);
-        toast.error("Failed to load payment options");
+        toast.error("Failed to initialize payment system");
       }
     };
 
     loadPayPalScript();
-
-    return () => {
-      const script = document.querySelector('script[src*="paypal"]');
-      if (script) {
-        script.remove();
-      }
-    };
-  }, [isPro, scriptLoaded]);
+  }, [isPro, scriptLoaded, router]);
 
   if (isPro) {
     return (
-      <Button disabled={true} variant="premium" className="w-full">
-        <Zap className="w-4 h-4 ml-2 fill-white" />
-        You are a Pro user
+      <Button variant="premium" className="w-full" disabled>
+        <Zap className="w-4 h-4 mr-2 fill-white" />
+        Already Pro
+      </Button>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Button variant="premium" className="w-full" disabled>
+        <Zap className="w-4 h-4 mr-2 fill-white" />
+        Loading...
       </Button>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-2xl font-bold mb-4">Monthly Plan</h3>
-        <p className="text-muted-foreground mb-4">$10/month - Unlimited access</p>
-        <div id={MONTHLY_BUTTON_ID} className="w-full" />
-      </div>
-      <div>
-        <h3 className="text-2xl font-bold mb-4">Yearly Plan</h3>
-        <p className="text-muted-foreground mb-4">$100/year - Save 17%</p>
-        <div id={YEARLY_BUTTON_ID} className="w-full" />
-      </div>
+    <div className="flex flex-col gap-4">
+      <div id={MONTHLY_BUTTON_ID} />
+      <div id={YEARLY_BUTTON_ID} />
     </div>
   );
 };

@@ -8,66 +8,40 @@ const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
 // Replace these with your actual PayPal plan IDs
 const PLAN_DETAILS = {
-  monthly: { plan_id: "P-8Y551355TK076831TM5M7OZA" }, // Your actual Monthly Plan ID
-  yearly: { plan_id: "P-67X44179VA3351546M5M7P5I" },  // Your actual Yearly Plan ID
+  monthly: { plan_id: "P-8Y551355TK076831TM5M7OZA" },
+  yearly: { plan_id: "P-9LL83744K0141123KM5RXMMQ" },
 } as const;
 
 type PlanType = keyof typeof PLAN_DETAILS;
 
+async function getPayPalAccessToken() {
+  const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+  const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${authString}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("PayPal Auth Error:", errorText);
+    throw new Error("Failed to get PayPal access token");
+  }
+
+  const { access_token } = await response.json();
+  return access_token;
+}
+
 async function createSubscription(plan: PlanType, userId: string) {
+  if (!PAYPAL_API_BASE || !PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+    throw new Error("Missing required PayPal configuration");
+  }
+
   try {
-    // Create Access Token
-    const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
-    const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${authString}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials",
-    });
-
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text();
-      console.error("PayPal Auth Error:", errorText);
-      throw new Error("Failed to fetch PayPal access token");
-    }
-
-    const { access_token } = await authResponse.json();
-
-    // Check plan status first
-    const planResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${PLAN_DETAILS[plan].plan_id}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!planResponse.ok) {
-      const errorText = await planResponse.text();
-      console.error("PayPal Plan Error:", errorText);
-      throw new Error("Failed to fetch plan details");
-    }
-
-    const planDetails = await planResponse.json();
-    
-    // If plan is not active, activate it
-    if (planDetails.status !== "ACTIVE") {
-      const activateResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${PLAN_DETAILS[plan].plan_id}/activate`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!activateResponse.ok) {
-        const errorText = await activateResponse.text();
-        console.error("PayPal Plan Activation Error:", errorText);
-        throw new Error("Failed to activate plan");
-      }
-    }
+    const access_token = await getPayPalAccessToken();
 
     // Create Subscription
     const subscriptionResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions`, {
@@ -75,16 +49,25 @@ async function createSubscription(plan: PlanType, userId: string) {
       headers: {
         Authorization: `Bearer ${access_token}`,
         "Content-Type": "application/json",
-        Accept: "application/json",
+        "PayPal-Request-Id": `${userId}-${Date.now()}`, // Idempotency key
       },
       body: JSON.stringify({
         plan_id: PLAN_DETAILS[plan].plan_id,
-        custom_id: userId,
+        subscriber: {
+          name: {
+            given_name: "Subscriber",
+          },
+          email_address: "subscriber@example.com", // This will be updated by PayPal during checkout
+        },
         application_context: {
           brand_name: "SynthAI",
           locale: "en-US",
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",
+          payment_method: {
+            payer_selected: "PAYPAL",
+            payee_preferred: "IMMEDIATE_PAYMENT_REQUIRED",
+          },
           return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
           cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
         },
@@ -97,7 +80,8 @@ async function createSubscription(plan: PlanType, userId: string) {
       throw new Error("Failed to create PayPal subscription");
     }
 
-    return await subscriptionResponse.json();
+    const subscription = await subscriptionResponse.json();
+    return subscription;
   } catch (error) {
     console.error("Error in createSubscription:", error);
     throw error;
@@ -106,7 +90,6 @@ async function createSubscription(plan: PlanType, userId: string) {
 
 export async function GET(req: Request) {
   try {
-    const { headers } = req;
     const user = await currentUser();
     if (!user) {
       return new NextResponse(
@@ -149,63 +132,10 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("Error creating subscription:", error);
     return new NextResponse(
-      JSON.stringify({ error: "Internal server error" }),
-      { 
-        status: 500, 
-        headers: { 
-          "Content-Type": "application/json",
-        } 
-      }
-    );
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const { headers } = req;
-    const user = await currentUser();
-    if (!user) {
-      return new NextResponse(
-        JSON.stringify({ error: "Unauthorized" }),
-        { 
-          status: 401, 
-          headers: { 
-            "Content-Type": "application/json",
-          } 
-        }
-      );
-    }
-
-    const body = await req.json();
-    const { plan } = body;
-
-    if (!plan || !PLAN_DETAILS[plan as PlanType]) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid subscription plan" }),
-        { 
-          status: 400, 
-          headers: { 
-            "Content-Type": "application/json",
-          } 
-        }
-      );
-    }
-
-    const subscription = await createSubscription(plan as PlanType, user.id);
-
-    return new NextResponse(
-      JSON.stringify(subscription),
-      { 
-        status: 200, 
-        headers: { 
-          "Content-Type": "application/json",
-        } 
-      }
-    );
-  } catch (error) {
-    console.error("Error creating subscription:", error);
-    return new NextResponse(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }),
       { 
         status: 500, 
         headers: { 
