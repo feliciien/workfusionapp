@@ -5,7 +5,9 @@ const FREE_CREDITS = 5;
 
 export const checkSubscription = async () => {
   try {
-    const { userId } = auth();
+    const session = await auth();
+    const userId = session?.userId;
+
     if (!userId) {
       return false;
     }
@@ -24,25 +26,29 @@ export const checkSubscription = async () => {
       return false;
     }
 
-    const isValid = 
-      subscription.paypalSubscriptionId && 
+    const isValid =
+      subscription.paypalSubscriptionId &&
       subscription.paypalCurrentPeriodEnd &&
-      subscription.paypalCurrentPeriodEnd.getTime() > Date.now();
+      subscription.paypalCurrentPeriodEnd.getTime() + 86_400_000 > Date.now();
 
-    return isValid;
+    return !!isValid;
   } catch (error) {
-    console.error("Error checking subscription:", error);
+    console.error("[CHECK_SUBSCRIPTION_ERROR]", error);
     return false;
   }
 };
 
 export const increaseApiLimit = async () => {
   try {
-    const { userId } = auth();
-    if (!userId) return;
+    const session = await auth();
+    const userId = session?.userId;
+
+    if (!userId) {
+      return;
+    }
 
     const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId: userId }
+      where: { userId: userId },
     });
 
     if (userApiLimit) {
@@ -52,25 +58,25 @@ export const increaseApiLimit = async () => {
       });
     } else {
       await db.userApiLimit.create({
-        data: { userId: userId, count: 1 }
+        data: { userId: userId, count: 1 },
       });
     }
   } catch (error) {
-    console.error("Error increasing API limit:", error);
+    console.error("[INCREASE_API_LIMIT_ERROR]", error);
   }
 };
 
 export const checkApiLimit = async () => {
   try {
-    const { userId } = auth();
-    if (!userId) return false;
+    const session = await auth();
+    const userId = session?.userId;
 
-    // Check if user is subscribed
-    const isPro = await checkSubscription();
-    if (isPro) return true;
+    if (!userId) {
+      return false;
+    }
 
     const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId: userId }
+      where: { userId: userId },
     });
 
     if (!userApiLimit || userApiLimit.count < FREE_CREDITS) {
@@ -79,18 +85,22 @@ export const checkApiLimit = async () => {
 
     return false;
   } catch (error) {
-    console.error("Error checking API limit:", error);
+    console.error("[CHECK_API_LIMIT_ERROR]", error);
     return false;
   }
 };
 
 export const getApiLimitCount = async () => {
   try {
-    const { userId } = auth();
-    if (!userId) return 0;
+    const session = await auth();
+    const userId = session?.userId;
+
+    if (!userId) {
+      return 0;
+    }
 
     const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId }
+      where: { userId },
     });
 
     if (!userApiLimit) {
@@ -99,7 +109,7 @@ export const getApiLimitCount = async () => {
 
     return userApiLimit.count;
   } catch (error) {
-    console.error("Error getting API limit count:", error);
+    console.error("[GET_API_LIMIT_COUNT_ERROR]", error);
     return 0;
   }
 };
