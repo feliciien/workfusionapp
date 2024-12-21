@@ -70,7 +70,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        baseTheme: undefined,
+        variables: { colorPrimary: '#000000' },
+        elements: {
+          formButtonPrimary: 'hover:bg-black/80',
+          card: 'rounded-md',
+        },
+      }}
+    >
       <html lang="en" suppressHydrationWarning>
         <head>
           <OrganizationStructuredData />
