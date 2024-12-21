@@ -12,6 +12,12 @@ const openai = new OpenAI({
 
 export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
+interface ConversationMessage {
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp?: Date;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -46,6 +52,10 @@ export async function POST(req: Request) {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages,
+      temperature: 0.7,
+      stream: false,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.5,
     });
 
     if (!isPro) {
@@ -60,23 +70,63 @@ export async function POST(req: Request) {
     });
 
     // Store conversation in database
+    const messageContent = response.choices[0].message.content || "";
     if (conversationId) {
-      await prismadb.conversation.update({
-        where: {
-          id: conversationId,
-        },
-        data: {
-          messages: {
-            create: {
-              content: response.choices[0].message.content || "",
-              role: "assistant",
-            },
+      try {
+        await prismadb.conversation.update({
+          where: {
+            id: conversationId,
           },
-        },
-      });
+          data: {
+            messages: {
+              create: {
+                content: messageContent,
+                role: "assistant",
+                timestamp: new Date(),
+              },
+            },
+            lastMessageAt: new Date(),
+          },
+        });
+      } catch (dbError) {
+        console.error("[DB_ERROR]", dbError);
+        // Continue even if DB save fails
+      }
+    } else {
+      try {
+        // Create new conversation
+        await prismadb.conversation.create({
+          data: {
+            userId,
+            messages: {
+              create: [
+                ...messages.map((msg: ConversationMessage) => ({
+                  content: msg.content,
+                  role: msg.role,
+                  timestamp: new Date(),
+                })),
+                {
+                  content: messageContent,
+                  role: "assistant",
+                  timestamp: new Date(),
+                }
+              ]
+            },
+            lastMessageAt: new Date(),
+          }
+        });
+      } catch (dbError) {
+        console.error("[DB_ERROR]", dbError);
+        // Continue even if DB save fails
+      }
     }
 
-    return NextResponse.json(response.choices[0].message);
+    return NextResponse.json({
+      id: Date.now().toString(),
+      content: messageContent,
+      timestamp: new Date(),
+      status: 'sent',
+    });
   } catch (error) {
     console.error("[CONVERSATION_ERROR]", error);
     return new NextResponse(

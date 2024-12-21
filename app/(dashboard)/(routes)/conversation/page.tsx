@@ -18,6 +18,9 @@ import * as z from "zod";
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: Date;
+  status?: 'sending' | 'sent' | 'error';
+  id?: string;
 }
 
 const formSchema = z.object({
@@ -37,6 +40,8 @@ export default function ConversationPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Only run client-side
   useEffect(() => {
@@ -79,14 +84,19 @@ export default function ConversationPage() {
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>, retryCount = 0) => {
     try {
       setLoading(true);
       setShowUpgrade(false);
+      setIsTyping(true);
 
+      const messageId = Date.now().toString();
       const userMessage: Message = {
         role: 'user',
         content: values.prompt,
+        timestamp: new Date(),
+        status: 'sending',
+        id: messageId,
       };
 
       const newMessages = [...messages, userMessage];
@@ -97,16 +107,30 @@ export default function ConversationPage() {
         conversationId,
       });
 
-      const assistantMessage = {
-        role: 'assistant' as const,
+      const assistantMessage: Message = {
+        role: 'assistant',
         content: typeof response.data === 'string' 
           ? response.data 
           : response.data.content || response.data.text || '',
+        timestamp: new Date(),
+        status: 'sent',
+        id: Date.now().toString(),
       };
 
-      setMessages((current) => [...current, assistantMessage]);
+      setMessages((current) => 
+        current.map(msg => msg.id === messageId ? { ...msg, status: 'sent' as const } : msg)
+        .concat([assistantMessage])
+      );
 
     } catch (error: any) {
+      if (retryCount < 2) {
+        setRetrying(true);
+        setTimeout(() => {
+          onSubmit(values, retryCount + 1);
+        }, 1000 * (retryCount + 1));
+        return;
+      }
+
       if (axios.isAxiosError(error) && error.response?.status === 403) {
         setShowUpgrade(true);
         toast.error("Free trial limit reached. Please upgrade to continue.");
@@ -114,8 +138,16 @@ export default function ConversationPage() {
         toast.error("Something went wrong. Please try again.");
       }
       console.error('[CONVERSATION_ERROR]', error);
+      
+      setMessages((current) =>
+        current.map(msg => 
+          msg.status === 'sending' ? { ...msg, status: 'error' as const } : msg
+        )
+      );
     } finally {
       setLoading(false);
+      setIsTyping(false);
+      setRetrying(false);
     }
   };
 
@@ -152,52 +184,78 @@ export default function ConversationPage() {
         iconColor="text-violet-500"
         bgColor="bg-violet-500/10"
       />
-      <div className="absolute top-4 right-4 flex items-center space-x-2">
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className={cn(
-            "p-2 rounded-lg transition-colors",
-            darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
-          )}
-        >
-          {darkMode ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </button>
-        {messages.length > 0 && (
-          <button
-            onClick={clearConversation}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
-            )}
-          >
-            <Trash className="h-5 w-5" />
-          </button>
-        )}
-      </div>
+      
       <div className="px-4 lg:px-8">
         <div>
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => setDarkMode(!darkMode)}
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+          
+          <Button
+            variant="ghost"
+            className="mb-4 ml-2"
+            onClick={clearConversation}
+          >
+            <Trash className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-4 max-h-[600px] overflow-y-auto p-4 rounded-lg bg-slate-100 dark:bg-slate-900">
           {messages.length === 0 && !loading && (
             <Empty label="No conversation started." />
           )}
-          <div className="space-y-4 mt-4">
+          <div className="flex flex-col space-y-4">
             {messages.map((message, index) => (
-              <div
-                key={index}
+              <div 
+                key={message.id || index}
                 className={cn(
-                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                  message.role === "user"
-                    ? "bg-white border border-black/10"
-                    : "bg-muted",
+                  "p-4 w-full flex items-start gap-x-4 rounded-lg",
+                  message.role === "user" ? "bg-white dark:bg-slate-800" : "bg-violet-500/10",
+                  message.status === 'error' && "border-red-500 border"
                 )}
               >
                 {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <p className="text-sm">{message.content}</p>
+                <div className="flex flex-col flex-1">
+                  <p className="text-sm">
+                    {message.content}
+                  </p>
+                  {message.timestamp && (
+                    <span className="text-xs text-gray-500 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </span>
+                  )}
+                  {message.status === 'error' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onSubmit({ prompt: message.content })}
+                      className="mt-2"
+                    >
+                      Retry
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(message.content);
+                    toast.success("Copied to clipboard!");
+                  }}
+                >
+                  Copy
+                </Button>
               </div>
             ))}
+            {isTyping && (
+              <div className="p-4 rounded-lg bg-violet-500/10 animate-pulse">
+                <p className="text-sm">AI is typing...</p>
+              </div>
+            )}
           </div>
         </div>
         {showUpgrade && (
