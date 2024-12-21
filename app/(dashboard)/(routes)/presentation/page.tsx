@@ -8,8 +8,30 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2, ChevronRight, ChevronLeft, Download, Copy, RefreshCw, FileDown } from "lucide-react";
+import { 
+  Loader2, 
+  ChevronRight, 
+  ChevronLeft, 
+  Download, 
+  Copy, 
+  RefreshCw, 
+  FileDown,
+  Layout,
+  LayoutTemplate,
+  Presentation
+} from "lucide-react";
 import { Slide } from "@/lib/api-client";
+import { motion, AnimatePresence } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Templates for different presentation styles
+const PRESENTATION_TEMPLATES = [
+  { id: 'business', name: 'Business Presentation', description: 'Professional and formal style' },
+  { id: 'educational', name: 'Educational', description: 'Clear and instructional format' },
+  { id: 'creative', name: 'Creative', description: 'Dynamic and engaging style' },
+  { id: 'minimal', name: 'Minimal', description: 'Clean and simple design' },
+];
 
 // We'll load pptxgenjs dynamically only when needed
 let PptxGenJS: any;
@@ -21,6 +43,8 @@ export default function PresentationPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState('business');
+  const [progress, setProgress] = useState(0);
 
   // Update current slide when slides or index changes
   useEffect(() => {
@@ -36,6 +60,7 @@ export default function PresentationPage() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setProgress(0);
     
     if (!topic.trim()) {
       toast.error("Please enter a topic");
@@ -51,37 +76,31 @@ export default function PresentationPage() {
       setIsLoading(true);
       setSlides([]);
       setCurrentSlideIndex(0);
-      setCurrentSlide(null);
-      
-      console.log("Generating presentation for topic:", topic);
-      const response = await api.generatePresentation(topic);
-      console.log("API Response:", response);
 
-      if (!response?.data?.slides) {
-        throw new Error("Failed to generate presentation");
+      // Simulate progress while generating
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 5, 90));
+      }, 500);
+
+      const response = await api.generatePresentation(topic, selectedTemplate);
+
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      if (response.status === 'error') {
+        throw new Error(response.message || 'Failed to generate presentation');
       }
 
-      const validSlides = response.data.slides.filter(slide => 
-        slide && 
-        typeof slide === 'object' &&
-        ['title', 'intro', 'content', 'conclusion'].includes(slide.type) &&
-        typeof slide.title === 'string' &&
-        (typeof slide.content === 'string' || Array.isArray(slide.content))
-      );
-
-      if (validSlides.length === 0) {
-        throw new Error("No valid slides generated");
+      if (!response.data?.slides || response.data.slides.length === 0) {
+        throw new Error('No slides generated. Please try again.');
       }
 
-      setSlides(validSlides);
-      setCurrentSlideIndex(0);
-      setCurrentSlide(validSlides[0]);
-      toast.success("Presentation generated!");
-    } catch (error: any) {
-      console.error("Presentation error:", error);
-      const errorMessage = error.response?.data?.error || error.message || "Failed to generate presentation";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setSlides(response.data.slides);
+      toast.success("Presentation generated successfully!");
+    } catch (err: any) {
+      console.error("Error generating presentation:", err);
+      toast.error(err.message || "Failed to generate presentation");
+      setError(err.message || "Failed to generate presentation");
     } finally {
       setIsLoading(false);
     }
@@ -220,152 +239,202 @@ export default function PresentationPage() {
   }, [slides]);
 
   return (
-    <ToolPage tool={tool} isLoading={isLoading}>
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {exampleTopics.map((exampleTopic) => (
-            <Button
-              key={exampleTopic}
-              variant="outline"
-              className="text-sm h-auto whitespace-normal p-2"
-              onClick={() => {
-                setTopic(exampleTopic);
-                setError(null);
-              }}
+    <ToolPage
+      tool={tool}
+      isLoading={isLoading}
+      error={error}
+    >
+      <form onSubmit={onSubmit} className="w-full">
+        <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+          <div className="flex-1">
+            <Input
+              placeholder="Enter your presentation topic..."
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
               disabled={isLoading}
-            >
-              {exampleTopic}
-            </Button>
-          ))}
-        </div>
-
-        <form onSubmit={onSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Presentation Topic</label>
-              <Input
-                placeholder="Enter your presentation topic..."
-                value={topic}
-                onChange={(e) => {
-                  setTopic(e.target.value);
-                  setError(null);
-                }}
-                disabled={isLoading}
-              />
-              {topic && (
-                <div className="text-xs text-muted-foreground">
-                  {topic.length}/1000 characters
-                </div>
-              )}
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading || !topic.trim()}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Presentation...
-                </>
-              ) : (
-                "Generate Presentation"
-              )}
-            </Button>
+              className="w-full"
+            />
           </div>
+          <Select
+            value={selectedTemplate}
+            onValueChange={setSelectedTemplate}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select template" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRESENTATION_TEMPLATES.map(template => (
+                <SelectItem key={template.id} value={template.id}>
+                  <div className="flex items-center">
+                    <LayoutTemplate className="w-4 h-4 mr-2" />
+                    <div>
+                      <div className="font-medium">{template.name}</div>
+                      <div className="text-xs text-gray-500">{template.description}</div>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Presentation className="w-4 h-4 mr-2" />
+                Generate
+              </>
+            )}
+          </Button>
+        </div>
+        {isLoading && (
+          <div className="mt-4">
+            <Progress value={progress} className="h-2" />
+            <p className="text-sm text-gray-500 mt-2">Generating your presentation...</p>
+          </div>
+        )}
+      </form>
 
-          {error && (
-            <Card className="p-4 border-destructive">
-              <div className="text-sm text-destructive">{error}</div>
-            </Card>
-          )}
+      {error && (
+        <div className="p-4 text-red-500 bg-red-50 rounded-lg">
+          {error}
+        </div>
+      )}
 
-          {currentSlide && (
-            <div className="space-y-6">
-              <Card className="p-6">
+      {currentSlide && (
+        <div className="relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSlideIndex}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="p-8 min-h-[400px] relative">
+                <div className="absolute top-4 right-4 text-sm text-gray-500">
+                  Slide {currentSlideIndex + 1} of {slides.length}
+                </div>
                 <div className="space-y-4">
-                  {/* Slide Navigation */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm text-muted-foreground">
-                      Slide {currentSlideIndex + 1} of {slides.length} • {currentSlide.type}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={previousSlide}
-                        disabled={currentSlideIndex === 0}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={nextSlide}
-                        disabled={currentSlideIndex === slides.length - 1}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Current Slide */}
-                  <div className="space-y-4 min-h-[300px] flex flex-col">
-                    <h2 className="text-2xl font-bold text-center">
-                      {currentSlide.title}
-                    </h2>
-                    <div className="flex-grow">
-                      {typeof currentSlide.content === 'string' ? (
-                        <p className="text-lg text-center text-muted-foreground mt-4">
-                          {currentSlide.content}
-                        </p>
-                      ) : (
-                        <ul className="list-disc pl-6 space-y-3 mt-4">
-                          {currentSlide.content.map((point, index) => (
-                            <li key={index} className="text-lg">
-                              {point}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={copyToClipboard}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy All
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={generatePowerPoint}
-                      >
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Download PPTX
-                      </Button>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearForm}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      New Presentation
-                    </Button>
-                  </div>
+                  <h2 className="text-2xl font-bold mb-4">{currentSlide.title}</h2>
+                  {Array.isArray(currentSlide.content) ? (
+                    <ul className="space-y-2 list-disc pl-6">
+                      {currentSlide.content.map((item, index) => (
+                        <motion.li
+                          key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          {item}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-700">{currentSlide.content}</p>
+                  )}
                 </div>
               </Card>
-            </div>
-          )}
-        </form>
-      </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="absolute top-1/2 -translate-y-1/2 flex justify-between w-full px-4 pointer-events-none">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentSlideIndex(i => Math.max(0, i - 1))}
+              disabled={currentSlideIndex === 0}
+              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentSlideIndex(i => Math.min(slides.length - 1, i + 1))}
+              disabled={currentSlideIndex === slides.length - 1}
+              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {slides.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentSlideIndex(0)}
+              disabled={currentSlideIndex === 0}
+            >
+              First Slide
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentSlideIndex(slides.length - 1)}
+              disabled={currentSlideIndex === slides.length - 1}
+            >
+              Last Slide
+            </Button>
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyToClipboard}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy All
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generatePowerPoint}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Download PPTX
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearForm}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            New Presentation
+          </Button>
+        </div>
+      )}
+
+      {slides.length > 0 && (
+        <div className="grid grid-cols-4 gap-4 mt-8">
+          {slides.map((slide, index) => (
+            <Card
+              key={index}
+              className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
+                index === currentSlideIndex ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setCurrentSlideIndex(index)}
+            >
+              <div className="text-xs font-medium mb-2">Slide {index + 1}</div>
+              <h3 className="text-sm font-medium truncate">{slide.title}</h3>
+              <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                {Array.isArray(slide.content)
+                  ? slide.content[0] + (slide.content.length > 1 ? '...' : '')
+                  : slide.content}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </ToolPage>
   );
 }

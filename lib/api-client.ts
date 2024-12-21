@@ -86,22 +86,29 @@ export const api = {
     return response.data;
   },
 
-  async generatePresentation(topic: string): Promise<ApiResponse<PresentationResponse>> {
+  async generatePresentation(topic: string, template: string = 'business'): Promise<ApiResponse<PresentationResponse>> {
     try {
-      console.log('Sending presentation request for topic:', topic);
-      const response = await apiClient.post('/presentation', { topic });
-      console.log('Raw presentation response:', response);
+      const response = await apiClient.post('/presentation', { topic, template });
       
-      // Ensure the response has the correct structure
-      if (!response.data?.data?.slides) {
-        console.error('Invalid response structure:', response.data);
+      // Add logging to debug response
+      console.log('API Response:', response.data);
+      
+      if (!response.data?.slides) {
         throw new Error('Invalid response structure: missing slides');
       }
-
-      return response.data;
-    } catch (error) {
+      
+      return {
+        status: 'success',
+        data: {
+          slides: response.data.slides
+        }
+      };
+    } catch (error: any) {
       console.error('Presentation API error:', error);
-      throw error;
+      return {
+        status: 'error',
+        message: error.response?.data?.message || error.message || 'Failed to generate presentation'
+      };
     }
   },
 
