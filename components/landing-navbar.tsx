@@ -28,9 +28,9 @@ export const LandingNabvbar = () => {
   };
 
   return (
-    <nav className="p-4 bg-transparent flex items-center justify-between">
+    <nav className="p-4 bg-transparent flex items-center justify-between max-w-screen overflow-hidden">
       <Link href="/" className="flex items-center">
-        <div className="relative h-8 w-8 mr-4 rounded-lg overflow-hidden bg-white/10 p-1 backdrop-blur-sm">
+        <div className="relative h-8 w-8 mr-2 sm:mr-4 rounded-lg overflow-hidden bg-white/10 p-1 backdrop-blur-sm">
           <Image 
             fill 
             src="/logo.png" 
@@ -38,19 +38,23 @@ export const LandingNabvbar = () => {
             className="object-contain"
           />
         </div>
-        <h1 className={cn("text-2xl font-bold text-white", font.className)}>workfusionapp</h1>
+        <h1 className={cn("hidden sm:block text-2xl font-bold text-white", font.className)}>
+          workfusionapp
+        </h1>
       </Link>
       <div className="flex items-center gap-x-2">
         <Button 
           onClick={onUpgradeClick}
           variant="premium" 
-          className="rounded-full"
+          className="rounded-full text-sm sm:text-base px-3 sm:px-4"
         >
-          Upgrade <Zap className="w-4 h-4 ml-2 fill-white" />
+          <span className="hidden sm:inline">Upgrade</span>
+          <span className="sm:hidden">Pro</span>
+          <Zap className="w-4 h-4 ml-2 fill-white" />
         </Button>
         <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
-          <Button variant="outline" className="rounded-full">
-            Get Started
+          <Button variant="outline" className="rounded-full text-sm sm:text-base px-3 sm:px-4">
+            {isSignedIn ? "Dashboard" : "Get Started"}
           </Button>
         </Link>
       </div>
