@@ -65,7 +65,7 @@ export default function DataInsightsPage() {
       const response = await api.analyzeData(parsedData);
       
       if (!response.data) {
-        throw new Error(response.error || "Invalid response from server");
+        throw new Error(response.message || "Invalid response from server");
       }
 
       setInsights(response.data);

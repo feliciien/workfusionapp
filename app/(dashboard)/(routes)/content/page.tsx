@@ -21,6 +21,9 @@ export default function ContentPage() {
     try {
       setIsLoading(true);
       const response = await api.generateContent(prompt);
+      if (!response.data) {
+        throw new Error("No content received from the API");
+      }
       setContent(response.data.content);
       toast.success("Content generated successfully!");
     } catch (error: any) {

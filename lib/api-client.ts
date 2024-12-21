@@ -23,6 +23,12 @@ export interface PresentationResponse {
   slides: Slide[];
 }
 
+export interface DataInsightsResponse {
+  metrics: Record<string, number | string>;
+  trends: string[];
+  recommendations: string[];
+}
+
 export const api = {
   // Chat & Writing
   async chat(message: string): Promise<ApiResponse<{ response: string }>> {
@@ -81,7 +87,7 @@ export const api = {
   },
 
   // Business
-  async analyzeData(data: any): Promise<ApiResponse<{ data: any }>> {
+  async analyzeData(data: any): Promise<ApiResponse<DataInsightsResponse>> {
     const response = await apiClient.post('/data-insights', { data });
     return response.data;
   },

@@ -8,8 +8,8 @@ Sentry.init({
   debug: process.env.NODE_ENV === 'development',
   environment: process.env.NODE_ENV,
   integrations: [
-    new Sentry.Integrations.Http({ tracing: true }),
-    new Sentry.Integrations.Prisma({ tracing: true }),
+    new Sentry.Integrations.Http(),
+    new Sentry.Integrations.Prisma(),
   ],
   beforeSend(event) {
     // Check if it is an exception, and if so, show it on the console
