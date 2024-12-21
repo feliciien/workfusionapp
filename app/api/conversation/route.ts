@@ -82,10 +82,8 @@ export async function POST(req: Request) {
               create: {
                 content: messageContent,
                 role: "assistant",
-                timestamp: new Date(),
               },
             },
-            lastMessageAt: new Date(),
           },
         });
       } catch (dbError) {
@@ -98,6 +96,7 @@ export async function POST(req: Request) {
         await prismadb.conversation.create({
           data: {
             userId,
+            title: "New Conversation",
             messages: {
               create: [
                 ...messages.map((msg: ConversationMessage) => ({
@@ -108,11 +107,9 @@ export async function POST(req: Request) {
                 {
                   content: messageContent,
                   role: "assistant",
-                  timestamp: new Date(),
                 }
               ]
             },
-            lastMessageAt: new Date(),
           }
         });
       } catch (dbError) {
