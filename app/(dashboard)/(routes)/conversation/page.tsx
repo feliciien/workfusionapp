@@ -14,6 +14,7 @@ import { Empty } from "@/components/empty";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import * as z from "zod";
+import { ClipboardCopy } from "lucide-react";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -176,116 +177,140 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="h-full relative">
-      <Heading
-        title="Conversation"
-        description="Our most advanced conversation model."
-        icon={MessageSquare}
-        iconColor="text-violet-500"
-        bgColor="bg-violet-500/10"
-      />
-      
-      <div className="px-4 lg:px-8">
-        <div>
+    <div className="flex flex-col h-[calc(100vh-100px)]">
+      <div className="flex items-center justify-between px-4 lg:px-8 py-4 border-b">
+        <Heading
+          title="AI Conversation"
+          description="Have a natural conversation with our advanced AI"
+          icon={MessageSquare}
+          iconColor="text-violet-500"
+          bgColor="bg-violet-500/10"
+        />
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            className="mb-4"
+            size="icon"
             onClick={() => setDarkMode(!darkMode)}
+            className="rounded-full"
           >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
           
           <Button
             variant="ghost"
-            className="mb-4 ml-2"
+            size="icon"
             onClick={clearConversation}
+            className="rounded-full"
+            disabled={messages.length === 0}
           >
-            <Trash className="w-4 h-4" />
+            <Trash className="w-5 h-5" />
           </Button>
         </div>
+      </div>
 
-        <div className="space-y-4 max-h-[600px] overflow-y-auto p-4 rounded-lg bg-slate-100 dark:bg-slate-900">
-          {messages.length === 0 && !loading && (
-            <Empty label="No conversation started." />
-          )}
-          <div className="flex flex-col space-y-4">
-            {messages.map((message, index) => (
-              <div 
-                key={message.id || index}
-                className={cn(
-                  "p-4 w-full flex items-start gap-x-4 rounded-lg",
-                  message.role === "user" ? "bg-white dark:bg-slate-800" : "bg-violet-500/10",
-                  message.status === 'error' && "border-red-500 border"
-                )}
-              >
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <div className="flex flex-col flex-1">
-                  <p className="text-sm">
-                    {message.content}
-                  </p>
-                  {message.timestamp && (
-                    <span className="text-xs text-gray-500 mt-1">
-                      {new Date(message.timestamp).toLocaleTimeString()}
-                    </span>
-                  )}
-                  {message.status === 'error' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSubmit({ prompt: message.content })}
-                      className="mt-2"
-                    >
-                      Retry
-                    </Button>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(message.content);
-                    toast.success("Copied to clipboard!");
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="p-4 rounded-lg bg-violet-500/10 animate-pulse">
-                <p className="text-sm">AI is typing...</p>
-              </div>
-            )}
-          </div>
-        </div>
-        {showUpgrade && (
-          <div className="p-8 rounded-lg bg-amber-100 mt-4">
-            <div className="flex items-center gap-x-4">
-              <Zap className="h-8 w-8 text-amber-600" />
-              <div>
-                <h3 className="text-lg font-bold text-amber-600">Free Trial Limit Reached</h3>
-                <p className="text-sm text-amber-600">
-                  Upgrade to our pro plan to continue using the conversation feature.
-                </p>
-              </div>
-              <Button 
-                variant="premium"
-                className="ml-auto"
-                onClick={() => router.push('/settings')}
-              >
-                Upgrade to Pro
-                <Zap className="w-4 h-4 ml-2 fill-white" />
-              </Button>
-            </div>
+      <div className="flex-1 overflow-y-auto px-4 lg:px-8 py-4 space-y-4 bg-secondary/10">
+        {messages.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Empty label="Start a conversation" />
           </div>
         )}
-        <div className="mt-4">
+        <div className="flex flex-col space-y-4 max-w-4xl mx-auto">
+          {messages.map((message, index) => (
+            <div 
+              key={message.id || index}
+              className={cn(
+                "flex items-start gap-x-4 rounded-xl p-4 animate-fade-in transition-all",
+                message.role === "user" 
+                  ? "ml-auto bg-primary text-primary-foreground max-w-[80%]" 
+                  : "mr-auto bg-muted max-w-[80%]",
+                message.status === 'error' && "border-2 border-destructive"
+              )}
+            >
+              <div className={cn(
+                "flex-shrink-0 rounded-full p-2",
+                message.role === "user" ? "bg-primary-foreground/10" : "bg-primary/10"
+              )}>
+                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+              </div>
+              <div className="flex flex-col flex-1 min-w-[200px]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    {message.role === "user" ? "You" : "AI Assistant"}
+                  </span>
+                  {message.timestamp && (
+                    <span className="text-xs opacity-70">
+                      {new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+                {message.status === 'error' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onSubmit({ prompt: message.content })}
+                    className="mt-2 w-fit"
+                  >
+                    Retry Message
+                  </Button>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(message.content);
+                  toast.success("Message copied to clipboard!");
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <ClipboardCopy className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex items-center gap-2 text-muted-foreground animate-pulse mr-auto bg-muted rounded-xl p-4">
+              <BotAvatar />
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce" />
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.2s]" />
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.4s]" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 lg:p-8 border-t bg-background">
+        <div className="max-w-4xl mx-auto">
           <Form
             isLoading={loading}
             onSubmit={onSubmit}
           />
         </div>
       </div>
+
+      {showUpgrade && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background p-6 rounded-xl shadow-lg border z-50">
+          <h3 className="text-lg font-semibold mb-2">Upgrade Required</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            You've reached your free trial limit. Upgrade to continue using the AI conversation feature.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowUpgrade(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => router.push('/settings')}>
+              Upgrade Now
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
