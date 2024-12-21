@@ -4,9 +4,15 @@ import prismadb from "@/lib/prismadb";
 
 export const dynamic = 'force-dynamic';
 
+interface RouteParams {
+  params: {
+    id: string;
+  };
+}
+
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  context: RouteParams
 ) {
   try {
     const { userId } = await auth();
@@ -17,7 +23,7 @@ export async function GET(
 
     const conversation = await prismadb.conversation.findUnique({
       where: {
-        id: params.id,
+        id: context.params.id,
         userId: userId
       },
       include: {
