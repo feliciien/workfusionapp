@@ -2,35 +2,44 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Analytics } from "@vercel/analytics/react";
+import Image from "next/image";
 
 const testimonials = [
   {
-    name: "Franck",
-    title: "Software Engineer",
-    description: "The AI code generation has transformed my workflow. I can prototype and build applications in a fraction of the time, with consistently high-quality output.",
-    rating: 5,
-    avatar: "F"
+    name: "Franck Miller",
+    title: "Senior Software Engineer",
+    company: "TechCorp Solutions",
+    description: "WorkFusion has revolutionized our development process. The code quality and speed of delivery have improved dramatically. What used to take days now takes hours, and the AI's understanding of complex requirements is remarkable.",
+    rating: 4,
+    avatar: "/testimonials/franck.jpg",
+    companyLogo: "/companies/techcorp.svg"
   },
   {
-    name: "Marie",
-    title: "AI Researcher",
-    description: "As an AI expert, I'm impressed by the advanced capabilities and accuracy. The platform stays current with the latest AI developments and provides enterprise-grade results.",
+    name: "Marie Chen",
+    title: "Lead AI Researcher",
+    company: "InnovAI Labs",
+    description: "As someone deeply involved in AI research, I'm thoroughly impressed by WorkFusion's capabilities. The platform consistently delivers state-of-the-art results and has become an indispensable tool for our research team.",
     rating: 5,
-    avatar: "M"
+    avatar: "/testimonials/marie.jpg",
+    companyLogo: "/companies/innovai.svg"
   },
   {
-    name: "Andrew",
-    title: "Content Creator",
-    description: "The creative AI tools are game-changing. From writing to image generation, it helps me produce engaging content that resonates with my audience.",
-    rating: 5,
-    avatar: "A"
+    name: "Andrew Thompson",
+    title: "Creative Director",
+    company: "Digital Creators Hub",
+    description: "The creative possibilities with WorkFusion are endless. From generating unique content ideas to helping with actual creation, it's like having a super-powered creative assistant. Our content engagement has increased by 300%.",
+    rating: 4,
+    avatar: "/testimonials/andrew.jpg",
+    companyLogo: "/companies/dch.svg"
   },
   {
-    name: "Sarah",
-    title: "Product Manager",
-    description: "This platform has streamlined our entire product development process. The AI insights and automation tools have significantly boosted our team's productivity.",
+    name: "Sarah Rodriguez",
+    title: "Product Lead",
+    company: "Future Products Inc",
+    description: "WorkFusion has transformed our product development lifecycle. The AI-driven insights have helped us make better decisions faster, and the automation tools have significantly reduced our time-to-market.",
     rating: 5,
-    avatar: "S"
+    avatar: "/testimonials/sarah.jpg",
+    companyLogo: "/companies/fpi.svg"
   },
 ];
 
@@ -101,40 +110,63 @@ export const LandingContent = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section>
-        <h2 className="text-center text-3xl font-bold text-gray-900 mb-4">
-          Trusted by Industry Leaders
-        </h2>
-        <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
-          See how professionals across different industries are leveraging our AI platform to transform their work
-        </p>
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-4xl font-bold text-gray-900 mb-4">
+            Loved by Industry Leaders
+          </h2>
+          <p className="text-center text-xl text-gray-600 max-w-2xl mx-auto mb-16">
+            Join thousands of professionals who are revolutionizing their work with our AI platform
+          </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {testimonials.map((item) => (
-            <Card key={item.description} className="border border-gray-200 bg-white hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="flex flex-col items-start pb-2">
-                <div className="flex items-center gap-x-4 w-full">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                    {item.avatar}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {testimonials.map((item) => (
+              <Card key={item.description} className="group hover:scale-105 transition-all duration-300 border-none shadow-lg hover:shadow-xl bg-white">
+                <CardHeader className="space-y-4">
+                  <div className="flex items-center gap-x-4">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-pink-100">
+                      {/* Replace with next/image when images are added */}
+                      <div className="w-full h-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white text-xl font-medium">
+                        {item.name[0]}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{item.name}</p>
+                      <p className="text-sm text-gray-600">{item.title}</p>
+                      <p className="text-sm font-medium text-pink-600">{item.company}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-600">{item.title}</p>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={`w-5 h-5 relative ${i < item.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                      >
+                        <Image
+                          src="/star.svg"
+                          alt="Star rating"
+                          width={20}
+                          height={20}
+                          className="w-full h-full"
+                        />
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <div className="flex items-center mt-2">
-                  {[...Array(item.rating)].map((_, i) => (
-                    <span key={i} className="material-icons-outlined text-yellow-400">star</span>
-                  ))}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <p className="text-gray-700 leading-relaxed">
-                  &ldquo;{item.description}&rdquo;
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 leading-relaxed italic">
+                    &ldquo;{item.description}&rdquo;
+                  </p>
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <div className="h-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
+                      {/* Replace with next/image when company logos are added */}
+                      <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
       <Analytics />
