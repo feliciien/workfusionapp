@@ -181,39 +181,64 @@ export async function POST(req: Request) {
 
       return NextResponse.json(response.data);
     } catch (error: any) {
-      console.error("OpenAI API Error:", error.response?.data || error.message);
-      throw error;
+      console.error("[IMAGE_ERROR] Full error:", {
+        message: error.message,
+        response: error.response?.data,
+        stack: error.stack,
+        redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
+        openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
+      });
+      
+      // Handle OpenAI API specific errors
+      if (error?.response?.data?.error) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: error.response.data.error.message,
+            code: "OPENAI_ERROR",
+            details: error.response.data.error
+          }), 
+          { status: error.response.status || 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Generic error response
+      return new NextResponse(
+        JSON.stringify({ 
+          error: "An error occurred during image generation",
+          code: "INTERNAL_ERROR",
+          message: error.message
+        }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
   } catch (error: any) {
-    console.error("[IMAGE_ERROR]", error);
+    console.error("[IMAGE_ERROR] Full error:", {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack,
+      redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
+      openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
+    });
     
     // Handle OpenAI API specific errors
     if (error?.response?.data?.error) {
       return new NextResponse(
         JSON.stringify({ 
           error: error.response.data.error.message,
-          code: "OPENAI_ERROR"
+          code: "OPENAI_ERROR",
+          details: error.response.data.error
         }), 
         { status: error.response.status || 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Handle rate limiting
-    if (error?.response?.status === 429) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: "Rate limit exceeded. Please try again later.",
-          code: "RATE_LIMIT"
-        }), 
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // Generic error response
     return new NextResponse(
       JSON.stringify({ 
-        error: "An error occurred while generating images",
-        details: error?.message || "Unknown error"
+        error: "An error occurred during image generation",
+        code: "INTERNAL_ERROR",
+        message: error.message
       }), 
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
