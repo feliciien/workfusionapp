@@ -192,20 +192,60 @@ export async function POST(req: Request) {
 
     // Process the prompt with style enhancement
     const enhancedPrompt = processPrompt(prompt, style);
-    console.log("Enhanced prompt:", enhancedPrompt);
+    console.log("[DEBUG] Image generation request:", {
+      prompt: enhancedPrompt.slice(0, 100) + "...", // Log first 100 chars of prompt
+      resolution,
+      style,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       const response = await retryWithExponentialBackoff(async () => {
-        return await openai.images.generate({
+        // Log the exact request configuration
+        console.log("[DEBUG] OpenAI Request Config:", {
+          timestamp: new Date().toISOString(),
           model: "dall-e-3",
-          prompt: enhancedPrompt,
-          n: 1, // DALL-E 3 only supports n=1
-          size: resolution as "1024x1024" | "1792x1024" | "1024x1792",
-          quality: "hd", // Using HD quality for better results
-          style: "vivid", // Using vivid style for more striking images
-          response_format: "url",
+          promptLength: enhancedPrompt.length,
+          resolution,
+          apiKeyPresent: !!process.env.OPENAI_API_KEY,
+          apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
+          apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 5) || 'none'
         });
-      });
+
+        try {
+          const result = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: enhancedPrompt,
+            n: 1,
+            size: resolution as "1024x1024" | "1792x1024" | "1024x1792",
+            quality: "hd",
+            style: "vivid",
+            response_format: "url",
+          });
+
+          // Log successful response
+          console.log("[DEBUG] OpenAI Success Response:", {
+            timestamp: new Date().toISOString(),
+            hasData: !!result.data,
+            dataLength: result.data?.length || 0,
+            firstUrl: result.data?.[0]?.url ? 'present' : 'missing'
+          });
+
+          return result;
+        } catch (apiError: any) {
+          // Log detailed API error
+          console.error("[DEBUG] OpenAI API Error:", {
+            timestamp: new Date().toISOString(),
+            errorMessage: apiError?.message,
+            errorType: apiError?.type,
+            errorCode: apiError?.status,
+            responseData: apiError?.response?.data,
+            headers: apiError?.response?.headers
+          });
+          throw apiError; // Re-throw to be handled by outer catch
+        }
+      }, 3, 2000); // 3 retries, 2 second base delay
 
       if (!isPro) {
         await increaseApiLimit();
@@ -223,15 +263,67 @@ export async function POST(req: Request) {
 
       return NextResponse.json(response.data);
     } catch (error: any) {
-      console.error("[IMAGE_ERROR] Full error:", {
+      console.error("[IMAGE_ERROR] Detailed error:", {
+        timestamp: new Date().toISOString(),
+        errorType: error?.constructor?.name,
         message: error?.message || 'Unknown error',
-        response: error?.response?.data,
-        stack: error?.stack || '',
-        redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
-        openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
+        response: {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          data: error?.response?.data,
+        },
+        request: {
+          prompt: enhancedPrompt.slice(0, 50) + '...',
+          resolution,
+          style
+        }
       });
-      
-      // Handle OpenAI API specific errors
+
+      // Handle specific error cases
+      if (!process.env.OPENAI_API_KEY) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "OpenAI API key is not configured",
+            code: "MISSING_API_KEY"
+          }), 
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (error?.response?.status === 401) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "OpenAI API key is invalid or expired",
+            code: "INVALID_API_KEY",
+            details: "Please check your API key configuration"
+          }), 
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (error?.response?.status === 429) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "Rate limit exceeded. Please try again later.",
+            code: "RATE_LIMIT",
+            details: "You've reached the OpenAI API rate limit"
+          }), 
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (error?.message?.includes('timeout') || error?.code === 'ETIMEDOUT') {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "Request timed out",
+            code: "TIMEOUT",
+            details: "The request took too long to complete"
+          }), 
+          { status: 504, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle OpenAI specific errors
       if (error?.response?.data?.error) {
         return new NextResponse(
           JSON.stringify({ 
@@ -248,7 +340,8 @@ export async function POST(req: Request) {
         JSON.stringify({ 
           error: "An error occurred during image generation",
           code: "INTERNAL_ERROR",
-          message: error?.message || 'Unknown error'
+          message: error?.message || 'Unknown error',
+          timestamp: new Date().toISOString()
         }), 
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
