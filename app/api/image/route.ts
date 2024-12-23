@@ -83,26 +83,59 @@ const generateCacheKey = (prompt: string, style: string, resolution: string) => 
 // Retry mechanism for API calls
 const retryWithExponentialBackoff = async (
   fn: () => Promise<any>,
-  maxRetries: number = 3,
+  maxRetries: number = 2,
   baseDelay: number = 1000
 ) => {
+  let lastError;
+  
   for (let i = 0; i < maxRetries; i++) {
     try {
-      return await fn();
+      // Add timeout using AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+
+      try {
+        const result = await Promise.race([
+          fn(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timed out')), 50000)
+          )
+        ]);
+        
+        clearTimeout(timeoutId);
+        return result;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError' || error.message === 'Operation timed out') {
+          throw new Error('Request timed out after 50 seconds');
+        }
+        throw error;
+      }
     } catch (error: any) {
-      if (i === maxRetries - 1) throw error;
-      if (error?.response?.status === 429) {
+      lastError = error;
+      
+      if (i === maxRetries - 1) break;
+      
+      if (error?.response?.status === 429 || error.message.includes('timeout')) {
         const delay = baseDelay * Math.pow(2, i);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
+      
       throw error;
     }
   }
+  
+  throw lastError;
 };
 
 export async function POST(req: Request) {
   try {
+    // Send initial response headers to keep connection alive
+    const encoder = new TextEncoder();
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    
     const { userId } = auth();
 
     if (!userId) {

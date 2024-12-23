@@ -43,9 +43,10 @@ const ImagePage = () => {
     try {
       setImages([]);
       const toastId = toast.loading(
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-2">
           <Wand2 className="h-4 w-4 animate-pulse" />
           <span>Creating your masterpiece...</span>
+          <span className="text-xs text-gray-500">This may take up to 30 seconds</span>
         </div>
       );
       
@@ -54,6 +55,12 @@ const ImagePage = () => {
         amount: "1",
         resolution: values.resolution,
         style: values.style,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000, // 60 second timeout
+        timeoutErrorMessage: "Image generation is taking longer than expected. Please try again."
       });
 
       if (!response.data || !Array.isArray(response.data)) {
@@ -73,7 +80,9 @@ const ImagePage = () => {
     } catch (error: any) {
       toast.dismiss();
       
-      if (error?.response?.status === 403) {
+      if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
+        toast.error("Image generation is taking longer than expected. Please try again.");
+      } else if (error?.response?.status === 403) {
         proModal.onOpen();
         toast.error("Free trial has expired. Please upgrade to pro.");
       } else if (error?.response?.status === 400) {
@@ -85,7 +94,11 @@ const ImagePage = () => {
       } else {
         toast.error("Failed to generate image. Please try again.");
       }
-      console.error("[IMAGE_ERROR]", error);
+      console.error("[IMAGE_ERROR]", {
+        code: error?.code,
+        message: error?.message,
+        response: error?.response?.data
+      });
     }
   };
 
