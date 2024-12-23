@@ -20,6 +20,10 @@ interface StudyHistory {
   notes?: string;
 }
 
+interface StudyResponse {
+  answer: string;
+}
+
 export default function StudyPage() {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
@@ -70,8 +74,8 @@ export default function StudyPage() {
       setAnswer("");
       const response = await api.getStudyHelp(query);
       
-      if (!response?.data?.answer) {
-        throw new Error("Invalid response from server");
+      if (!response.success || !response.data?.answer) {
+        throw new Error(response.error || "Failed to generate response");
       }
 
       const formattedAnswer = response.data.answer;
@@ -80,9 +84,8 @@ export default function StudyPage() {
       toast.success("Answer generated!");
     } catch (error: any) {
       console.error("Study error:", error);
-      const errorMessage = error.response?.data?.error || error.message || "Something went wrong";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(error.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }

@@ -8,9 +8,9 @@ const apiClient = axios.create({
 });
 
 export interface ApiResponse<T> {
-  status: 'success' | 'error';
+  success: boolean;
   data?: T;
-  message?: string;
+  error?: string;
 }
 
 export interface Slide {
@@ -36,8 +36,12 @@ export const api = {
     return response.data;
   },
 
-  async generateContent(prompt: string): Promise<ApiResponse<{ content: string }>> {
-    const response = await apiClient.post('/content', { prompt });
+  async generateContent(
+    prompt: string,
+    type: string = "blog",
+    tone: string = "professional"
+  ): Promise<ApiResponse<{ content: string }>> {
+    const response = await apiClient.post('/content', { prompt, type, tone });
     return response.data;
   },
 
@@ -104,7 +108,7 @@ export const api = {
       }
       
       return {
-        status: 'success',
+        success: true,
         data: {
           slides: response.data.slides
         }
@@ -112,14 +116,14 @@ export const api = {
     } catch (error: any) {
       console.error('Presentation API error:', error);
       return {
-        status: 'error',
-        message: error.response?.data?.message || error.message || 'Failed to generate presentation'
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to generate presentation'
       };
     }
   },
 
   // Learning
-  async getStudyHelp(query: string): Promise<{ data: { answer: string } }> {
+  async getStudyHelp(query: string): Promise<ApiResponse<{ answer: string }>> {
     const response = await apiClient.post('/study', { query });
     return response.data;
   },

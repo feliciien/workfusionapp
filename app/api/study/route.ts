@@ -11,33 +11,54 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
+    // Validate OpenAI API key
     if (!process.env.OPENAI_API_KEY) {
-      return new NextResponse("OpenAI API key not configured", { status: 500 });
+      return NextResponse.json({
+        success: false,
+        error: "OpenAI API key not configured"
+      }, { status: 500 });
     }
 
-    const { query } = await req.json();
+    // Parse and validate request body
+    const body = await req.json().catch(() => ({}));
+    const { query } = body;
 
     if (!query || typeof query !== "string") {
-      return new NextResponse("Query is required and must be a string", { status: 400 });
+      return NextResponse.json({
+        success: false,
+        error: "Query is required and must be a string"
+      }, { status: 400 });
     }
 
     if (query.length > 1000) {
-      return new NextResponse("Query is too long. Maximum length is 1000 characters", { status: 400 });
+      return NextResponse.json({
+        success: false,
+        error: "Query is too long. Maximum length is 1000 characters"
+      }, { status: 400 });
     }
 
+    // Check user limits
     const freeTrial = await checkApiLimit();
     const isPro = await checkSubscription();
 
     if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+      return NextResponse.json({
+        success: false,
+        error: "Free trial has expired. Please upgrade to pro."
+      }, { status: 403 });
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert tutor specializing in breaking down complex topics into clear, understandable explanations.
+    // Set timeout for OpenAI request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert tutor specializing in breaking down complex topics into clear, understandable explanations.
 
 Your responses should follow this structure:
 
@@ -56,35 +77,49 @@ Guidelines for your explanations:
 - Highlight important terms or concepts using bold or italics
 
 Format your response in proper markdown for optimal readability.`
-        },
-        {
-          role: "user",
-          content: query
+          },
+          {
+            role: "user",
+            content: query
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }, { signal: controller.signal });
+
+      clearTimeout(timeoutId);
+
+      if (!response.choices[0].message?.content) {
+        throw new Error("No content in response");
+      }
+
+      // Increase the API limit for non-pro users
+      if (!isPro) {
+        await increaseApiLimit();
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          answer: response.choices[0].message.content
         }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+      });
 
-    if (!response.choices[0].message.content) {
-      return new NextResponse("Failed to generate response", { status: 500 });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return NextResponse.json({
+          success: false,
+          error: "Request timed out"
+        }, { status: 504 });
+      }
+      throw error; // Re-throw to be caught by outer catch block
     }
 
-    // Increase the API limit
-    if (!isPro) {
-      await increaseApiLimit();
-    }
-
-    return NextResponse.json({
-      success: true,
-      answer: response.choices[0].message.content
-    });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("[STUDY_ERROR]", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: error.message || "Internal Server Error"
+    }, { status: 500 });
   }
 }
