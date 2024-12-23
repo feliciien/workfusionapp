@@ -11,6 +11,26 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
 });
 
+// Verify Redis connection
+const verifyRedisConnection = async () => {
+  try {
+    // Try to set and get a test value
+    const testKey = 'test-connection';
+    await redis.set(testKey, 'test-value');
+    const testValue = await redis.get(testKey);
+    await redis.del(testKey);
+    return testValue === 'test-value';
+  } catch (error: any) {
+    console.error('[REDIS_CONNECTION_ERROR]:', {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack || '',
+      url: !!process.env.UPSTASH_REDIS_REST_URL,
+      token: !!process.env.UPSTASH_REDIS_REST_TOKEN
+    });
+    return false;
+  }
+};
+
 // Style enhancements for different image types
 const stylePrompts = {
   "realistic": "ultra realistic, photorealistic, highly detailed, 8k resolution, professional photography, masterpiece quality",
@@ -146,9 +166,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check cache first
+    // Verify Redis connection early
+    const redisConnected = await verifyRedisConnection();
+    if (!redisConnected) {
+      console.warn('[REDIS_WARNING] Redis connection failed, proceeding without caching');
+    }
+
+    // Check cache first (only if Redis is connected)
+    let cachedResult = null;
     const cacheKey = generateCacheKey(prompt, style, resolution);
-    const cachedResult = await redis.get(cacheKey);
+    
+    if (redisConnected) {
+      try {
+        cachedResult = await redis.get(cacheKey);
+      } catch (error: any) {
+        console.error('[REDIS_CACHE_ERROR]:', error?.message || 'Unknown error');
+        // Continue without cache on error
+      }
+    }
     
     if (cachedResult) {
       console.log("Cache hit for image generation");
@@ -176,15 +211,22 @@ export async function POST(req: Request) {
         await increaseApiLimit();
       }
 
-      // Cache the result for 24 hours
-      await redis.set(cacheKey, response.data, { ex: 86400 });
+      // Cache the result for 24 hours (only if Redis is connected)
+      if (redisConnected) {
+        try {
+          await redis.set(cacheKey, response.data, { ex: 86400 });
+        } catch (error: any) {
+          console.error('[REDIS_CACHE_SET_ERROR]:', error?.message || 'Unknown error');
+          // Continue without caching on error
+        }
+      }
 
       return NextResponse.json(response.data);
     } catch (error: any) {
       console.error("[IMAGE_ERROR] Full error:", {
-        message: error.message,
-        response: error.response?.data,
-        stack: error.stack,
+        message: error?.message || 'Unknown error',
+        response: error?.response?.data,
+        stack: error?.stack || '',
         redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
         openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
       });
@@ -206,7 +248,7 @@ export async function POST(req: Request) {
         JSON.stringify({ 
           error: "An error occurred during image generation",
           code: "INTERNAL_ERROR",
-          message: error.message
+          message: error?.message || 'Unknown error'
         }), 
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
@@ -214,9 +256,9 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("[IMAGE_ERROR] Full error:", {
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack,
+      message: error?.message || 'Unknown error',
+      response: error?.response?.data,
+      stack: error?.stack || '',
       redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
       openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
     });
@@ -238,7 +280,7 @@ export async function POST(req: Request) {
       JSON.stringify({ 
         error: "An error occurred during image generation",
         code: "INTERNAL_ERROR",
-        message: error.message
+        message: error?.message || 'Unknown error'
       }), 
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
