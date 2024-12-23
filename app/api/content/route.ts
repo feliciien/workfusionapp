@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 300; // Increased from 60 to 300 seconds
+export const maxDuration = 60; // Maximum allowed duration for Vercel Hobby plan
 
 const MAX_RETRIES = 2;
 const TIMEOUT_DURATION = 60000; // 60 seconds
