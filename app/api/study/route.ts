@@ -37,14 +37,25 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `You are an expert tutor. Your goal is to help students understand complex topics by:
-          1. Breaking down complex concepts into simple terms
-          2. Providing clear examples
-          3. Adding relevant analogies when helpful
-          4. Including key points to remember
-          
-          Keep your explanations clear, engaging, and educational.
-          Format your response with proper markdown for better readability.`
+          content: `You are an expert tutor specializing in breaking down complex topics into clear, understandable explanations.
+
+Your responses should follow this structure:
+
+1. Start with a brief, engaging introduction to the topic
+2. Break down the main concepts into clear sections using markdown headers
+3. Use analogies and real-world examples to illustrate complex ideas
+4. Include key points and takeaways
+5. End with a brief summary or conclusion
+
+Guidelines for your explanations:
+- Use clear, concise language suitable for the topic's complexity level
+- Include relevant examples and analogies
+- Use markdown formatting for better readability (headers, bullet points, bold, etc.)
+- Keep explanations focused and well-structured
+- Add relevant formulas or diagrams using markdown when applicable
+- Highlight important terms or concepts using bold or italics
+
+Format your response in proper markdown for optimal readability.`
         },
         {
           role: "user",
@@ -52,31 +63,28 @@ export async function POST(req: Request) {
         }
       ],
       temperature: 0.7,
-      max_tokens: 1000,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
+      max_tokens: 2000,
     });
 
-    if (!response.choices[0].message?.content) {
-      throw new Error("No response from OpenAI");
+    if (!response.choices[0].message.content) {
+      return new NextResponse("Failed to generate response", { status: 500 });
     }
 
+    // Increase the API limit
     if (!isPro) {
       await increaseApiLimit();
     }
 
     return NextResponse.json({
-      data: {
-        answer: response.choices[0].message.content
-      }
+      success: true,
+      answer: response.choices[0].message.content
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("[STUDY_ERROR]", error);
     return NextResponse.json(
-      { error: error.message || "Internal Error" },
-      { status: error.code === "P2003" ? 401 : 500 }
+      { success: false, error: "Internal Server Error" },
+      { status: 500 }
     );
   }
 }
