@@ -87,11 +87,11 @@ export default function PresentationPage() {
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (response.status === 'error') {
-        throw new Error(response.message || 'Failed to generate presentation');
+      if (!response?.data) {
+        throw new Error('Failed to generate presentation');
       }
 
-      if (!response.data?.slides || response.data.slides.length === 0) {
+      if (!response.data.slides || response.data.slides.length === 0) {
         throw new Error('No slides generated. Please try again.');
       }
 

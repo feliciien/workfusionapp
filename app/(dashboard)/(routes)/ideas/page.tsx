@@ -37,13 +37,9 @@ export default function IdeasPage() {
       setIdeas([]);
       const response = await api.generateIdeas(topic);
       
-      if (response.status === "error") {
-        throw new Error(response.message || "Failed to generate ideas");
-      }
-      
       if (!response?.data?.ideas || !Array.isArray(response.data.ideas)) {
         console.error("Invalid response structure:", response);
-        throw new Error("Invalid response from server");
+        throw new Error("Failed to generate ideas");
       }
 
       setIdeas(response.data.ideas);
