@@ -129,74 +129,46 @@ const retryWithExponentialBackoff = async (
   throw lastError;
 };
 
+const CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
+
+// Enhanced error handling for OpenAI API
+const handleOpenAIError = (error: any) => {
+  console.error('[OPENAI_ERROR]:', {
+    status: error?.status,
+    message: error?.message,
+    type: error?.type,
+    code: error?.code
+  });
+
+  if (error?.status === 429) {
+    return new NextResponse("Rate limit exceeded. Please try again later.", { status: 429 });
+  }
+  
+  if (error?.message?.includes('billing')) {
+    return new NextResponse("OpenAI API billing error. Please check your account.", { status: 402 });
+  }
+
+  return new NextResponse(error?.message || "Internal server error", { 
+    status: error?.status || 500 
+  });
+};
+
 export async function POST(req: Request) {
   try {
-    // Send initial response headers to keep connection alive
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
-    
     const { userId } = auth();
+    const body = await req.json();
+    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
 
     if (!userId) {
-      return new NextResponse(
-        JSON.stringify({ error: "Unauthorized. Please sign in." }), 
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error("OpenAI API Key is not configured");
-      return new NextResponse(
-        JSON.stringify({ error: "OpenAI API Key not configured" }), 
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
-
-    const body = await req.json();
-    const { prompt, amount = "1", resolution = "1024x1024", style = "realistic" } = body;
 
     if (!prompt) {
-      return new NextResponse(
-        JSON.stringify({ error: "Image prompt is required" }), 
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new NextResponse("Prompt is required", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
-
-    if (!freeTrial && !isPro) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: "Free trial has expired. Please upgrade to pro.",
-          code: "FREE_TRIAL_EXPIRED"
-        }), 
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate amount
-    const imageCount = parseInt(amount, 10);
-    if (isNaN(imageCount) || imageCount < 1 || imageCount > 1) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid amount. Must be 1 for DALL-E 3" }), 
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate resolution
-    const validResolutions = ["1024x1024", "1792x1024", "1024x1792"];
-    if (!validResolutions.includes(resolution)) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid resolution for DALL-E 3. Must be 1024x1024, 1792x1024, or 1024x1792" }), 
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!resolution) {
+      return new NextResponse("Resolution is required", { status: 400 });
     }
 
     // Verify Redis connection early
@@ -205,9 +177,9 @@ export async function POST(req: Request) {
       console.warn('[REDIS_WARNING] Redis connection failed, proceeding without caching');
     }
 
-    // Check cache first (only if Redis is connected)
-    let cachedResult = null;
+    // Check for cached result
     const cacheKey = generateCacheKey(prompt, style, resolution);
+    let cachedResult = null;
     
     if (redisConnected) {
       try {
@@ -219,196 +191,60 @@ export async function POST(req: Request) {
     }
     
     if (cachedResult) {
-      console.log("Cache hit for image generation");
-      return NextResponse.json(cachedResult);
+      console.log('[CACHE_HIT] Returning cached result');
+      return new NextResponse(JSON.stringify(cachedResult));
     }
 
-    // Process the prompt with style enhancement
-    const enhancedPrompt = processPrompt(prompt, style);
-    console.log("[DEBUG] Image generation request:", {
-      prompt: enhancedPrompt.slice(0, 100) + "...", // Log first 100 chars of prompt
-      resolution,
-      style,
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-      timestamp: new Date().toISOString()
-    });
+    const freeTrial = await checkApiLimit();
+    const isPro = await checkSubscription();
 
+    if (!freeTrial && !isPro) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    }
+
+    let result;
     try {
-      const response = await retryWithExponentialBackoff(async () => {
-        // Log the exact request configuration
-        console.log("[DEBUG] OpenAI Request Config:", {
-          timestamp: new Date().toISOString(),
-          model: "dall-e-3",
-          promptLength: enhancedPrompt.length,
-          resolution,
-          apiKeyPresent: !!process.env.OPENAI_API_KEY,
-          apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
-          apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 5) || 'none'
+      result = await retryWithExponentialBackoff(async () => {
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
         });
 
-        try {
-          const result = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: enhancedPrompt,
-            n: 1,
-            size: resolution as "1024x1024" | "1792x1024" | "1024x1792",
-            quality: "hd",
-            style: "vivid",
-            response_format: "url",
-          });
+        const enhancedPrompt = processPrompt(prompt, style);
+        const response = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: `${prompt}. Style: ${style}.`,
+          n: Number(amount),
+          size: resolution === "1024x1024" ? "1024x1024" : 
+                resolution === "1792x1024" ? "1792x1024" :
+                "1024x1024", // Default to square if unsupported size
+          quality: "standard",
+        });
 
-          // Log successful response
-          console.log("[DEBUG] OpenAI Success Response:", {
-            timestamp: new Date().toISOString(),
-            hasData: !!result.data,
-            dataLength: result.data?.length || 0,
-            firstUrl: result.data?.[0]?.url ? 'present' : 'missing'
-          });
-
-          return result;
-        } catch (apiError: any) {
-          // Log detailed API error
-          console.error("[DEBUG] OpenAI API Error:", {
-            timestamp: new Date().toISOString(),
-            errorMessage: apiError?.message,
-            errorType: apiError?.type,
-            errorCode: apiError?.status,
-            responseData: apiError?.response?.data,
-            headers: apiError?.response?.headers
-          });
-          throw apiError; // Re-throw to be handled by outer catch
-        }
-      }, 3, 2000); // 3 retries, 2 second base delay
-
-      if (!isPro) {
-        await increaseApiLimit();
-      }
-
-      // Cache the result for 24 hours (only if Redis is connected)
-      if (redisConnected) {
-        try {
-          await redis.set(cacheKey, response.data, { ex: 86400 });
-        } catch (error: any) {
-          console.error('[REDIS_CACHE_SET_ERROR]:', error?.message || 'Unknown error');
-          // Continue without caching on error
-        }
-      }
-
-      return NextResponse.json(response.data);
-    } catch (error: any) {
-      console.error("[IMAGE_ERROR] Detailed error:", {
-        timestamp: new Date().toISOString(),
-        errorType: error?.constructor?.name,
-        message: error?.message || 'Unknown error',
-        response: {
-          status: error?.response?.status,
-          statusText: error?.response?.statusText,
-          data: error?.response?.data,
-        },
-        request: {
-          prompt: enhancedPrompt.slice(0, 50) + '...',
-          resolution,
-          style
-        }
+        return response;
       });
-
-      // Handle specific error cases
-      if (!process.env.OPENAI_API_KEY) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: "OpenAI API key is not configured",
-            code: "MISSING_API_KEY"
-          }), 
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (error?.response?.status === 401) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: "OpenAI API key is invalid or expired",
-            code: "INVALID_API_KEY",
-            details: "Please check your API key configuration"
-          }), 
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (error?.response?.status === 429) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: "Rate limit exceeded. Please try again later.",
-            code: "RATE_LIMIT",
-            details: "You've reached the OpenAI API rate limit"
-          }), 
-          { status: 429, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (error?.message?.includes('timeout') || error?.code === 'ETIMEDOUT') {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: "Request timed out",
-            code: "TIMEOUT",
-            details: "The request took too long to complete"
-          }), 
-          { status: 504, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Handle OpenAI specific errors
-      if (error?.response?.data?.error) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: error.response.data.error.message,
-            code: "OPENAI_ERROR",
-            details: error.response.data.error
-          }), 
-          { status: error.response.status || 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Generic error response
-      return new NextResponse(
-        JSON.stringify({ 
-          error: "An error occurred during image generation",
-          code: "INTERNAL_ERROR",
-          message: error?.message || 'Unknown error',
-          timestamp: new Date().toISOString()
-        }), 
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    } catch (error: any) {
+      return handleOpenAIError(error);
     }
 
+    if (!isPro) {
+      await increaseApiLimit();
+    }
+
+    // Cache the successful result
+    if (redisConnected) {
+      try {
+        await redis.set(cacheKey, JSON.stringify(result.data), {
+          ex: CACHE_TTL
+        });
+      } catch (error: any) {
+        console.error('[REDIS_CACHE_SET_ERROR]:', error?.message || 'Unknown error');
+        // Continue without caching on error
+      }
+    }
+
+    return new NextResponse(JSON.stringify(result.data));
   } catch (error: any) {
-    console.error("[IMAGE_ERROR] Full error:", {
-      message: error?.message || 'Unknown error',
-      response: error?.response?.data,
-      stack: error?.stack || '',
-      redisUrl: !!process.env.UPSTASH_REDIS_REST_URL, // Log if Redis URL exists
-      openAiKey: !!process.env.OPENAI_API_KEY, // Log if OpenAI key exists
-    });
-    
-    // Handle OpenAI API specific errors
-    if (error?.response?.data?.error) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: error.response.data.error.message,
-          code: "OPENAI_ERROR",
-          details: error.response.data.error
-        }), 
-        { status: error.response.status || 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Generic error response
-    return new NextResponse(
-      JSON.stringify({ 
-        error: "An error occurred during image generation",
-        code: "INTERNAL_ERROR",
-        message: error?.message || 'Unknown error'
-      }), 
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    console.error('[GENERAL_ERROR]:', error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
