@@ -2,87 +2,167 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ArrowRight } from "lucide-react";
-import { tools } from "@/constants";
+import { ArrowRight, Zap, Crown, Star, Lock } from "lucide-react";
+import { tools, routeCategories } from "./config";
+import { MAX_FREE_COUNTS } from "@/constants";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
   const { isLoaded, userId } = useAuth();
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiLimitCount, setApiLimitCount] = useState(0);
 
   useEffect(() => {
-    const checkProStatus = async () => {
+    const checkStatus = async () => {
       if (!isLoaded || !userId) return;
 
       try {
         setIsLoading(true);
-        const response = await fetch("/api/subscription");
-        if (!response.ok) throw new Error('Failed to fetch subscription status');
+        const [subResponse, limitResponse] = await Promise.all([
+          fetch("/api/subscription"),
+          fetch("/api/api-limit")
+        ]);
+
+        if (!subResponse.ok || !limitResponse.ok) {
+          throw new Error('Failed to fetch status');
+        }
         
-        const data = await response.json();
-        setIsPro(data.isPro);
+        const [subData, limitData] = await Promise.all([
+          subResponse.json(),
+          limitResponse.json()
+        ]);
+
+        setIsPro(subData.isPro);
+        setApiLimitCount(limitData.count || 0);
         
-        console.log("[DASHBOARD] Pro status:", {
-          userId,
-          isPro: data.isPro,
-          timestamp: new Date().toISOString()
-        });
       } catch (error) {
-        console.error("[DASHBOARD] Error checking pro status:", error);
+        console.error("[DASHBOARD] Error checking status:", error);
         setIsPro(false);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkProStatus();
+    checkStatus();
   }, [isLoaded, userId]);
 
+  const getFreeProgress = () => {
+    return (apiLimitCount / MAX_FREE_COUNTS) * 100;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-48"></div>
+          <div className="h-8 bg-gray-200 rounded w-64"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const remainingGenerations = MAX_FREE_COUNTS - apiLimitCount;
+
   return (
-    <div>
+    <div className="px-4 lg:px-8">
       <div className="mb-8 space-y-4">
-        <h2 className="text-2xl md:text-4xl font-bold text-center">
-          Explore the power of AI
+        <h2 className="text-2xl md:text-4xl font-bold text-center bg-gradient-to-r from-violet-500 to-indigo-500 text-transparent bg-clip-text">
+          Welcome to SynthAI
         </h2>
         <p className="text-muted-foreground font-light text-sm md:text-lg text-center">
-          {isPro ? "Access all premium features with your Pro subscription" : "Chat with the smartest AI - Experience the power of AI"}
+          {isPro ? (
+            <span className="flex items-center justify-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-500" />
+              Access all premium features with your Pro subscription
+            </span>
+          ) : (
+            "Experience the power of AI - Upgrade to Pro for unlimited access"
+          )}
         </p>
       </div>
-      <div className="px-4 md:px-20 lg:px-32 space-y-4">
-        {tools.map((tool) => (
-          <Link
-            key={tool.href}
-            href={tool.free || isPro ? tool.href : "/settings"}
-            className={cn(
-              "block transition-opacity duration-200",
-              (isLoading || (!tool.free && !isPro)) && "opacity-75"
-            )}
-          >
-            <Card className="p-4 border-black/5 flex items-center justify-between hover:shadow-md transition cursor-pointer">
-              <div className="flex items-center gap-x-4">
-                <div className={cn("p-2 w-fit rounded-md", tool.bgColor)}>
-                  <tool.icon className={cn("w-8 h-8", tool.color)} />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="font-semibold">{tool.label}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {tool.description}
-                  </p>
-                  {!tool.free && !isPro && !isLoading && (
-                    <p className="text-xs text-yellow-600 mt-1">
-                      Pro feature - Click to upgrade
-                    </p>
-                  )}
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5" />
-            </Card>
-          </Link>
+
+      {!isPro && (
+        <Card className="p-4 border-yellow-500/20 bg-yellow-500/10 mb-8">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-yellow-800">Free Tier Usage</p>
+              <span className="text-xs text-yellow-800">{remainingGenerations} generations remaining</span>
+            </div>
+            <Progress value={getFreeProgress()} className="h-2" />
+          </div>
+        </Card>
+      )}
+
+      <div className="space-y-6">
+        {routeCategories.map((category) => (
+          <div key={category.name} className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">{category.name}</h3>
+            <div className="space-y-2">
+              {category.routes.map((tool) => {
+                const isProTool = tool.proOnly;
+                const isAccessible = isPro || !isProTool;
+
+                return (
+                  <Link 
+                    key={tool.href}
+                    href={isAccessible ? tool.href : "/settings"}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg transition-all",
+                      isAccessible ? "hover:bg-muted/50 cursor-pointer" : "opacity-70 cursor-not-allowed bg-muted/20",
+                      tool.limitedFree && !isPro && "border border-yellow-500/20"
+                    )}
+                  >
+                    <div className="flex items-center gap-x-4">
+                      <div className={cn("p-2 w-fit rounded-md", tool.bgColor)}>
+                        <tool.icon className={cn("w-5 h-5", tool.color)} />
+                      </div>
+                      <div>
+                        <div className="font-semibold flex items-center gap-2">
+                          {tool.label}
+                          {isProTool && !isPro && (
+                            <Lock className="w-3 h-3 text-muted-foreground" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{tool.description}</p>
+                      </div>
+                    </div>
+                    {tool.limitedFree && !isPro ? (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Star className="w-3 h-3" />
+                        <span>{tool.freeLimit} free</span>
+                      </div>
+                    ) : (
+                      <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
+
+      {!isPro && (
+        <Card className="p-6 bg-gradient-to-r from-violet-500 to-indigo-500 mt-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-white">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-bold">Upgrade to Pro</h3>
+              <p className="text-white/80">Unlock unlimited access to all features</p>
+            </div>
+            <Link href="/settings">
+              <Button variant="premium" className="bg-white text-violet-500 hover:bg-white/90">
+                <Zap className="w-4 h-4 mr-2 fill-violet-500" />
+                Upgrade Now
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

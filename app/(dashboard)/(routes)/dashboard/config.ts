@@ -182,43 +182,27 @@ export const tools: Tool[] = [
 
 export const routeCategories = [
   {
-    name: "Core Tools",
-    routes: tools.filter(tool => tool.featureType === "CODE_GENERATION" || tool.featureType === "CONTENT_WRITER")
-  },
-  {
-    name: "Content Creation",
+    name: "Essential Tools",
     routes: tools.filter(tool => 
-      ["IMAGE_GENERATION", "VIDEO_GENERATION", "MUSIC_CREATION", "ART_STUDIO"].includes(tool.featureType as string)
+      ["IMAGE_GENERATION", "CODE_GENERATION", "CONTENT_WRITER"].includes(tool.featureType as string)
     )
   },
   {
-    name: "Writing & Communication",
+    name: "Creative Suite",
     routes: tools.filter(tool => 
-      ["CONTENT_WRITER", "TRANSLATION"].includes(tool.featureType as string)
+      ["VIDEO_GENERATION", "MUSIC_CREATION", "ART_STUDIO", "VOICE_SYNTHESIS"].includes(tool.featureType as string)
     )
   },
   {
-    name: "Development",
+    name: "Productivity Tools",
     routes: tools.filter(tool => 
-      ["CODE_GENERATION"].includes(tool.featureType as string)
+      ["PRESENTATION", "IDEA_GENERATOR", "TRANSLATION"].includes(tool.featureType as string)
     )
   },
   {
-    name: "Analysis",
+    name: "Advanced Tools",
     routes: tools.filter(tool => 
-      ["DATA_INSIGHTS", "NETWORK_ANALYSIS"].includes(tool.featureType as string)
-    )
-  },
-  {
-    name: "Education",
-    routes: tools.filter(tool => 
-      ["STUDY_ASSISTANT", "RESEARCH_ASSISTANT"].includes(tool.featureType as string)
-    )
-  },
-  {
-    name: "Productivity",
-    routes: tools.filter(tool => 
-      ["PRESENTATION", "IDEA_GENERATOR"].includes(tool.featureType as string)
+      ["DATA_INSIGHTS", "NETWORK_ANALYSIS", "STUDY_ASSISTANT", "RESEARCH_ASSISTANT"].includes(tool.featureType as string)
     )
   }
 ];
