@@ -52,7 +52,7 @@ const DashboardPage = () => {
   }, [isLoaded, userId]);
 
   const getFreeProgress = () => {
-    return (apiLimitCount / MAX_FREE_COUNTS) * 100;
+    return Math.min((apiLimitCount / MAX_FREE_COUNTS) * 100, 100);
   };
 
   if (isLoading) {
@@ -66,7 +66,8 @@ const DashboardPage = () => {
     );
   }
 
-  const remainingGenerations = MAX_FREE_COUNTS - apiLimitCount;
+  const usedGenerations = apiLimitCount;
+  const remainingGenerations = Math.max(MAX_FREE_COUNTS - usedGenerations, 0);
 
   return (
     <div className="px-4 lg:px-8">
@@ -91,9 +92,16 @@ const DashboardPage = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm text-yellow-800">Free Tier Usage</p>
-              <span className="text-xs text-yellow-800">{remainingGenerations} generations remaining</span>
+              <div className="text-xs text-yellow-800 flex items-center gap-2">
+                <span>{usedGenerations} used</span>
+                <span>/</span>
+                <span>{MAX_FREE_COUNTS} generations</span>
+              </div>
             </div>
             <Progress value={getFreeProgress()} className="h-2" />
+            <p className="text-xs text-yellow-800 text-right">
+              {remainingGenerations} generations remaining
+            </p>
           </div>
         </Card>
       )}
@@ -105,7 +113,7 @@ const DashboardPage = () => {
             <div className="space-y-2">
               {category.routes.map((tool) => {
                 const isProTool = tool.proOnly;
-                const isAccessible = isPro || !isProTool;
+                const isAccessible = isPro || (!isProTool && remainingGenerations > 0);
 
                 return (
                   <Link 
@@ -114,7 +122,7 @@ const DashboardPage = () => {
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg transition-all",
                       isAccessible ? "hover:bg-muted/50 cursor-pointer" : "opacity-70 cursor-not-allowed bg-muted/20",
-                      tool.limitedFree && !isPro && "border border-yellow-500/20"
+                      tool.limitedFree && !isPro && remainingGenerations > 0 && "border border-yellow-500/20"
                     )}
                   >
                     <div className="flex items-center gap-x-4">
@@ -124,17 +132,17 @@ const DashboardPage = () => {
                       <div>
                         <div className="font-semibold flex items-center gap-2">
                           {tool.label}
-                          {isProTool && !isPro && (
+                          {(!isAccessible || (isProTool && !isPro)) && (
                             <Lock className="w-3 h-3 text-muted-foreground" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{tool.description}</p>
                       </div>
                     </div>
-                    {tool.limitedFree && !isPro ? (
+                    {tool.limitedFree && !isPro && remainingGenerations > 0 ? (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Star className="w-3 h-3" />
-                        <span>{tool.freeLimit} free</span>
+                        <span>{Math.min(tool.freeLimit || 0, remainingGenerations)} available</span>
                       </div>
                     ) : (
                       <ArrowRight className="w-5 h-5 text-muted-foreground" />
