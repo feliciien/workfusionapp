@@ -64,7 +64,7 @@ const ImagePage = () => {
   }, []);
 
   useEffect(() => {
-    if (imageTool && !imageTool.free && !isPro) {
+    if (imageTool && !imageTool.limitedFree && !isPro) {
       router.push("/");
       proModal.onOpen();
     }

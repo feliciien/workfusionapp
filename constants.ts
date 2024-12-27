@@ -36,7 +36,15 @@ export const FEATURE_TYPES = {
   VOICE_SYNTHESIS: 'voice',
   CONTENT_WRITER: 'content',
   PRESENTATION: 'presentation',
-  IDEA_GENERATOR: 'idea'
+  IDEA_GENERATOR: 'idea',
+  VIDEO_GENERATION: 'video',
+  MUSIC_CREATION: 'music',
+  ART_STUDIO: 'art',
+  TRANSLATION: 'translation',
+  DATA_INSIGHTS: 'data',
+  NETWORK_ANALYSIS: 'network',
+  STUDY_ASSISTANT: 'study',
+  RESEARCH_ASSISTANT: 'research'
 } as const;
 
 export const tools = [

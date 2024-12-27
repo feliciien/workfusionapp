@@ -1,47 +1,44 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { Montserrat } from 'next/font/google';
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { 
-  Code, 
-  ImageIcon, 
-  LayoutDashboard, 
-  MessageSquare, 
-  Music, 
-  Settings, 
-  VideoIcon,
-  Mic2,
-  Palette,
-  Brain,
-  History,
-  Network,
-  FileText,
-  PresentationIcon,
-  Lightbulb,
-  Languages,
-  LineChart,
-  BookOpen,
-  ScrollText,
-  Search,
-  Microscope,
-  ChevronDown,
-  ChevronRight
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
-import { getFeatureUsage } from "@/lib/feature-limit";
 import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
+import { getFeatureUsage } from "@/lib/feature-limit";
+import { cn } from "@/lib/utils";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Code,
+  FileText,
+  History,
+  ImageIcon,
+  Languages,
+  Lightbulb,
+  LineChart,
+  MessageSquare,
+  Music,
+  Network,
+  Palette,
+  PresentationIcon,
+  Search,
+  Settings,
+  VideoIcon
+} from "lucide-react";
+import { Montserrat } from 'next/font/google';
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const montserrat = Montserrat ({ weight: '600', subsets: ['latin'] });
+const montserrat = Montserrat({ weight: '600', subsets: ['latin'] });
 
 interface RouteCategory {
   name: string;
   routes: Route[];
 }
+
+type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];
 
 interface Route {
   label: string;
@@ -54,6 +51,7 @@ interface Route {
   proOnly?: boolean;
   limitedFree?: boolean;
   freeLimit?: number;
+  featureType?: FeatureType;
 }
 
 interface FeatureUsage {
@@ -250,25 +248,41 @@ const Sidebar = ({
   isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [featureUsage, setFeatureUsage] = useState<Record<string, number>>({});
 
-  const toggleCategory = (category: string) => {
-    setExpanded(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+  useEffect(() => {
+    setMounted(true);
+    const loadFeatureUsage = async () => {
+      const usage: Record<string, number> = {};
+      for (const category of routeCategories) {
+        for (const route of category.routes) {
+          if (route.featureType) {
+            const count = await getFeatureUsage(route.featureType);
+            usage[route.href] = count;
+          }
+        }
+      }
+      setFeatureUsage(usage);
+    };
+    loadFeatureUsage();
+  }, []);
+
+  const toggleCategory = (categoryName: string) => {
+    setExpandedCategories(prev =>
+      prev.includes(categoryName)
+        ? prev.filter(name => name !== categoryName)
+        : [...prev, categoryName]
     );
   };
 
-  const filteredCategories = routeCategories.map(category => ({
-    ...category,
-    routes: category.routes.filter(route => 
-      isPro || route.core || route.limitedFree || route.free
-    )
-  })).filter(category => category.routes.length > 0);
+  if (!mounted) {
+    return null;
+  }
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-gray-900 text-white">
+    <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
           <div className="relative h-8 w-8 mr-4">
@@ -279,52 +293,48 @@ const Sidebar = ({
           </h1>
         </Link>
         <div className="space-y-1">
-          {filteredCategories.map((category) => (
-            <div key={category.name}>
+          {routeCategories.map((category) => (
+            <div key={category.name} className="mb-4">
               <button
                 onClick={() => toggleCategory(category.name)}
-                className="w-full flex items-center justify-between p-3 text-sm font-medium hover:text-white hover:bg-white/10 rounded-lg transition"
+                className="flex items-center w-full p-3 text-sm font-medium text-white hover:text-white hover:bg-white/10 rounded-lg transition"
               >
-                {category.name}
-                {expanded.includes(category.name) ? (
-                  <ChevronDown className="h-4 w-4" />
+                {expandedCategories.includes(category.name) ? (
+                  <ChevronDown className="h-4 w-4 mr-2" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4 mr-2" />
                 )}
+                {category.name}
               </button>
-              
-              {expanded.includes(category.name) && (
-                <div className="pl-6 space-y-1">
+
+              {expandedCategories.includes(category.name) && (
+                <div className="mt-2">
                   {category.routes.map((route) => (
                     <Link
                       key={route.href}
-                      href={route.href}
+                      href={route.proOnly && !isPro ? "/settings" : route.href}
                       className={cn(
                         "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
                         pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-                        !isPro && route.proOnly && "opacity-50 cursor-not-allowed"
+                        route.proOnly && !isPro ? "opacity-75" : ""
                       )}
-                      onClick={(e) => {
-                        if (!isPro && route.proOnly) {
-                          e.preventDefault();
-                          // You can add pro modal open here if needed
-                        }
-                      }}
                     >
                       <div className="flex items-center flex-1">
                         <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
                         {route.label}
+                        {route.proOnly && !isPro && (
+                          <ProLink href="/settings" isPro={isPro} isFree={false}>
+                            <div className="ml-2 px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-400/10 rounded">
+                              PRO
+                            </div>
+                          </ProLink>
+                        )}
+                        {route.limitedFree && !route.proOnly && !isPro && (
+                          <div className="ml-auto text-xs">
+                            {featureUsage[route.href] || 0}/{route.freeLimit}
+                          </div>
+                        )}
                       </div>
-                      {(!isPro && route.proOnly) && (
-                        <div className="ml-2 px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-400/10 rounded">
-                          PRO
-                        </div>
-                      )}
-                      {(!isPro && route.limitedFree) && (
-                        <div className="ml-2 px-2 py-0.5 text-xs font-medium text-emerald-400 bg-emerald-400/10 rounded">
-                          FREE TRIAL
-                        </div>
-                      )}
                     </Link>
                   ))}
                 </div>
@@ -335,11 +345,12 @@ const Sidebar = ({
       </div>
       <div className="px-3">
         {!isPro && (
-          <ProLink 
-            href="/pro"
-            isPro={isPro}
-            isFree={false}
-          />
+          <Link 
+            href="/settings" 
+            className="w-full px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md text-sm font-semibold hover:opacity-90 transition flex items-center justify-center"
+          >
+            Upgrade to Pro
+          </Link>
         )}
         <FreeCounter 
           apiLimitCount={apiLimitCount} 
