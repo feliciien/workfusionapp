@@ -27,27 +27,63 @@ const publicRoutes = [
   "/",
   "/api/webhook",
   "/api/subscription",
-  "/settings"
+  "/settings",
+  "/sign-in",
+  "/sign-up"
 ];
 
 export default authMiddleware({
-  publicRoutes: publicRoutes,
+  publicRoutes: [
+    ...publicRoutes,
+    "/sign-in/[[...sign-in]]",
+    "/sign-up/[[...sign-up]]",
+    "/sso-callback",
+    "/api/subscription/verify"
+  ],
+  ignoredRoutes: [
+    "/api/webhook",
+    "/_next",
+    "/favicon.ico",
+    "/public",
+    "/api/subscription/verify"
+  ],
+  beforeAuth: (req) => {
+    const url = req.nextUrl;
+    console.log("[MIDDLEWARE_BEFORE_AUTH]", {
+      path: url.pathname,
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.next();
+  },
   async afterAuth(auth, req) {
     const start = Date.now();
-    console.log("[MIDDLEWARE] Request started:", {
-      path: req.nextUrl.pathname,
+    const path = req.nextUrl.pathname;
+    
+    // Check if path matches any public route pattern
+    const isPublicRoute = publicRoutes.some(route => path === route || path.startsWith(`${route}/`));
+    
+    console.log("[MIDDLEWARE_AFTER_AUTH] Request started:", {
+      path,
       userId: auth.userId,
+      isPublicRoute,
       timestamp: new Date().toISOString()
     });
 
-    // If the user is not authenticated, redirect to sign-in
+    // Allow public routes
+    if (isPublicRoute) {
+      console.log("[MIDDLEWARE] Public route access granted:", path);
+      return NextResponse.next();
+    }
+
+    // If not public route and user is not authenticated, redirect to sign-in
     if (!auth.userId) {
       console.log("[MIDDLEWARE] No user ID, redirecting to sign-in");
-      return NextResponse.redirect(new URL("/sign-in", req.url));
+      const signInUrl = new URL("/sign-in", req.url);
+      signInUrl.searchParams.set("redirect_url", path);
+      return NextResponse.redirect(signInUrl);
     }
 
     // Check if the requested path requires pro subscription
-    const path = req.nextUrl.pathname;
     const isProRoute = proRoutes.some(route => path.startsWith(route));
     
     console.log("[MIDDLEWARE] Route check:", {
@@ -85,16 +121,11 @@ export default authMiddleware({
   }
 });
 
+// See https://clerk.com/docs/references/nextjs/auth-middleware for more information about configuring your Middleware
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-    '/',
-  ],
+    "/((?!.+\\.[\\w]+$|_next).*)",
+    "/",
+    "/(api|trpc)(.*)"
+  ]
 };

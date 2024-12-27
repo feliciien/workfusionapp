@@ -15,7 +15,7 @@ const font = Montserrat({
   subsets: ["latin"],
 });
 
-export const LandingNabvbar = () => {
+export const LandingNavbar = () => {
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -35,6 +35,7 @@ export const LandingNabvbar = () => {
             fill 
             src="/logo.png" 
             alt="Logo"
+            sizes="(max-width: 32px) 100vw, 32px"
             className="object-contain"
           />
         </div>
@@ -52,11 +53,27 @@ export const LandingNabvbar = () => {
           <span className="sm:hidden">Pro</span>
           <Zap className="w-4 h-4 ml-2 fill-white" />
         </Button>
-        <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
-          <Button variant="outline" className="rounded-full text-sm sm:text-base px-3 sm:px-4">
-            {isSignedIn ? "Dashboard" : "Get Started"}
-          </Button>
-        </Link>
+        {!isSignedIn && (
+          <>
+            <Link href="/sign-in">
+              <Button variant="outline" className="rounded-full">
+                Sign in
+              </Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button className="rounded-full">
+                Get Started
+              </Button>
+            </Link>
+          </>
+        )}
+        {isSignedIn && (
+          <Link href="/dashboard">
+            <Button variant="outline" className="rounded-full text-sm sm:text-base px-3 sm:px-4">
+              Dashboard
+            </Button>
+          </Link>
+        )}
       </div>
     </nav>
   );

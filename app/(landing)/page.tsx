@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import LandingContent from "@/components/landing-content";
 import { LandingHero } from "@/components/landing-hero";
-import { LandingNabvbar } from "@/components/landing-navbar";
+import { LandingNavbar } from "@/components/landing-navbar";
 import { Analytics } from '@vercel/analytics/react';
 import { PageSEO, generateMetadata as baseGenerateMetadata } from "@/components/seo/page-seo";
 
@@ -26,7 +26,7 @@ function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col">
       <header>
-        <LandingNabvbar />
+        <LandingNavbar />
       </header>
 
       <section aria-label="Hero Section" className="flex-grow">

@@ -44,13 +44,10 @@ export const checkSubscription = async (): Promise<boolean> => {
     });
 
     // Check if user has an active subscription in the database
-    const subscription = await db.userSubscription.findFirst({
+    const subscription = await db.userSubscription.findUnique({
       where: {
         userId: userId,
-        paypalStatus: "ACTIVE",
-        paypalCurrentPeriodEnd: {
-          gt: new Date(),
-        },
+        paypalStatus: "ACTIVE"
       },
       select: {
         paypalSubscriptionId: true,
@@ -101,13 +98,13 @@ export const checkSubscription = async (): Promise<boolean> => {
     };
 
     return isValid;
-  } catch (error) {
+  } catch (error: any) {
     console.error("[SUBSCRIPTION_CHECK_ERROR] Failed to check subscription:", {
-      error,
+      error: error?.message || String(error),
+      stack: error?.stack || new Error().stack,
       timeElapsed: Date.now() - start,
       timestamp: new Date().toISOString()
     });
-    // On error, allow access as a fallback
-    return true;
+    return false;
   }
 };

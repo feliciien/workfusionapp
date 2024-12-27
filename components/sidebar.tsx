@@ -171,6 +171,7 @@ const Sidebar = ({
               fill 
               alt="Logo" 
               src="/logo.png"
+              sizes="(max-width: 32px) 100vw, 32px"
               className="object-contain" 
             />
           </div>
