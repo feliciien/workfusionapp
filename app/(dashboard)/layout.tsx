@@ -1,4 +1,4 @@
-import Navbar from "@/components/navbar-server";
+import NavbarWrapper from "@/components/navbar-wrapper";
 import Sidebar from "@/components/sidebar";
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
@@ -45,7 +45,7 @@ export default async function DashboardLayout({
         </div>
       </div>
       <main className="md:pl-72 dark:bg-gray-900">
-        <Navbar />
+        <NavbarWrapper />
         {children}
       </main>
     </div>

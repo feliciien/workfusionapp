@@ -17,8 +17,8 @@ export async function trackEvent(
     await prismadb.analytics.create({
       data: {
         userId,
-        eventType,
-        eventData,
+        event: eventType,
+        metadata: eventData,
       },
     });
   } catch (error) {
@@ -42,7 +42,7 @@ export async function getAnalytics(userId: string, options: {
   }
   
   if (eventType) {
-    where.eventType = eventType;
+    where.event = eventType;
   }
 
   return prismadb.analytics.findMany({
@@ -58,7 +58,7 @@ export async function getApiUsageStats(userId: string) {
   const apiCalls = await prismadb.analytics.findMany({
     where: {
       userId,
-      eventType: "api_call",
+      event: "api_call",
       createdAt: {
         gte: thirtyDaysAgo,
       },
@@ -85,7 +85,7 @@ export async function getErrorStats(userId: string) {
   return prismadb.analytics.findMany({
     where: {
       userId,
-      eventType: "error",
+      event: "error",
       createdAt: {
         gte: sevenDaysAgo,
       },

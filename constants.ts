@@ -25,6 +25,11 @@ export const FREE_LIMITS = {
   IDEA_LIMIT: 5
 };
 
+export const MAX_FREE_COUNTS = Object.values(FREE_LIMITS).reduce((a, b) => a + b, 0);
+
+export const FREE_CONTENT_WORD_LIMIT = FREE_LIMITS.CONTENT_WORD_LIMIT;
+export const FREE_IDEA_LIMIT = FREE_LIMITS.IDEA_LIMIT;
+
 export const FEATURE_TYPES = {
   IMAGE_GENERATION: 'image',
   CODE_GENERATION: 'code',

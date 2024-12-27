@@ -67,12 +67,12 @@ export async function GET(req: Request) {
     const metrics = await prismadb.networkMetrics.findMany({
       where: {
         userId,
-        timestamp: {
+        createdAt: {
           gte: startDate,
         },
       },
       orderBy: {
-        timestamp: "asc",
+        createdAt: "asc",
       },
     });
 

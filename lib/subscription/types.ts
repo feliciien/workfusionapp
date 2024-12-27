@@ -15,7 +15,7 @@ export interface Subscription {
   updatedAt: Date;
   paypalCurrentPeriodEnd: Date | null;
   paypalPlanId: string | null;
-  paypalStatus: string | null;
+  paypalStatus: string;
   paypalSubscriptionId: string | null;
 }
 
@@ -28,7 +28,7 @@ export interface CreateSubscriptionData {
   generationsUsed?: number;
   maxGenerations?: number;
   paypalPlanId?: string | null;
-  paypalStatus?: string | null;
+  paypalStatus?: string;
   paypalSubscriptionId?: string | null;
   paypalCurrentPeriodEnd?: Date | null;
 }
@@ -41,7 +41,7 @@ export interface UpdateSubscriptionData {
   generationsUsed?: number;
   maxGenerations?: number;
   paypalPlanId?: string | null;
-  paypalStatus?: string | null;
+  paypalStatus?: string;
   paypalSubscriptionId?: string | null;
   paypalCurrentPeriodEnd?: Date | null;
 }

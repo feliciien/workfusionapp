@@ -1,6 +1,8 @@
 import { auth, currentUser } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prismadb from "@/lib/prismadb";
+import { prismaEdge } from "@/lib/prisma-edge";
+
+export const runtime = "edge";
 
 export async function GET() {
   try {
@@ -18,48 +20,32 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const userSubscription = await prismadb.userSubscription.findUnique({
+    const userSubscription = await prismaEdge.userSubscription.findUnique({
       where: {
-        userId: userId,
+        userId: userId
       }
     });
 
-    console.log("[SUBSCRIPTION_API] Database result:", {
+    console.log("[SUBSCRIPTION_API] Subscription found:", {
       userId,
-      hasSubscription: !!userSubscription,
-      subscriptionDetails: userSubscription ? {
-        status: userSubscription.paypalStatus,
-        endDate: userSubscription.paypalCurrentPeriodEnd,
-      } : null,
+      subscriptionExists: !!userSubscription,
+      status: userSubscription?.paypalStatus,
+      endDate: userSubscription?.paypalCurrentPeriodEnd,
       timestamp: new Date().toISOString()
     });
 
-    if (!userSubscription) {
-      console.log("[SUBSCRIPTION_API] No subscription found");
-      return NextResponse.json({ isPro: false });
-    }
+    const isPro = userSubscription?.paypalStatus === "ACTIVE" && 
+                 userSubscription?.paypalCurrentPeriodEnd ? 
+                 userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() : 
+                 false;
 
-    const currentTime = Date.now();
-    const endTime = userSubscription.paypalCurrentPeriodEnd?.getTime() || 0;
-    const gracePeriod = 86_400_000; // 24 hours
-
-    const isValid = 
-      userSubscription.paypalStatus === "ACTIVE" &&
-      endTime + gracePeriod > currentTime;
-
-    console.log("[SUBSCRIPTION_API] Validation check:", {
-      userId,
-      status: userSubscription.paypalStatus,
-      currentTime: new Date(currentTime).toISOString(),
-      endTime: new Date(endTime).toISOString(),
-      gracePeriodEnd: new Date(endTime + gracePeriod).toISOString(),
-      isValid,
-      timestamp: new Date().toISOString()
+    return NextResponse.json({
+      ...userSubscription,
+      isPro
     });
 
-    return NextResponse.json({ isPro: isValid });
   } catch (error) {
-    console.error("[SUBSCRIPTION_API_ERROR]", error);
+    console.error("[SUBSCRIPTION_API] Error:", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

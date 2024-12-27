@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions", "driverAdapters"]
 }
 
 datasource db {
@@ -33,9 +34,10 @@ model UserApiLimit {
 model UserSubscription {
   id                     String    @id @default(cuid())
   userId                 String    @unique
-  paypalSubscriptionId   String?   @map("paypal_subscription_id")
+  paypalSubscriptionId   String?   @unique @map("paypal_subscription_id")
   paypalCustomerId      String?   @map("paypal_customer_id")
   paypalPlanId          String?   @map("paypal_plan_id")
+  paypalPayerId         String?   @map("paypal_payer_id")
   paypalStatus          String    @default("INACTIVE") @map("paypal_status")
   paypalCurrentPeriodEnd DateTime? @map("paypal_current_period_end")
   createdAt             DateTime  @default(now())
@@ -96,7 +98,9 @@ model NetworkMetrics {
   userId     String
   latency    Float
   bandwidth  Float
-  packetLoss Float
+  packetLoss Float    @default(0)
+  status     String   @default("active")
+  metadata   Json?    @default("{}")
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

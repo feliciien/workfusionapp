@@ -17,13 +17,16 @@ import {
   Palette,
   Brain,
   History,
-  Moon,
-  Sun,
   Network,
-  Lock,
   FileText,
   PresentationIcon,
-  Lightbulb
+  Lightbulb,
+  Languages,
+  LineChart,
+  BookOpen,
+  ScrollText,
+  Search,
+  Microscope
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
@@ -33,121 +36,198 @@ import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 
 const montserrat = Montserrat ({ weight: '600', subsets: ['latin'] });
 
+interface RouteCategory {
+  name: string;
+  routes: Route[];
+}
+
+interface Route {
+  label: string;
+  icon: any;
+  href: string;
+  color: string;
+  description: string;
+  free: boolean;
+  core?: boolean;
+  proOnly?: boolean;
+  limitedFree?: boolean;
+  freeLimit?: number;
+}
+
 interface FeatureUsage {
   [key: string]: number;
 }
 
-const routes = [
+const routeCategories: RouteCategory[] = [
   {
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-    color: "text-sky-500",
-    description: "Overview of your AI workspace and activities.",
-    free: true,
-    core: true
+    name: "Communication & Writing",
+    routes: [
+      {
+        label: 'Conversation',
+        icon: MessageSquare,
+        href: '/conversation',
+        color: "text-violet-500",
+        description: "Chat seamlessly with our AI assistant for ideas and help.",
+        free: true,
+        core: true
+      },
+      {
+        label: 'Content Writer',
+        icon: FileText,
+        color: "text-blue-600",
+        href: '/content',
+        description: "Generate high-quality articles and blog posts.",
+        free: false,
+        limitedFree: true,
+        freeLimit: FREE_LIMITS.CONTENT_WORD_LIMIT
+      },
+      {
+        label: 'Translation',
+        icon: Languages,
+        color: "text-green-600",
+        href: '/translation',
+        description: "Translate text between multiple languages accurately.",
+        free: false,
+        proOnly: true
+      }
+    ]
   },
   {
-    label: 'Network Monitor',
-    icon: Network,
-    href: '/network',
-    color: "text-emerald-500",
-    description: "Monitor and analyze network performance metrics.",
-    free: false,
-    proOnly: true
+    name: "Creative Suite",
+    routes: [
+      {
+        label: 'Image Generation',
+        icon: ImageIcon,
+        color: "text-pink-700",
+        href: '/image',
+        description: "Create stunning images from text descriptions.",
+        free: false,
+        limitedFree: true,
+        freeLimit: 5
+      },
+      {
+        label: 'Music Creation',
+        icon: Music,
+        color: "text-emerald-500",
+        href: '/music',
+        description: "Compose original music and melodies.",
+        free: false,
+        proOnly: true
+      },
+      {
+        label: 'Video Generation',
+        icon: VideoIcon,
+        color: "text-orange-700",
+        href: '/video',
+        description: "Create and edit videos with AI assistance.",
+        free: false,
+        proOnly: true
+      }
+    ]
   },
   {
-    label: 'Conversation',
-    icon: MessageSquare,
-    href: '/conversation',
-    color: "text-violet-500",
-    description: "Chat seamlessly with our AI assistant to brainstorm ideas.",
-    free: true,
-    core: true
+    name: "Development Tools",
+    routes: [
+      {
+        label: 'Code Generation',
+        icon: Code,
+        color: "text-green-700",
+        href: '/code',
+        description: "Generate code snippets and entire functions.",
+        free: false,
+        limitedFree: true,
+        freeLimit: 10
+      },
+      {
+        label: 'Code Analysis',
+        icon: Search,
+        color: "text-yellow-600",
+        href: '/code-analysis',
+        description: "Analyze and improve your code quality.",
+        free: false,
+        proOnly: true
+      }
+    ]
   },
   {
-    label: 'History',
-    icon: History,
-    href: '/history',
-    color: "text-indigo-500",
-    description: "View your past conversations and interactions.",
-    free: true,
-    core: true
+    name: "Business Tools",
+    routes: [
+      {
+        label: 'Analytics Insights',
+        icon: LineChart,
+        color: "text-blue-500",
+        href: '/analytics',
+        description: "Generate insights from your data.",
+        free: false,
+        proOnly: true
+      },
+      {
+        label: 'Presentation Creator',
+        icon: PresentationIcon,
+        color: "text-orange-600",
+        href: '/presentation',
+        description: "Create professional presentations instantly.",
+        free: false,
+        limitedFree: true,
+        freeLimit: FREE_LIMITS.PRESENTATION_SLIDES
+      }
+    ]
   },
   {
-    label: 'Image Generation',
-    icon: ImageIcon,
-    color: "text-pink-700",
-    href: '/image',
-    description: "Generate unique images using AI",
-    free: false,
-    limitedFree: true,
-    freeLimit: 5
+    name: "Learning & Research",
+    routes: [
+      {
+        label: 'Study Assistant',
+        icon: BookOpen,
+        color: "text-purple-600",
+        href: '/study',
+        description: "Get help with studying and research.",
+        free: false,
+        proOnly: true
+      },
+      {
+        label: 'Idea Generator',
+        icon: Lightbulb,
+        color: "text-yellow-600",
+        href: '/ideas',
+        description: "Generate creative ideas for any project.",
+        free: false,
+        limitedFree: true,
+        freeLimit: FREE_LIMITS.IDEA_LIMIT
+      }
+    ]
   },
   {
-    label: 'Video Creation',
-    icon: VideoIcon,
-    color: "text-orange-700",
-    href: '/video',
-    description: "Convert text-based ideas into short, AI-generated videos.",
-    free: false,
-    proOnly: true
-  },
-  {
-    label: 'Code Generation',
-    icon: Code,
-    color: "text-green-700",
-    href: '/code',
-    description: "Generate code snippets, functions, or entire modules.",
-    free: false,
-    limitedFree: true,
-    freeLimit: 10
-  },
-  {
-    label: 'Music Synthesis',
-    icon: Music,
-    color: "text-emerald-500",
-    href: '/music',
-    description: "Produce custom audio tracks suited for your projects.",
-    free: false,
-    proOnly: true
-  },
-  {
-    label: 'Voice Synthesis',
-    icon: Mic2,
-    color: "text-yellow-500",
-    href: '/voice',
-    description: "Generate voice samples and narrations in various styles.",
-    free: false,
-    limitedFree: true,
-    freeLimit: 5
-  },
-  {
-    label: 'Art Generation',
-    icon: Palette,
-    color: "text-purple-700",
-    href: '/art',
-    description: "Craft stunning AI-assisted artwork and designs.",
-    free: false,
-    proOnly: true
-  },
-  {
-    label: 'Custom Models',
-    icon: Brain,
-    color: "text-blue-700",
-    href: '/custom-models',
-    description: "Train and deploy custom AI models.",
-    free: false,
-    proOnly: true
-  },
-  {
-    label: 'Settings',
-    icon: Settings,
-    href: '/settings',
-    color: "text-gray-500",
-    description: "Manage your account settings and preferences.",
-    free: true,
-    core: true
+    name: "System",
+    routes: [
+      {
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        href: '/dashboard',
+        color: "text-sky-500",
+        description: "Overview of your AI workspace and activities.",
+        free: true,
+        core: true
+      },
+      {
+        label: 'History',
+        icon: History,
+        href: '/history',
+        color: "text-indigo-500",
+        description: "View your past conversations and interactions.",
+        free: true,
+        core: true
+      },
+      {
+        label: 'Settings',
+        icon: Settings,
+        href: '/settings',
+        color: "text-gray-500",
+        description: "Manage your account settings and preferences.",
+        free: true,
+        core: true
+      }
+    ]
   }
 ];
 
@@ -182,9 +262,9 @@ const Sidebar = ({
     }
   }, [isPro]);
 
-  const getRemainingUsage = (featureType: string) => {
-    if (isPro) return "∞";
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS];
+  const getRemainingUsage = (featureType: string): number => {
+    if (isPro) return Infinity;
+    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 0;
     const used = featureUsage[featureType] || 0;
     return Math.max(0, limit - used);
   };
@@ -193,103 +273,89 @@ const Sidebar = ({
     return null;
   }
 
-  const coreFeatures = routes.filter(route => route.core);
-  const limitedFreeFeatures = routes.filter(route => route.limitedFree);
-  const proOnlyFeatures = routes.filter(route => route.proOnly);
-
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
+    <div className="space-y-4 py-4 flex flex-col h-full bg-gray-900 text-white">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
           <div className="relative h-8 w-8 mr-4">
             <Image fill alt="Logo" src="/logo.png" />
           </div>
           <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-            workfusionapp
+            WorkFusion
           </h1>
         </Link>
-        <div className="space-y-1">
-          {/* Core Features */}
-          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2">
-            Core Features
-          </h2>
-          {coreFeatures.map((route) => (
-            <Link
-              key={route.href} 
-              href={route.href}
-              className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-              )}
-            >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                {route.label}
+        <div className="space-y-6">
+          {routeCategories.map((category) => (
+            <div key={category.name}>
+              <h2 className="text-xs uppercase text-gray-400 font-bold px-4 mb-2">
+                {category.name}
+              </h2>
+              <div className="space-y-1">
+                {category.routes.map((route) => (
+                  <div key={route.href}>
+                    {route.proOnly && !isPro ? (
+                      <ProLink
+                        href={route.href}
+                        isPro={isPro}
+                        isFree={false}
+                      >
+                        <div
+                          className={cn(
+                            "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                            "text-zinc-400",
+                          )}
+                        >
+                          <div className="flex items-center flex-1">
+                            <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                            <div className="flex-1">{route.label}</div>
+                            <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full">
+                              PRO
+                            </span>
+                          </div>
+                        </div>
+                      </ProLink>
+                    ) : route.limitedFree ? (
+                      <Link
+                        href={route.href}
+                        className={cn(
+                          "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                          pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+                        )}
+                      >
+                        <div className="flex items-center flex-1">
+                          <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                          <div className="flex-1">{route.label}</div>
+                          <div className="text-xs text-gray-500">
+                            {getRemainingUsage(route.label.toLowerCase().replace(/\s+/g, '_'))}/
+                            {route.freeLimit} free
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={route.href}
+                        className={cn(
+                          "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                          pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+                        )}
+                      >
+                        <div className="flex items-center flex-1">
+                          <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                          {route.label}
+                        </div>
+                      </Link>
+                    )}
+                  </div>
+                ))}
               </div>
-            </Link>
-          ))}
-
-          {/* Limited Free Features */}
-          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2 mt-6">
-            Limited Free Features
-          </h2>
-          {limitedFreeFeatures.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-              )}
-            >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                <div>
-                  {route.label}
-                  {route.freeLimit && (
-                    <span className="text-xs text-zinc-400 block">
-                      {getRemainingUsage(route.href.replace("/", ""))}/{route.freeLimit} free uses
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-
-          {/* Pro-Only Features */}
-          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2 mt-6">
-            Pro Features
-          </h2>
-          {proOnlyFeatures.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-              )}
-            >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                {route.label}
-                {!isPro && (
-                  <ProLink 
-                    href={route.href}
-                    isPro={isPro}
-                    isFree={false}
-                  >
-                    <span className="ml-2 text-xs text-zinc-400">PRO</span>
-                  </ProLink>
-                )}
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
       {!isPro && (
         <div className="px-3">
           <FreeCounter 
-            apiLimitCount={apiLimitCount} 
+            apiLimitCount={apiLimitCount}
             isPro={isPro}
           />
         </div>

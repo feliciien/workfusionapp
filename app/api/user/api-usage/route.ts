@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prismadb"; // Adjust the path as per your project structure
+import { prismaEdge } from "@/lib/prisma-edge";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -19,41 +19,30 @@ export async function GET() {
     }
 
     // Fetch user data from the database
-    const userApiLimit = await prisma.userApiLimit.findUnique({
-      where: { userId },
-      select: {
-        count: true,
-      },
+    const userApiLimit = await prismaEdge.userApiLimit.findUnique({
+      where: {
+        userId: userId
+      }
     });
 
-    const userSubscription = await prisma.userSubscription.findUnique({
-      where: { userId },
-      select: {
-        paypalStatus: true,
-        paypalCurrentPeriodEnd: true,
-      },
-    });
-
-    if (!userApiLimit || !userSubscription) {
-      return new NextResponse("User not found", { status: 404 });
+    if (!userApiLimit) {
+      return new NextResponse(
+        JSON.stringify({
+          apiLimitCount: 0,
+          apiLimitRemaining: FREE_CREDITS
+        })
+      );
     }
 
-    const isPro = 
-      userSubscription?.paypalStatus === 'ACTIVE' && 
-      userSubscription?.paypalCurrentPeriodEnd ? 
-      userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() : 
-      false;
+    return new NextResponse(
+      JSON.stringify({
+        apiLimitCount: userApiLimit.count,
+        apiLimitRemaining: Math.max(FREE_CREDITS - userApiLimit.count, 0)
+      })
+    );
 
-    const usedCredits = userApiLimit?.count ?? 0;
-    const remainingFreeCredits = Math.max(0, FREE_CREDITS - usedCredits);
-
-    return NextResponse.json({
-      apiLimitCount: usedCredits,
-      remainingFreeCredits: isPro ? null : remainingFreeCredits, // null if pro user
-      isPro,
-    });
   } catch (error) {
-    console.error("[API-Usage Error]", error);
+    console.error("[API_LIMIT_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

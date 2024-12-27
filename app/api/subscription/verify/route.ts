@@ -1,57 +1,15 @@
-import { auth, currentUser } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import axios from "axios";
-import { db } from "@/lib/db";
+import { prismaEdge } from "@/lib/prisma-edge";
 
-const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
-
-async function getPayPalAccessToken() {
-  try {
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
-    const response = await axios.post(
-      `${PAYPAL_API_BASE}/v1/oauth2/token`,
-      'grant_type=client_credentials',
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
-    return response.data.access_token;
-  } catch (error) {
-    console.error("[PAYPAL_AUTH_ERROR] Failed to get access token:", error);
-    throw error;
-  }
-}
-
-async function getSubscriptionDetails(subscriptionId: string, accessToken: string) {
-  try {
-    const response = await axios.get(
-      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("[PAYPAL_SUBSCRIPTION_ERROR] Failed to get subscription details:", error);
-    throw error;
-  }
-}
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   const start = Date.now();
   try {
     const { userId } = auth();
-    const user = await currentUser();
 
-    if (!userId || !user) {
+    if (!userId) {
       console.error("[VERIFY_ERROR] Unauthorized - No user found:", { userId });
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -84,7 +42,7 @@ export async function POST(req: Request) {
     });
 
     // Create or update user first
-    await db.user.upsert({
+    await prismaEdge.user.upsert({
       where: {
         id: userId,
       },
@@ -95,7 +53,7 @@ export async function POST(req: Request) {
     });
 
     // Update or create subscription in our database
-    const userSubscription = await db.userSubscription.upsert({
+    const userSubscription = await prismaEdge.userSubscription.upsert({
       where: {
         userId: userId
       },
@@ -133,5 +91,51 @@ export async function POST(req: Request) {
     return new NextResponse(error?.response?.data?.message || "Internal Server Error", { 
       status: error?.response?.status || 500 
     });
+  }
+}
+
+async function getPayPalAccessToken() {
+  try {
+    const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
+    const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
+    const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
+    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+    const response = await fetch(
+      `${PAYPAL_API_BASE}/v1/oauth2/token`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials'
+      }
+    );
+    const data = await response.json();
+    return data.access_token;
+  } catch (error) {
+    console.error("[PAYPAL_AUTH_ERROR] Failed to get access token:", error);
+    throw error;
+  }
+}
+
+async function getSubscriptionDetails(subscriptionId: string, accessToken: string) {
+  try {
+    const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
+    const response = await fetch(
+      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("[PAYPAL_SUBSCRIPTION_ERROR] Failed to get subscription details:", error);
+    throw error;
   }
 }
