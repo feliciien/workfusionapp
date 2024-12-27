@@ -34,7 +34,7 @@ export default function StudyPage() {
   const [activeNote, setActiveNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const tool = tools.find(t => t.label === "Study Assistant")!;
+  const studyTool = tools.find(t => t.label === "Study Assistant");
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("studyHistory");
@@ -42,6 +42,14 @@ export default function StudyPage() {
       setHistory(JSON.parse(savedHistory));
     }
   }, []);
+
+  if (!studyTool) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-muted-foreground">Study Assistant tool not found</p>
+      </div>
+    );
+  }
 
   const saveToHistory = (query: string, answer: string) => {
     const newHistory: StudyHistory = {
@@ -138,7 +146,7 @@ export default function StudyPage() {
   };
 
   return (
-    <ToolPage tool={tool} isLoading={isLoading}>
+    <ToolPage tool={studyTool} isLoading={isLoading}>
       <div className="space-y-6">
         {/* Category Selection */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

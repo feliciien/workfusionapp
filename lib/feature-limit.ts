@@ -29,7 +29,7 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
 
     await db.$transaction(async (prisma: TransactionClient) => {
       const userFeatureUsage = await prisma.userFeatureUsage.findUnique({
-        where: { 
+        where: {
           userId_featureType: {
             userId,
             featureType
@@ -39,20 +39,22 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
 
       if (userFeatureUsage) {
         await prisma.userFeatureUsage.update({
-          where: { 
+          where: {
             userId_featureType: {
               userId,
               featureType
             }
           },
-          data: { count: userFeatureUsage.count + 1 },
+          data: {
+            count: userFeatureUsage.count + 1,
+          },
         });
       } else {
         await prisma.userFeatureUsage.create({
-          data: { 
+          data: {
             userId,
             featureType,
-            count: 1 
+            count: 1,
           },
         });
       }
@@ -76,7 +78,7 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
     }
 
     const userFeatureUsage = await db.userFeatureUsage.findUnique({
-      where: { 
+      where: {
         userId_featureType: {
           userId,
           featureType
@@ -84,15 +86,16 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
       },
     });
 
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS];
+    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 100;
     if (!userFeatureUsage || userFeatureUsage.count < limit) {
       return true;
     }
 
     return false;
   } catch (error) {
-    handleError(error, "CHECK_FEATURE_LIMIT_ERROR");
-    return false;
+    console.error("[CHECK_FEATURE_LIMIT_ERROR]", error);
+    // If there's an error checking the limit, allow the operation
+    return true;
   }
 };
 
@@ -105,7 +108,7 @@ export const getFeatureUsage = async (featureType: FeatureType): Promise<number>
     }
 
     const userFeatureUsage = await db.userFeatureUsage.findUnique({
-      where: { 
+      where: {
         userId_featureType: {
           userId,
           featureType
@@ -113,13 +116,9 @@ export const getFeatureUsage = async (featureType: FeatureType): Promise<number>
       },
     });
 
-    if (!userFeatureUsage) {
-      return 0;
-    }
-
-    return userFeatureUsage.count;
+    return userFeatureUsage?.count || 0;
   } catch (error) {
-    handleError(error, "GET_FEATURE_USAGE_ERROR");
+    console.error("[GET_FEATURE_USAGE_ERROR]", error);
     return 0;
   }
 };

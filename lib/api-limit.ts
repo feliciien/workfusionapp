@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
+import { MAX_FREE_COUNTS } from "@/constants";
 
-const FREE_CREDITS = 5;
+const FREE_CREDITS = MAX_FREE_COUNTS;
 
 export const increaseApiLimit = async () => {
   try {

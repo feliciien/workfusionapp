@@ -17,12 +17,12 @@ import {
 } from "lucide-react";
 
 export const FREE_LIMITS = {
-  IMAGE_GENERATION: 5,
-  CODE_GENERATION: 10,
-  VOICE_SYNTHESIS: 5,
+  IMAGE_GENERATION: 100,
+  CODE_GENERATION: 100,
+  VOICE_SYNTHESIS: 100,
   CONTENT_WORD_LIMIT: 500,
-  PRESENTATION_SLIDES: 5,
-  IDEA_LIMIT: 5
+  PRESENTATION_SLIDES: 100,
+  IDEA_LIMIT: 30
 };
 
 export const MAX_FREE_COUNTS = Object.values(FREE_LIMITS).reduce((a, b) => a + b, 0);
@@ -86,7 +86,7 @@ export const tools = [
     href: '/image',
     color: "text-pink-700",
     bgColor: "bg-pink-700/10",
-    description: "Generate stunning images with 5 free generations.",
+    description: "Generate stunning images with 100 free generations.",
     free: true,
     limitedFree: true,
     freeLimit: FREE_LIMITS.IMAGE_GENERATION
@@ -151,7 +151,7 @@ export const tools = [
     href: '/ideas',
     color: "text-purple-500",
     bgColor: "bg-purple-500/10",
-    description: "Generate up to 5 ideas per request.",
+    description: "Generate up to 30 ideas per request.",
     free: true,
     limitedFree: true,
     freeLimit: FREE_LIMITS.IDEA_LIMIT

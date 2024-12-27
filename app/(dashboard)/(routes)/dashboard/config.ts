@@ -85,7 +85,8 @@ export const tools: Tool[] = [
     category: "Visual Creation",
     bgColor: "bg-orange-700/10",
     color: "text-orange-700",
-    free: false
+    free: false,
+    limit: "Pro feature"
   },
   {
     label: "Art Generation",
@@ -95,8 +96,8 @@ export const tools: Tool[] = [
     category: "Visual Creation",
     bgColor: "bg-purple-700/10",
     color: "text-purple-700",
-    free: true,
-    limit: "Basic styles"
+    free: false,
+    limit: "Pro feature"
   },
 
   // Audio & Music
@@ -108,7 +109,8 @@ export const tools: Tool[] = [
     category: "Audio & Music",
     bgColor: "bg-emerald-500/10",
     color: "text-emerald-500",
-    free: false
+    free: false,
+    limit: "Pro feature"
   },
   {
     label: "Voice Synthesis",
@@ -118,8 +120,8 @@ export const tools: Tool[] = [
     category: "Audio & Music",
     bgColor: "bg-yellow-500/10",
     color: "text-yellow-500",
-    free: true,
-    limit: "Basic voices"
+    free: false,
+    limit: "Pro feature"
   },
 
   // Development & Analysis
@@ -142,7 +144,8 @@ export const tools: Tool[] = [
     category: "Development & Analysis",
     bgColor: "bg-blue-700/10",
     color: "text-blue-700",
-    free: false
+    free: false,
+    limit: "Pro feature"
   },
 
   // Productivity Tools
@@ -167,5 +170,15 @@ export const tools: Tool[] = [
     color: "text-amber-500",
     free: true,
     limit: "5 ideas"
+  },
+  {
+    label: "Study Assistant",
+    description: "Your AI-powered study companion for learning and research.",
+    icon: BookOpen,
+    href: "/study",
+    category: "Productivity Tools",
+    bgColor: "bg-indigo-500/10",
+    color: "text-indigo-500",
+    free: true
   }
 ];

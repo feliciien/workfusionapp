@@ -26,7 +26,9 @@ import {
   BookOpen,
   ScrollText,
   Search,
-  Microscope
+  Microscope,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
@@ -85,7 +87,7 @@ const routeCategories: RouteCategory[] = [
         label: 'Translation',
         icon: Languages,
         color: "text-green-600",
-        href: '/translation',
+        href: '/translate',
         description: "Translate text between multiple languages accurately.",
         free: false,
         proOnly: true
@@ -122,6 +124,15 @@ const routeCategories: RouteCategory[] = [
         description: "Create and edit videos with AI assistance.",
         free: false,
         proOnly: true
+      },
+      {
+        label: 'Art Studio',
+        icon: Palette,
+        color: "text-purple-500",
+        href: '/art',
+        description: "Create digital art with AI assistance.",
+        free: false,
+        proOnly: true
       }
     ]
   },
@@ -153,16 +164,16 @@ const routeCategories: RouteCategory[] = [
     name: "Business Tools",
     routes: [
       {
-        label: 'Analytics Insights',
+        label: 'Data Insights',
         icon: LineChart,
         color: "text-blue-500",
-        href: '/analytics',
+        href: '/data-insights',
         description: "Generate insights from your data.",
         free: false,
         proOnly: true
       },
       {
-        label: 'Presentation Creator',
+        label: 'Presentation',
         icon: PresentationIcon,
         color: "text-orange-600",
         href: '/presentation',
@@ -170,6 +181,15 @@ const routeCategories: RouteCategory[] = [
         free: false,
         limitedFree: true,
         freeLimit: FREE_LIMITS.PRESENTATION_SLIDES
+      },
+      {
+        label: 'Network Analysis',
+        icon: Network,
+        color: "text-indigo-500",
+        href: '/network',
+        description: "Analyze and visualize network data.",
+        free: false,
+        proOnly: true
       }
     ]
   },
@@ -201,31 +221,20 @@ const routeCategories: RouteCategory[] = [
     name: "System",
     routes: [
       {
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        href: '/dashboard',
-        color: "text-sky-500",
-        description: "Overview of your AI workspace and activities.",
-        free: true,
-        core: true
+        label: 'Settings',
+        icon: Settings,
+        href: '/settings',
+        color: "text-gray-500",
+        description: "Manage your account and preferences.",
+        free: true
       },
       {
         label: 'History',
         icon: History,
         href: '/history',
-        color: "text-indigo-500",
-        description: "View your past conversations and interactions.",
-        free: true,
-        core: true
-      },
-      {
-        label: 'Settings',
-        icon: Settings,
-        href: '/settings',
         color: "text-gray-500",
-        description: "Manage your account settings and preferences.",
-        free: true,
-        core: true
+        description: "View your conversation history.",
+        free: true
       }
     ]
   }
@@ -241,37 +250,22 @@ const Sidebar = ({
   isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
-  const [isMounted, setIsMounted] = useState(false);
-  const [featureUsage, setFeatureUsage] = useState<FeatureUsage>({});
+  const [expanded, setExpanded] = useState<string[]>([]);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const loadFeatureUsage = async () => {
-      const usage: FeatureUsage = {};
-      for (const type of Object.values(FEATURE_TYPES)) {
-        usage[type] = await getFeatureUsage(type);
-      }
-      setFeatureUsage(usage);
-    };
-
-    if (!isPro) {
-      loadFeatureUsage();
-    }
-  }, [isPro]);
-
-  const getRemainingUsage = (featureType: string): number => {
-    if (isPro) return Infinity;
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 0;
-    const used = featureUsage[featureType] || 0;
-    return Math.max(0, limit - used);
+  const toggleCategory = (category: string) => {
+    setExpanded(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
   };
 
-  if (!isMounted) {
-    return null;
-  }
+  const filteredCategories = routeCategories.map(category => ({
+    ...category,
+    routes: category.routes.filter(route => 
+      isPro || route.core || route.limitedFree || route.free
+    )
+  })).filter(category => category.routes.length > 0);
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-gray-900 text-white">
@@ -281,85 +275,81 @@ const Sidebar = ({
             <Image fill alt="Logo" src="/logo.png" />
           </div>
           <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-            WorkFusion
+            SynthAI
           </h1>
         </Link>
-        <div className="space-y-6">
-          {routeCategories.map((category) => (
+        <div className="space-y-1">
+          {filteredCategories.map((category) => (
             <div key={category.name}>
-              <h2 className="text-xs uppercase text-gray-400 font-bold px-4 mb-2">
+              <button
+                onClick={() => toggleCategory(category.name)}
+                className="w-full flex items-center justify-between p-3 text-sm font-medium hover:text-white hover:bg-white/10 rounded-lg transition"
+              >
                 {category.name}
-              </h2>
-              <div className="space-y-1">
-                {category.routes.map((route) => (
-                  <div key={route.href}>
-                    {route.proOnly && !isPro ? (
-                      <ProLink
-                        href={route.href}
-                        isPro={isPro}
-                        isFree={false}
-                      >
-                        <div
-                          className={cn(
-                            "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                            "text-zinc-400",
-                          )}
-                        >
-                          <div className="flex items-center flex-1">
-                            <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                            <div className="flex-1">{route.label}</div>
-                            <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs px-2 py-0.5 rounded-full">
-                              PRO
-                            </span>
-                          </div>
+                {expanded.includes(category.name) ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              
+              {expanded.includes(category.name) && (
+                <div className="pl-6 space-y-1">
+                  {category.routes.map((route) => (
+                    <Link
+                      key={route.href}
+                      href={route.href}
+                      className={cn(
+                        "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                        pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+                        !isPro && route.proOnly && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={(e) => {
+                        if (!isPro && route.proOnly) {
+                          e.preventDefault();
+                          // You can add pro modal open here if needed
+                        }
+                      }}
+                    >
+                      <div className="flex items-center flex-1">
+                        <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                        {route.label}
+                      </div>
+                      {(!isPro && route.proOnly) && (
+                        <div className="ml-2 px-2 py-0.5 text-xs font-medium text-yellow-400 bg-yellow-400/10 rounded">
+                          PRO
                         </div>
-                      </ProLink>
-                    ) : route.limitedFree ? (
-                      <Link
-                        href={route.href}
-                        className={cn(
-                          "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                          pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-                        )}
-                      >
-                        <div className="flex items-center flex-1">
-                          <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                          <div className="flex-1">{route.label}</div>
-                          <div className="text-xs text-gray-500">
-                            {getRemainingUsage(route.label.toLowerCase().replace(/\s+/g, '_'))}/
-                            {route.freeLimit} free
-                          </div>
+                      )}
+                      {(!isPro && route.limitedFree) && (
+                        <div className="ml-2 px-2 py-0.5 text-xs font-medium text-emerald-400 bg-emerald-400/10 rounded">
+                          FREE TRIAL
                         </div>
-                      </Link>
-                    ) : (
-                      <Link
-                        href={route.href}
-                        className={cn(
-                          "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                          pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-                        )}
-                      >
-                        <div className="flex items-center flex-1">
-                          <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                          {route.label}
-                        </div>
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
-      {!isPro && (
-        <div className="px-3">
-          <FreeCounter 
-            apiLimitCount={apiLimitCount}
+      <div className="px-3">
+        {!isPro && (
+          <ProLink 
+            href="/pro"
             isPro={isPro}
-          />
-        </div>
-      )}
+            isFree={false}
+          >
+            <div className="p-3 text-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg">
+              Upgrade to Pro
+            </div>
+          </ProLink>
+        )}
+        <FreeCounter 
+          apiLimitCount={apiLimitCount} 
+          isPro={isPro}
+        />
+      </div>
     </div>
   );
 };
