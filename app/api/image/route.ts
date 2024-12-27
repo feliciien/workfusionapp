@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { Redis } from '@upstash/redis';
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
+import { FEATURE_TYPES } from "@/constants";
 
 // Initialize Redis client for caching
 const redis = new Redis({
@@ -195,11 +196,11 @@ export async function POST(req: Request) {
       return new NextResponse(JSON.stringify(cachedResult));
     }
 
-    const freeTrial = await checkApiLimit();
     const isPro = await checkSubscription();
+    const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.IMAGE_GENERATION);
 
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse("Free usage limit reached. Please upgrade to pro for unlimited access.", { status: 403 });
     }
 
     let result;
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
     }
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.IMAGE_GENERATION);
     }
 
     // Cache the successful result

@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
-import { checkSubscription } from "@/lib/api-limit";
+import { checkSubscription } from "@/lib/subscription";
 import { trackEvent } from "@/lib/analytics";
 import prismadb from "@/lib/prismadb";
 

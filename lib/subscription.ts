@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { prismaEdge } from "@/lib/prisma-edge";
 
 const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } = {};
 const CACHE_TTL = 60 * 1000; // 1 minute cache
+const DAY_IN_MS = 86_400_000;
 
 export const checkSubscription = async (): Promise<boolean> => {
   const start = Date.now();
@@ -43,49 +45,45 @@ export const checkSubscription = async (): Promise<boolean> => {
       timestamp: new Date().toISOString()
     });
 
-    // Check if user has an active subscription in the database
-    const subscription = await db.userSubscription.findUnique({
+    const userSubscription = await prismaEdge.userSubscription.findUnique({
       where: {
         userId: userId,
-        paypalStatus: "ACTIVE"
       },
       select: {
         paypalSubscriptionId: true,
         paypalCurrentPeriodEnd: true,
+        paypalCustomerId: true,
+        paypalPlanId: true,
         paypalStatus: true,
-      }
+      },
     });
 
-    console.log("[SUBSCRIPTION_CHECK] Database subscription:", {
+    console.log("[SUBSCRIPTION_CHECK] Edge subscription:", {
       userId,
-      hasSubscription: !!subscription,
-      subscriptionDetails: subscription ? {
-        id: subscription.paypalSubscriptionId,
-        status: subscription.paypalStatus,
-        currentPeriodEnd: subscription.paypalCurrentPeriodEnd,
+      hasSubscription: !!userSubscription,
+      subscriptionDetails: userSubscription ? {
+        id: userSubscription.paypalSubscriptionId,
+        customerId: userSubscription.paypalCustomerId,
+        planId: userSubscription.paypalPlanId,
+        currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
+        status: userSubscription.paypalStatus,
       } : null,
       timeElapsed: Date.now() - start,
       timestamp: new Date().toISOString()
     });
 
-    // Check if subscription is active and not expired
-    const currentTime = Date.now();
-    const endTime = subscription?.paypalCurrentPeriodEnd?.getTime() || 0;
-    const gracePeriod = 86_400_000; // 24 hours in milliseconds
+    if (!userSubscription) {
+      return false;
+    }
 
-    const isValid = Boolean(
-      subscription?.paypalSubscriptionId && 
-      subscription?.paypalStatus === "ACTIVE" &&
-      endTime &&
-      endTime + gracePeriod > currentTime
-    );
+    const isValid =
+      userSubscription.paypalStatus === "ACTIVE" &&
+      userSubscription.paypalCurrentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now();
 
     console.log("[SUBSCRIPTION_CHECK] Validation result:", {
       userId,
-      status: subscription?.paypalStatus,
-      currentTime: new Date(currentTime).toISOString(),
-      endTime: endTime ? new Date(endTime).toISOString() : null,
-      gracePeriodEnd: endTime ? new Date(endTime + gracePeriod).toISOString() : null,
+      currentTime: new Date(Date.now()).toISOString(),
+      endTime: userSubscription.paypalCurrentPeriodEnd?.getTime() ? new Date(userSubscription.paypalCurrentPeriodEnd?.getTime()).toISOString() : null,
       isValid,
       timeElapsed: Date.now() - start,
       timestamp: new Date().toISOString()

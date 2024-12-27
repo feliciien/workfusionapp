@@ -28,8 +28,14 @@ import {
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
+import { getFeatureUsage } from "@/lib/feature-limit";
+import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 
 const montserrat = Montserrat ({ weight: '600', subsets: ['latin'] });
+
+interface FeatureUsage {
+  [key: string]: number;
+}
 
 const routes = [
   {
@@ -38,7 +44,8 @@ const routes = [
     href: '/dashboard',
     color: "text-sky-500",
     description: "Overview of your AI workspace and activities.",
-    free: true
+    free: true,
+    core: true
   },
   {
     label: 'Network Monitor',
@@ -46,7 +53,8 @@ const routes = [
     href: '/network',
     color: "text-emerald-500",
     description: "Monitor and analyze network performance metrics.",
-    free: false
+    free: false,
+    proOnly: true
   },
   {
     label: 'Conversation',
@@ -54,7 +62,8 @@ const routes = [
     href: '/conversation',
     color: "text-violet-500",
     description: "Chat seamlessly with our AI assistant to brainstorm ideas.",
-    free: true
+    free: true,
+    core: true
   },
   {
     label: 'History',
@@ -62,7 +71,8 @@ const routes = [
     href: '/history',
     color: "text-indigo-500",
     description: "View your past conversations and interactions.",
-    free: true
+    free: true,
+    core: true
   },
   {
     label: 'Image Generation',
@@ -71,6 +81,8 @@ const routes = [
     href: '/image',
     description: "Generate unique images using AI",
     free: false,
+    limitedFree: true,
+    freeLimit: 5
   },
   {
     label: 'Video Creation',
@@ -78,7 +90,8 @@ const routes = [
     color: "text-orange-700",
     href: '/video',
     description: "Convert text-based ideas into short, AI-generated videos.",
-    free: false
+    free: false,
+    proOnly: true
   },
   {
     label: 'Code Generation',
@@ -87,6 +100,8 @@ const routes = [
     href: '/code',
     description: "Generate code snippets, functions, or entire modules.",
     free: false,
+    limitedFree: true,
+    freeLimit: 10
   },
   {
     label: 'Music Synthesis',
@@ -94,7 +109,8 @@ const routes = [
     color: "text-emerald-500",
     href: '/music',
     description: "Produce custom audio tracks suited for your projects.",
-    free: false
+    free: false,
+    proOnly: true
   },
   {
     label: 'Voice Synthesis',
@@ -103,6 +119,8 @@ const routes = [
     href: '/voice',
     description: "Generate voice samples and narrations in various styles.",
     free: false,
+    limitedFree: true,
+    freeLimit: 5
   },
   {
     label: 'Art Generation',
@@ -111,6 +129,7 @@ const routes = [
     href: '/art',
     description: "Craft stunning AI-assisted artwork and designs.",
     free: false,
+    proOnly: true
   },
   {
     label: 'Custom Models',
@@ -118,7 +137,8 @@ const routes = [
     color: "text-blue-700",
     href: '/custom-models',
     description: "Train and deploy custom AI models.",
-    free: false
+    free: false,
+    proOnly: true
   },
   {
     label: 'Settings',
@@ -126,7 +146,8 @@ const routes = [
     href: '/settings',
     color: "text-gray-500",
     description: "Manage your account settings and preferences.",
-    free: true
+    free: true,
+    core: true
   }
 ];
 
@@ -137,113 +158,142 @@ interface SidebarProps {
 
 const Sidebar = ({
   apiLimitCount = 0,
-  isPro = false,
+  isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
-  const [hoveredRoute, setHoveredRoute] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [featureUsage, setFeatureUsage] = useState<FeatureUsage>({});
 
   useEffect(() => {
-    // Check localStorage first, then system preference
-    const storedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialDarkMode = storedTheme === 'dark' || (storedTheme === null && prefersDark);
-    
-    setDarkMode(initialDarkMode);
-    if (initialDarkMode) {
-      document.documentElement.classList.add('dark');
-    }
+    setIsMounted(true);
   }, []);
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark');
+  useEffect(() => {
+    const loadFeatureUsage = async () => {
+      const usage: FeatureUsage = {};
+      for (const type of Object.values(FEATURE_TYPES)) {
+        usage[type] = await getFeatureUsage(type);
+      }
+      setFeatureUsage(usage);
+    };
+
+    if (!isPro) {
+      loadFeatureUsage();
+    }
+  }, [isPro]);
+
+  const getRemainingUsage = (featureType: string) => {
+    if (isPro) return "∞";
+    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS];
+    const used = featureUsage[featureType] || 0;
+    return Math.max(0, limit - used);
   };
+
+  if (!isMounted) {
+    return null;
+  }
+
+  const coreFeatures = routes.filter(route => route.core);
+  const limitedFreeFeatures = routes.filter(route => route.limitedFree);
+  const proOnlyFeatures = routes.filter(route => route.proOnly);
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <div className="relative h-8 w-8 mr-4 rounded-lg overflow-hidden bg-white/10 p-1 backdrop-blur-sm">
-            <Image 
-              fill 
-              alt="Logo" 
-              src="/logo.png"
-              sizes="(max-width: 32px) 100vw, 32px"
-              className="object-contain" 
-            />
+          <div className="relative h-8 w-8 mr-4">
+            <Image fill alt="Logo" src="/logo.png" />
           </div>
           <h1 className={cn("text-2xl font-bold", montserrat.className)}>
             workfusionapp
           </h1>
         </Link>
         <div className="space-y-1">
-          {routes.map((route) => (
-            <ProLink
-              key={route.href}
+          {/* Core Features */}
+          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2">
+            Core Features
+          </h2>
+          {coreFeatures.map((route) => (
+            <Link
+              key={route.href} 
               href={route.href}
-              isPro={isPro}
-              isFree={route.free}
               className={cn(
                 "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400"
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+              )}
+            >
+              <div className="flex items-center flex-1">
+                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                {route.label}
+              </div>
+            </Link>
+          ))}
+
+          {/* Limited Free Features */}
+          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2 mt-6">
+            Limited Free Features
+          </h2>
+          {limitedFreeFeatures.map((route) => (
+            <Link
+              key={route.href}
+              href={route.href}
+              className={cn(
+                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
             >
               <div className="flex items-center flex-1">
                 <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
                 <div>
                   {route.label}
-                </div>
-              </div>
-              {!route.free && !isPro && (
-                <Lock className="h-4 w-4 text-zinc-400" />
-              )}
-              {hoveredRoute === route.href && (
-                <div className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-sm rounded shadow-lg z-50 w-48">
-                  {route.description}
-                  {!route.free && !isPro && (
-                    <div className="mt-1 text-xs text-yellow-400">
-                      Pro feature - <Link href="/settings" className="underline hover:text-yellow-300">Upgrade to access</Link>
-                    </div>
+                  {route.freeLimit && (
+                    <span className="text-xs text-zinc-400 block">
+                      {getRemainingUsage(route.href.replace("/", ""))}/{route.freeLimit} free uses
+                    </span>
                   )}
                 </div>
-              )}
-            </ProLink>
+              </div>
+            </Link>
           ))}
-          <button
-            onClick={toggleDarkMode}
-            className="text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition text-zinc-400"
-          >
-            <div className="flex items-center flex-1">
-              {darkMode ? (
-                <Sun className="h-5 w-5 mr-3 text-yellow-500" />
-              ) : (
-                <Moon className="h-5 w-5 mr-3 text-blue-500" />
+
+          {/* Pro-Only Features */}
+          <h2 className="text-xs uppercase text-zinc-400 font-bold pl-4 mb-2 mt-6">
+            Pro Features
+          </h2>
+          {proOnlyFeatures.map((route) => (
+            <Link
+              key={route.href}
+              href={route.href}
+              className={cn(
+                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
-              {darkMode ? "Light Mode" : "Dark Mode"}
-            </div>
-          </button>
+            >
+              <div className="flex items-center flex-1">
+                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                {route.label}
+                {!isPro && (
+                  <ProLink 
+                    href={route.href}
+                    isPro={isPro}
+                    isFree={false}
+                  >
+                    <span className="ml-2 text-xs text-zinc-400">PRO</span>
+                  </ProLink>
+                )}
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
-
-      <div className="mt-auto px-3">
-        {!isPro && (
-          <div className="p-4 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 mb-4">
-            <p className="text-white text-sm mb-2">
-              Upgrade to Pro for unlimited access
-            </p>
-            <Link
-              href="/settings"
-              className="w-full bg-white text-black rounded-lg p-2 text-center text-sm font-medium hover:bg-gray-100 transition"
-            >
-              Upgrade Now
-            </Link>
-          </div>
-        )}
-        <FreeCounter apiLimitCount={apiLimitCount} isPro={isPro} />
-      </div>
+      {!isPro && (
+        <div className="px-3">
+          <FreeCounter 
+            apiLimitCount={apiLimitCount} 
+            isPro={isPro}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,26 +1,29 @@
 import { authMiddleware } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
+import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
+import { prismaEdge } from "@/lib/prisma-edge";
+import type { PrismaClient } from '@prisma/client/edge';
+
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 // List of routes that require pro subscription
 const proRoutes = [
   "/video",
   "/music",
   "/custom",
-  "/voice",
-  "/art",
-  "/network",
-  "/code",
-  "/image",
-  "/code-analysis",
-  "/data-insights",
-  "/study",
-  "/translate",
-  "/content",
   "/models",
-  "/ideas",
-  "/presentation"
 ];
+
+// Routes with free tier limits
+const limitedRoutes = {
+  "/image": FEATURE_TYPES.IMAGE_GENERATION,
+  "/code": FEATURE_TYPES.CODE_GENERATION,
+  "/voice": FEATURE_TYPES.VOICE_SYNTHESIS,
+  "/content": FEATURE_TYPES.CONTENT_WRITER,
+  "/presentation": FEATURE_TYPES.PRESENTATION,
+  "/ideas": FEATURE_TYPES.IDEA_GENERATOR,
+};
 
 // List of public routes that don't require authentication
 const publicRoutes = [
@@ -57,25 +60,16 @@ export default authMiddleware({
   },
   async afterAuth(auth, req) {
     const start = Date.now();
-    const path = req.nextUrl.pathname;
-    
-    // Check if path matches any public route pattern
-    const isPublicRoute = publicRoutes.some(route => path === route || path.startsWith(`${route}/`));
-    
-    console.log("[MIDDLEWARE_AFTER_AUTH] Request started:", {
-      path,
-      userId: auth.userId,
-      isPublicRoute,
-      timestamp: new Date().toISOString()
-    });
+    const url = req.nextUrl;
+    const path = url.pathname;
 
-    // Allow public routes
-    if (isPublicRoute) {
+    // Handle public routes
+    if (publicRoutes.some(route => path.startsWith(route))) {
       console.log("[MIDDLEWARE] Public route access granted:", path);
       return NextResponse.next();
     }
 
-    // If not public route and user is not authenticated, redirect to sign-in
+    // Handle auth
     if (!auth.userId) {
       console.log("[MIDDLEWARE] No user ID, redirecting to sign-in");
       const signInUrl = new URL("/sign-in", req.url);
@@ -83,39 +77,56 @@ export default authMiddleware({
       return NextResponse.redirect(signInUrl);
     }
 
-    // Check if the requested path requires pro subscription
-    const isProRoute = proRoutes.some(route => path.startsWith(route));
-    
-    console.log("[MIDDLEWARE] Route check:", {
+    // Check if accessing a pro route
+    if (proRoutes.some(route => path.startsWith(route))) {
+      const isPro = await checkSubscription();
+      if (!isPro) {
+        console.log("[MIDDLEWARE] No pro access, redirecting to settings");
+        return NextResponse.redirect(new URL("/settings", req.url));
+      }
+    }
+
+    // Check feature limits for limited routes
+    const limitedRoute = Object.entries(limitedRoutes).find(([route]) => path.startsWith(route));
+    if (limitedRoute) {
+      const [_, featureType] = limitedRoute;
+      const isPro = await checkSubscription();
+      
+      if (!isPro) {
+        // For API routes, we'll handle the limit check in the route handler
+        if (path.startsWith('/api')) {
+          return NextResponse.next();
+        }
+        
+        try {
+          // For page routes, redirect to upgrade if limit reached
+          const usage = await prismaEdge.userFeatureUsage.findUnique({
+            where: {
+              userId_featureType: {
+                userId: auth.userId,
+                featureType
+              }
+            }
+          });
+          
+          const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS];
+          if (usage && usage.count >= limit) {
+            console.log("[MIDDLEWARE] Free tier limit reached, redirecting to upgrade");
+            return NextResponse.redirect(new URL("/", req.url));
+          }
+        } catch (error) {
+          console.error("[MIDDLEWARE_ERROR] Failed to check feature usage:", error);
+          // On error, allow access as a fallback
+          return NextResponse.next();
+        }
+      }
+    }
+
+    console.log("[MIDDLEWARE_AFTER_AUTH] Request started:", {
       path,
-      isProRoute,
       userId: auth.userId,
       timestamp: new Date().toISOString()
     });
-
-    if (isProRoute) {
-      try {
-        const hasProAccess = await checkSubscription();
-        
-        console.log("[MIDDLEWARE] Pro access check:", {
-          path,
-          hasProAccess,
-          userId: auth.userId,
-          timeElapsed: Date.now() - start,
-          timestamp: new Date().toISOString()
-        });
-
-        if (!hasProAccess) {
-          console.log("[MIDDLEWARE] No pro access, redirecting to settings");
-          return NextResponse.redirect(new URL("/settings", req.url));
-        }
-      } catch (error) {
-        console.error("[MIDDLEWARE_ERROR] Subscription check failed:", error);
-        // On error, allow access as a fallback
-        console.log("[MIDDLEWARE] Error in subscription check, allowing access");
-        return NextResponse.next();
-      }
-    }
 
     return NextResponse.next();
   }
