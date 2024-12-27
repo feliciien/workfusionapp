@@ -339,11 +339,7 @@ const Sidebar = ({
             href="/pro"
             isPro={isPro}
             isFree={false}
-          >
-            <div className="p-3 text-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg">
-              Upgrade to Pro
-            </div>
-          </ProLink>
+          />
         )}
         <FreeCounter 
           apiLimitCount={apiLimitCount} 
