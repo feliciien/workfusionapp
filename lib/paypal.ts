@@ -29,4 +29,56 @@ async function getPayPalAccessToken(): Promise<string> {
   }
 }
 
-export { PAYPAL_API_BASE, getPayPalAccessToken };
+// Function to get subscription details
+async function getSubscriptionDetails(subscriptionId: string, accessToken: string) {
+  try {
+    const response = await axios.get(
+      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("[PAYPAL_SUBSCRIPTION_ERROR]", error);
+    return null;
+  }
+}
+
+// Function to verify subscription status
+async function verifySubscription(subscriptionId: string): Promise<{
+  isValid: boolean;
+  status?: string;
+  planId?: string;
+  nextBillingTime?: string;
+}> {
+  try {
+    const accessToken = await getPayPalAccessToken();
+    const subscription = await getSubscriptionDetails(subscriptionId, accessToken);
+
+    if (!subscription) {
+      return { isValid: false };
+    }
+
+    const isValid = ['ACTIVE', 'APPROVED'].includes(subscription.status);
+    return {
+      isValid,
+      status: subscription.status,
+      planId: subscription.plan_id,
+      nextBillingTime: subscription.billing_info?.next_billing_time
+    };
+  } catch (error) {
+    console.error("[SUBSCRIPTION_VERIFY_ERROR]", error);
+    return { isValid: false };
+  }
+}
+
+export { 
+  PAYPAL_API_BASE, 
+  getPayPalAccessToken, 
+  getSubscriptionDetails,
+  verifySubscription 
+};
