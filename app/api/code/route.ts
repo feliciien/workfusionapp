@@ -25,26 +25,31 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 export async function POST(req: Request) {
   try {
     const { userId } = auth();
-    const body = await req.json();
-    const { messages, language } = body;
+    console.log("[CODE_API] Checking access for user:", userId);
 
     if (!userId) {
+      console.log("[CODE_API] No user ID found");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!openai.apiKey) {
-      return new NextResponse("OpenAI API Key not configured", { status: 500 });
+    const isPro = await checkSubscription();
+    console.log("[CODE_API] Pro status:", { userId, isPro });
+
+    if (!isPro) {
+      const hasApiLimit = await checkApiLimit();
+      console.log("[CODE_API] API limit check:", { userId, hasApiLimit });
+      
+      if (!hasApiLimit) {
+        return new NextResponse("Free tier limit reached", { status: 403 });
+      }
     }
+
+    const body = await req.json();
+    const { messages, language } = body;
+    console.log("[CODE_API] Received messages:", messages);
 
     if (!messages) {
-      return new NextResponse("Missing messages", { status: 400 });
-    }
-
-    const isAllowed = await checkApiLimit();
-    const isPro = await checkSubscription();
-
-    if (!isAllowed && !isPro) {
-      return new NextResponse("API Limit Exceeded", { status: 403 });
+      return new NextResponse("Messages are required", { status: 400 });
     }
 
     // Add language context to the system message if specified
@@ -62,12 +67,13 @@ export async function POST(req: Request) {
       presence_penalty: 0,
     });
 
-    if (!response.choices[0].message) {
-      throw new Error("No response from OpenAI");
-    }
-
+    // Only increase the API limit count for free users
     if (!isPro) {
       await increaseApiLimit();
+    }
+
+    if (!response.choices[0].message) {
+      throw new Error("No response from OpenAI");
     }
 
     return NextResponse.json(response.choices[0].message, { 
@@ -77,8 +83,8 @@ export async function POST(req: Request) {
         'Cache-Control': 'no-store, no-cache, must-revalidate'
       }
     });
-  } catch (error) {
-    console.error("[CODE_ERROR]", error);
+  } catch (error: unknown) {
+    console.error("[CODE_API_ERROR]", error instanceof Error ? error.message : error);
     
     // Return more specific error messages
     if (error instanceof OpenAI.APIError) {

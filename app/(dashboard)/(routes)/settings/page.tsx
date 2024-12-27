@@ -5,7 +5,13 @@ import { Settings } from "lucide-react";
 import { Analytics } from '@vercel/analytics/react';
 
 const SettingsPage = async () => {
+  // Force dynamic rendering
+  const timestamp = Date.now();
+  console.log("[SETTINGS_PAGE] Checking subscription:", { timestamp: new Date(timestamp).toISOString() });
+  
   const isPro = await checkSubscription();
+  
+  console.log("[SETTINGS_PAGE] Subscription status:", { isPro, timestamp: new Date(timestamp).toISOString() });
 
   return (
     <div>
@@ -20,5 +26,9 @@ const SettingsPage = async () => {
     </div>
   );
 };
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default SettingsPage;

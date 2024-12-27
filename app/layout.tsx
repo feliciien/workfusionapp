@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "WorkFusion App - Advanced AI Platform for Business Automation",
   description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
   manifest: "/manifest.json",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'),
   icons: {
     apple: "/icon.png",
   },
@@ -50,22 +50,16 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: {
       index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  verification: {
-    google: "your-google-verification-code",
-  },
+      follow: true
+    }
+  }
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
-  width: "device-width",
+  width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -117,6 +111,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ModalProvider />
             <ToasterProvider />
             {children}
+            <Analytics />
           </ErrorBoundary>
         </body>
       </html>

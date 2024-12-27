@@ -1,93 +1,55 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 
-const configuration = {
-  apiKey: process.env.OPENAI_API_KEY,
-};
-
-const openai = new OpenAI(configuration);
-
-type OpenAIVoice = "alloy" | "echo" | "fable" | "nova" | "onyx" | "shimmer";
-
-const VOICE_MAPPINGS: Record<string, OpenAIVoice> = {
-  male: "echo",     // Deep male voice
-  female: "nova",   // Female voice
-  child: "alloy",   // Young voice
-};
-
-export async function POST(
-  req: Request
-) {
+export async function POST(req: Request) {
   try {
     const { userId } = auth();
-    const body = await req.json();
-    const { prompt, voice, emotion, speed, pitch } = body;
+    const isPro = await checkSubscription();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!configuration.apiKey) {
-      return new NextResponse("OpenAI API Key not configured.", { status: 500 });
-    }
-
-    if (!prompt) {
-      return new NextResponse("Prompt is required", { status: 400 });
-    }
-
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
-
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
-    }
-
-    // Add emotion to the prompt
-    let enhancedPrompt = prompt;
-    if (emotion && emotion !== "neutral") {
-      switch(emotion) {
-        case "happy":
-          enhancedPrompt = `[Speaking with enthusiasm and joy] ${prompt}`;
-          break;
-        case "sad":
-          enhancedPrompt = `[Speaking with sadness and melancholy] ${prompt}`;
-          break;
-        case "angry":
-          enhancedPrompt = `[Speaking with anger and intensity] ${prompt}`;
-          break;
-        default:
-          enhancedPrompt = prompt;
-      }
-    }
-
-    const selectedVoice: OpenAIVoice = VOICE_MAPPINGS[voice as keyof typeof VOICE_MAPPINGS] || "echo";
-
-    const mp3 = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: selectedVoice,
-      input: enhancedPrompt,
-      speed: speed || 1.0,
-    });
-
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-    const base64Audio = buffer.toString('base64');
-    const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
-
-    // Only increase the API limit count for non-pro users
     if (!isPro) {
-      await increaseApiLimit();
+      return new NextResponse("Pro subscription required", { status: 403 });
     }
 
-    return NextResponse.json({
-      audio: audioDataUrl,
-      remaining: freeTrial ? await checkApiLimit() : null,
-      isPro
-    });
+    const { text, voice } = await req.json();
+
+    if (!text) {
+      return new NextResponse("Text is required", { status: 400 });
+    }
+
+    const response = await fetch(
+      "https://api.elevenlabs.io/v1/text-to-speech/" + (voice || "21m00Tcm4TlvDq8ikWAM"),
+      {
+        method: "POST",
+        headers: {
+          "Accept": "audio/mpeg",
+          "Content-Type": "application/json",
+          "xi-api-key": process.env.ELEVEN_LABS_API_KEY!,
+        },
+        body: JSON.stringify({
+          text,
+          model_id: "eleven_monolingual_v1",
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return new NextResponse("Voice generation failed", { status: 500 });
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const base64Audio = Buffer.from(audioBuffer).toString("base64");
+    return NextResponse.json({ audio: `data:audio/mpeg;base64,${base64Audio}` });
   } catch (error) {
-    console.log('[VOICE_ERROR]', error);
+    console.log("[VOICE_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

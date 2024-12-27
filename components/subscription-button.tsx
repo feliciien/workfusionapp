@@ -59,23 +59,22 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
         
         script.onload = () => {
           setScriptLoaded(true);
-          // Add a container for PayPal buttons with controlled z-index
           const container = document.createElement('div');
           container.style.position = 'relative';
-          container.style.zIndex = '40'; // Set lower than navigation menu
+          container.style.zIndex = '40';
           document.body.appendChild(container);
           renderButtons();
         };
 
         script.onerror = (error) => {
           console.error("PayPal script failed to load:", error);
-          toast.error("Failed to load payment system");
+          toast.error("Failed to load payment system. Please try again.");
         };
 
         document.body.appendChild(script);
-      } catch (error) {
-        console.error("Error loading PayPal:", error);
-        toast.error("Something went wrong loading the payment system");
+      } catch (error: any) {
+        console.error("Error loading PayPal:", error?.response?.data || error);
+        toast.error(error?.response?.data?.message || "Failed to load payment system");
       } finally {
         setLoading(false);
       }
@@ -95,26 +94,35 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
           createSubscription: async (data: any, actions: any) => {
             try {
               return actions.subscription.create({
-                plan_id: PLAN_DETAILS.monthly.plan_id
+                plan_id: PLAN_DETAILS.monthly.plan_id,
+                application_context: {
+                  shipping_preference: "NO_SHIPPING"
+                }
               });
-            } catch (error) {
-              console.error("Error creating subscription:", error);
-              toast.error("Failed to create subscription");
+            } catch (error: any) {
+              console.error("Error creating subscription:", error?.response?.data || error);
+              toast.error(error?.response?.data?.message || "Failed to create subscription");
               throw error;
             }
           },
           onApprove: async (data: any) => {
             try {
+              console.log("Subscription approved:", data);
+              await axios.post('/api/subscription/verify', {
+                subscriptionId: data.subscriptionID
+              });
+              
               toast.success("Successfully subscribed! Redirecting to dashboard...");
+              router.refresh();
               router.push("/dashboard");
-            } catch (error) {
-              console.error("Error handling subscription approval:", error);
-              toast.error("Error finalizing subscription");
+            } catch (error: any) {
+              console.error("Error handling subscription approval:", error?.response?.data || error);
+              toast.error(error?.response?.data?.message || "Error finalizing subscription");
             }
           },
           onError: (error: any) => {
-            console.error("PayPal Error:", error);
-            toast.error("Payment failed. Please try again.");
+            console.error("PayPal Error:", error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Payment failed. Please try again.");
           }
         }).render(`#${MONTHLY_BUTTON_ID}`);
 
@@ -128,31 +136,40 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
           createSubscription: async (data: any, actions: any) => {
             try {
               return actions.subscription.create({
-                plan_id: PLAN_DETAILS.yearly.plan_id
+                plan_id: PLAN_DETAILS.yearly.plan_id,
+                application_context: {
+                  shipping_preference: "NO_SHIPPING"
+                }
               });
-            } catch (error) {
-              console.error("Error creating subscription:", error);
-              toast.error("Failed to create subscription");
+            } catch (error: any) {
+              console.error("Error creating subscription:", error?.response?.data || error);
+              toast.error(error?.response?.data?.message || "Failed to create subscription");
               throw error;
             }
           },
           onApprove: async (data: any) => {
             try {
+              console.log("Subscription approved:", data);
+              await axios.post('/api/subscription/verify', {
+                subscriptionId: data.subscriptionID
+              });
+              
               toast.success("Successfully subscribed! Redirecting to dashboard...");
+              router.refresh();
               router.push("/dashboard");
-            } catch (error) {
-              console.error("Error handling subscription approval:", error);
-              toast.error("Error finalizing subscription");
+            } catch (error: any) {
+              console.error("Error handling subscription approval:", error?.response?.data || error);
+              toast.error(error?.response?.data?.message || "Error finalizing subscription");
             }
           },
           onError: (error: any) => {
-            console.error("PayPal Error:", error);
-            toast.error("Payment failed. Please try again.");
+            console.error("PayPal Error:", error?.response?.data || error);
+            toast.error(error?.response?.data?.message || "Payment failed. Please try again.");
           }
         }).render(`#${YEARLY_BUTTON_ID}`);
-      } catch (error) {
-        console.error("Error rendering PayPal buttons:", error);
-        toast.error("Failed to initialize payment system");
+      } catch (error: any) {
+        console.error("Error rendering PayPal buttons:", error?.response?.data || error);
+        toast.error(error?.response?.data?.message || "Failed to initialize payment system");
       }
     };
 

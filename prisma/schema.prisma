@@ -32,13 +32,16 @@ model UserApiLimit {
 model UserSubscription {
   id                     String    @id @default(cuid())
   userId                 String    @unique
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  paypalSubscriptionId   String?   @map("paypal_subscription_id")
+  paypalCustomerId      String?   @map("paypal_customer_id")
+  paypalPlanId          String?   @map("paypal_plan_id")
+  paypalStatus          String    @default("INACTIVE") @map("paypal_status")
   paypalCurrentPeriodEnd DateTime? @map("paypal_current_period_end")
-  paypalPlanId           String?   @map("paypal_plan_id")
-  paypalStatus           String?   @map("paypal_status")
-  paypalSubscriptionId   String?   @unique @map("paypal_subscription_id")
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([paypalSubscriptionId])
 }
 
 model Conversation {
@@ -56,50 +59,45 @@ model Conversation {
 
 model Message {
   id             String       @id @default(cuid())
-  content        String       @db.Text
-  role           String
   conversationId String
+  content        String       @db.Text
+  role          String
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
 }
 
 model UserSettings {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  theme              String   @default("system")
-  emailNotifications Boolean  @default(true)
-  preferredLanguage  String   @default("en")
-  customApiKey       String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  theme           String   @default("light")
+  notifications   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Analytics {
   id        String   @id @default(cuid())
   userId    String
-  eventType String
-  eventData Json
+  event     String
+  metadata  Json?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, eventType])
-  @@index([createdAt])
+  @@index([userId])
 }
 
 model NetworkMetrics {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  timestamp   DateTime @default(now())
-  latency     Float
-  bandwidth   Float
-  packetLoss  Float    @default(0)
-  status      String   @default("active")
-  metadata    Json?
+  id         String   @id @default(cuid())
+  userId     String
+  latency    Float
+  bandwidth  Float
+  packetLoss Float
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([timestamp])
 }

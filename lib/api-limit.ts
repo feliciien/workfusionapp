@@ -1,42 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { checkSubscription } from "@/lib/subscription";
 
 const FREE_CREDITS = 5;
-
-export const checkSubscription = async () => {
-  try {
-    const session = await auth();
-    const userId = session?.userId;
-
-    if (!userId) {
-      return false;
-    }
-
-    const subscription = await db.userSubscription.findUnique({
-      where: {
-        userId: userId,
-      },
-      select: {
-        paypalSubscriptionId: true,
-        paypalCurrentPeriodEnd: true,
-      }
-    });
-
-    if (!subscription) {
-      return false;
-    }
-
-    const isValid =
-      subscription.paypalSubscriptionId &&
-      subscription.paypalCurrentPeriodEnd &&
-      subscription.paypalCurrentPeriodEnd.getTime() + 86_400_000 > Date.now();
-
-    return !!isValid;
-  } catch (error) {
-    console.error("[CHECK_SUBSCRIPTION_ERROR]", error);
-    return false;
-  }
-};
 
 export const increaseApiLimit = async () => {
   try {
@@ -73,6 +39,11 @@ export const checkApiLimit = async () => {
 
     if (!userId) {
       return false;
+    }
+
+    const isPro = await checkSubscription();
+    if (isPro) {
+      return true;
     }
 
     const userApiLimit = await db.userApiLimit.findUnique({

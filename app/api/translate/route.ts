@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import OpenAI from 'openai';
+import { checkSubscription } from "@/lib/subscription";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,31 +9,42 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { text, targetLang } = await req.json();
+    const { userId } = auth();
+    const isPro = await checkSubscription();
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    if (!isPro) {
+      return new NextResponse("Pro subscription required", { status: 403 });
+    }
+
+    const { text, targetLanguage } = await req.json();
+
+    if (!text || !targetLanguage) {
+      return new NextResponse("Text and target language are required", { status: 400 });
+    }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: `You are a professional translator. Translate the following text to ${targetLang}. Only respond with the translation, nothing else.`
+          content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style.`
         },
         {
           role: "user",
           content: text
         }
-      ],
+      ]
     });
 
     return NextResponse.json({
-      data: {
-        translation: response.choices[0].message.content
-      }
+      translation: response.choices[0].message.content
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "An error occurred during translation." },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.log("[TRANSLATE_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

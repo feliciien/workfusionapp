@@ -11,6 +11,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { LayoutDashboard, Network, History, Mic2, Palette, Brain, FileText, PresentationIcon, Lightbulb } from "lucide-react";
 
 export const ProModal = () => {
   const proModal = useProModal();
@@ -18,35 +19,110 @@ export const ProModal = () => {
 
   const tools = [
     {
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      color: "text-sky-500",
+      bgColor: "bg-sky-500/10",
+      free: true
+    },
+    {
+      label: "Network Monitor",
+      icon: Network,
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
+      free: true
+    },
+    {
       label: "Conversation",
       icon: MessageSquare,
       color: "text-violet-500",
       bgColor: "bg-violet-500/10",
+      free: true
     },
     {
-      label: "Music Generation",
-      icon: Music,
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
+      label: "History",
+      icon: History,
+      color: "text-indigo-500",
+      bgColor: "bg-indigo-500/10",
+      free: true
     },
     {
       label: "Image Generation",
       icon: ImageIcon,
       color: "text-pink-700",
       bgColor: "bg-pink-700/10",
+      free: true,
+      limit: "Limited to 25 generations"
     },
     {
-      label: "Video Generation",
+      label: "Video Creation",
       icon: VideoIcon,
       color: "text-orange-700",
       bgColor: "bg-orange-700/10",
+      free: false
     },
     {
       label: "Code Generation",
       icon: Code,
       color: "text-green-700",
       bgColor: "bg-green-700/10",
+      free: true,
+      limit: "Basic templates only"
     },
+    {
+      label: "Music Synthesis",
+      icon: Music,
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
+      free: false
+    },
+    {
+      label: "Voice Synthesis",
+      icon: Mic2,
+      color: "text-yellow-500",
+      bgColor: "bg-yellow-500/10",
+      free: true,
+      limit: "Basic voices only"
+    },
+    {
+      label: "Art Generation",
+      icon: Palette,
+      color: "text-purple-700",
+      bgColor: "bg-purple-700/10",
+      free: true,
+      limit: "Basic styles only"
+    },
+    {
+      label: "Custom Models",
+      icon: Brain,
+      color: "text-blue-700",
+      bgColor: "bg-blue-700/10",
+      free: false
+    },
+    {
+      label: "Content Writer",
+      icon: FileText,
+      color: "text-gray-700",
+      bgColor: "bg-gray-700/10",
+      free: true,
+      limit: "Up to 500 words"
+    },
+    {
+      label: "Presentation Creator",
+      icon: PresentationIcon,
+      color: "text-red-700",
+      bgColor: "bg-red-700/10",
+      free: true,
+      limit: "Basic templates only"
+    },
+    {
+      label: "Idea Generator",
+      icon: Lightbulb,
+      color: "text-amber-500",
+      bgColor: "bg-amber-500/10",
+      free: true,
+      limit: "5 ideas per request"
+    }
   ];
 
   const onSubscribe = () => {
@@ -81,7 +157,13 @@ export const ProModal = () => {
                   <div className={cn("p-2 flex w-fit rounded-md", tool.bgColor)}>
                     <tool.icon className={cn("h-6 w-6", tool.color)} />
                   </div>
-                  <div className="font-semibold text-sm">{tool.label}</div>
+                  <div>
+                    <div className="font-semibold text-sm">{tool.label}</div>
+                    {tool.free && tool.limit && (
+                      <div className="text-xs text-muted-foreground">{tool.limit}</div>
+                    )}
+                  </div>
+                  {tool.free && <Badge variant="outline" className="ml-2">Free</Badge>}
                 </div>
                 <Check className="text-primary w-5 h-5" />
               </Card>

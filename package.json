@@ -17,6 +17,7 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^5.1.4",
     "@clerk/nextjs": "^4.29.3",
     "@hookform/resolvers": "^3.1.1",
     "@next/bundle-analyzer": "^14.0.4",
@@ -33,7 +34,6 @@
     "@sentry/nextjs": "^7.0.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
-    "@types/node": "20.4.3",
     "@types/react": "18.2.15",
     "@types/react-dom": "18.2.7",
     "@types/uuid": "^10.0.0",
@@ -47,6 +47,7 @@
     "critters": "^0.0.23",
     "cypress": "^13.6.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
     "encoding": "^0.1.13",
     "eslint": "8.45.0",
     "eslint-config-next": "^13.4.19",
@@ -81,6 +82,7 @@
     "zustand": "^4.3.9"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "@types/react-syntax-highlighter": "^15.5.13",
     "prettier": "^3.0.0",
     "prisma": "^6.0.1",

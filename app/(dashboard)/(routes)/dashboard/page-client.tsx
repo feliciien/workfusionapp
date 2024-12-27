@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Search, Star, Clock, BarChart2 } from "lucide-react";
+import { ArrowRight, Search, Star, Clock, BarChart2, Lock, Zap } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,11 @@ import { tools } from "./config";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { groupBy } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useProModal } from "@/hooks/use-pro-modal";
+import { useSubscription } from "@/hooks/use-subscription";
 
 interface Tool {
   label: string;
@@ -20,6 +25,8 @@ interface Tool {
   category: string;
   bgColor: string;
   color: string;
+  free?: boolean;
+  limit?: string;
 }
 
 interface UsageStats {
@@ -36,14 +43,17 @@ export default function DashboardClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recentTools, setRecentTools] = useState<Tool[]>([]);
-  const [usageStats, setUsageStats] = useState<UsageStats>({
-    used: 0,
-    total: 100,
-    dailyUsage: Array(7).fill(0),
-    popularTools: [],
-    efficiency: 0
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  const proModal = useProModal();
+  const { isPro, isLoading: isLoadingSubscription } = useSubscription();
+
+  const handleToolClick = (tool: Tool) => {
+    if (!tool.free && !isPro) {
+      proModal.setSelectedTool(tool);
+      proModal.onOpen();
+    } else {
+      router.push(tool.href);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -84,26 +94,83 @@ export default function DashboardClient() {
     );
   };
 
+  const [usageStats, setUsageStats] = useState<UsageStats>({
+    used: 0,
+    total: 100,
+    dailyUsage: Array(7).fill(0),
+    popularTools: [],
+    efficiency: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
   return (
-    <main className="flex-1 p-8 max-w-7xl mx-auto">
+    <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto">
+      {/* Pro Modal */}
+      <Dialog open={proModal.isOpen} onOpenChange={proModal.onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex justify-center items-center flex-col gap-y-4 pb-2">
+              <div className="flex items-center gap-x-2 font-bold py-1">
+                <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text">
+                  Upgrade to Pro
+                </span>
+                <Badge variant="premium" className="uppercase text-sm py-1">
+                  pro
+                </Badge>
+              </div>
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2 space-y-2 text-zinc-900 font-medium">
+              {proModal.selectedTool && (
+                <div className="flex items-center justify-center flex-col space-y-4">
+                  <div className={cn("p-3 rounded-xl", proModal.selectedTool.bgColor)}>
+                    <proModal.selectedTool.icon className={cn("w-12 h-12", proModal.selectedTool.color)} />
+                  </div>
+                  <div className="text-xl font-semibold">{proModal.selectedTool.label}</div>
+                  <p className="text-sm text-muted-foreground">{proModal.selectedTool.description}</p>
+                </div>
+              )}
+              <p className="text-sm font-normal">
+                Upgrade to Pro to unlock all premium features and tools.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              size="lg"
+              variant="premium"
+              className="w-full"
+              onClick={() => {
+                router.push("/settings");
+                proModal.onClose();
+              }}
+            >
+              Upgrade to Pro
+              <Zap className="w-4 h-4 ml-2 fill-white" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header Section */}
       <div className="mb-8 space-y-4">
-        <h1 className="text-2xl md:text-4xl font-bold text-center">
-          AI Tools Dashboard
-        </h1>
-        <p className="text-muted-foreground font-light text-sm md:text-lg text-center">
-          Experience the power of AI with our comprehensive suite of tools
-        </p>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 text-transparent bg-clip-text">
+            AI Tools Dashboard
+          </h1>
+          <p className="text-muted-foreground font-light text-sm md:text-lg max-w-2xl mx-auto">
+            Experience the power of AI with our comprehensive suite of tools
+          </p>
+        </div>
       </div>
 
       {/* Search and Stats Section */}
-      <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 col-span-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="mb-8">
+        <Card className="p-4 border-0 shadow-md bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-900">
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search tools..."
-              className="pl-8"
+              className="pl-10 h-12 bg-white/80 dark:bg-gray-950/50 backdrop-blur-sm border-0 ring-1 ring-gray-200 dark:ring-gray-800 shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -111,7 +178,72 @@ export default function DashboardClient() {
         </Card>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+      {/* Tools Grid */}
+      <div className="space-y-8">
+        {Object.entries(groupBy(filteredTools, 'category')).map(([category, tools]) => (
+          <div key={category} className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold">{category}</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-800"></div>
+            </div>
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {tools.map((tool) => (
+                <Card
+                  key={tool.href}
+                  className={cn(
+                    "group relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300",
+                    !tool.free && !isPro && "opacity-90 hover:opacity-100 cursor-not-allowed"
+                  )}
+                  onClick={() => handleToolClick(tool)}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-gray-900/50"></div>
+                  <div className="relative p-6">
+                    <div className="flex items-start gap-4">
+                      <div className={cn(
+                        "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+                        tool.bgColor,
+                        "bg-opacity-50 backdrop-blur-sm"
+                      )}>
+                        <tool.icon className={cn("w-6 h-6", tool.color)} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-semibold truncate">{tool.label}</h3>
+                          {tool.free ? (
+                            <Badge variant="outline" className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                              Free
+                            </Badge>
+                          ) : (
+                            <Badge variant="premium" className="animate-shimmer">
+                              Pro
+                            </Badge>
+                          )}
+                        </div>
+                        {tool.free && tool.limit && (
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {tool.limit}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                          {tool.description}
+                        </p>
+                      </div>
+                    </div>
+                    {!tool.free && (
+                      <div className="absolute top-3 right-3">
+                        <div className="p-2 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-sm">
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Analytics Section */}
@@ -148,92 +280,6 @@ export default function DashboardClient() {
               ))}
           </div>
         </section>
-      )}
-
-      {/* Main Tools Navigation */}
-      {isLoading ? (
-        <div className="space-y-8">
-          {[1, 2, 3].map((_, index) => (
-            <section key={index} aria-label="Loading...">
-              <h2 className="text-xl font-semibold mb-4">Loading...</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((_, index) => (
-                  <Card
-                    key={index}
-                    className="p-4 border-black/5 flex items-center justify-between hover:shadow-md transition cursor-pointer group"
-                    role="link"
-                    tabIndex={0}
-                    aria-label="Loading..."
-                  >
-                    <div className="flex items-center gap-x-4">
-                      <div className="p-2 w-fit rounded-md bg-gray-200 animate-pulse"></div>
-                      <div className="flex flex-col">
-                        <h3 className="font-semibold animate-pulse bg-gray-200 h-4 w-24"></h3>
-                        <p className="text-sm text-muted-foreground animate-pulse bg-gray-200 h-4 w-48"></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-gray-300" />
-                      <ArrowRight className="w-5 h-5" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : (
-        <nav aria-label="AI Tools Navigation">
-          <div className="space-y-8">
-            {Object.entries(
-              filteredTools.reduce((acc, tool) => {
-                if (!acc[tool.category]) {
-                  acc[tool.category] = [];
-                }
-                acc[tool.category].push(tool);
-                return acc;
-              }, {} as Record<string, Tool[]>)
-            ).map(([category, categoryTools]) => (
-              <section key={category} aria-label={`${category} Tools`}>
-                <h2 className="text-xl font-semibold mb-4">{category}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categoryTools.map((tool) => (
-                    <Card
-                      key={tool.href}
-                      onClick={() => router.push(tool.href)}
-                      className="p-4 border-black/5 flex items-center justify-between hover:shadow-md transition cursor-pointer group"
-                      role="link"
-                      tabIndex={0}
-                      aria-label={`${tool.label} - ${tool.description}`}
-                    >
-                      <div className="flex items-center gap-x-4">
-                        <div className={cn("p-2 w-fit rounded-md transition-colors", tool.bgColor, "group-hover:bg-opacity-70")}>
-                          <tool.icon className={cn("w-8 h-8", tool.color)} />
-                        </div>
-                        <div className="flex flex-col">
-                          <h3 className="font-semibold">{tool.label}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {tool.description}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Star 
-                          className={cn("w-5 h-5", favorites.includes(tool.href) ? "fill-yellow-400 text-yellow-400" : "text-gray-300")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(tool.href);
-                          }}
-                        />
-                        <ArrowRight className="w-5 h-5" />
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </nav>
       )}
 
       <Analytics />

@@ -1,4 +1,7 @@
+import { auth } from "@clerk/nextjs";
 import { NextResponse } from 'next/server';
+import { checkSubscription } from "@/lib/subscription";
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 
 const HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-small";
 const MAX_RETRIES = 3;          // Number of times to retry if model is busy
@@ -15,10 +18,36 @@ function bufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+interface HuggingFaceError {
+  error: string;
+  name?: string;
+  [key: string]: any;
+}
+
 export async function POST(req: Request) {
   try {
+    const { userId } = auth();
+    console.log("[MUSIC_API] Checking access for user:", userId);
+
+    if (!userId) {
+      console.log("[MUSIC_API] No user ID found");
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const isPro = await checkSubscription();
+    console.log("[MUSIC_API] Pro status:", { userId, isPro });
+
+    if (!isPro) {
+      const hasApiLimit = await checkApiLimit();
+      console.log("[MUSIC_API] API limit check:", { userId, hasApiLimit });
+      
+      if (!hasApiLimit) {
+        return new NextResponse("Free tier limit reached", { status: 403 });
+      }
+    }
+
     const { prompt } = await req.json();
-    console.log("Received prompt:", prompt);
+    console.log("[MUSIC_API] Received prompt:", prompt);
 
     if (!process.env.HUGGINGFACE_TOKEN) {
       throw new Error("HUGGINGFACE_TOKEN not set in .env.local");
@@ -35,73 +64,60 @@ export async function POST(req: Request) {
         const response = await fetch(HUGGINGFACE_API_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${process.env.HUGGINGFACE_TOKEN}`,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ inputs: prompt }),
-          signal: controller.signal
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: {
+              max_new_tokens: 250,
+            }
+          }),
+          signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          const contentType = response.headers.get("content-type") || "";
+          const arrayBuffer = await response.arrayBuffer();
+          const base64Audio = bufferToBase64(arrayBuffer);
 
-          if (contentType.includes("application/json")) {
-            const data = await response.json();
-            const audioBase64 = data[0]?.blob;
-            if (!audioBase64) {
-              console.error("No audio data returned from model.");
-              return NextResponse.json({ error: "No audio returned from the model." }, { status: 500 });
-            }
-
-            const audioDataUrl = `data:audio/wav;base64,${audioBase64}`;
-            return NextResponse.json({ audio: audioDataUrl });
-          } else {
-            // Binary response
-            const arrayBuffer = await response.arrayBuffer();
-            const base64 = bufferToBase64(arrayBuffer);
-            // Assuming FLAC, adjust MIME if needed
-            const audioDataUrl = `data:audio/flac;base64,${base64}`;
-            return NextResponse.json({ audio: audioDataUrl });
+          // Only increase the API limit count for free users
+          if (!isPro) {
+            await increaseApiLimit();
           }
 
-        } else {
-          const contentType = response.headers.get("content-type") || "";
-          let errorData: any = {};
-          if (contentType.includes("application/json")) {
-            errorData = await response.json().catch(() => ({}));
-          } else {
-            console.error("Non-JSON error response");
-          }
+          return new NextResponse(JSON.stringify({ audio: base64Audio }));
+        }
 
-          console.error("Hugging Face API error:", errorData);
-
-          if (errorData.error && errorData.error.includes("Model too busy")) {
-            console.log(`Model busy, attempt ${attempt} of ${MAX_RETRIES}. Retrying in ${RETRY_DELAY / 1000} seconds...`);
-            if (attempt < MAX_RETRIES) {
-              await new Promise(res => setTimeout(res, RETRY_DELAY));
-              continue;
-            } else {
-              return NextResponse.json({ error: "Model is too busy. Please try again later." }, { status: 503 });
-            }
-          } else {
-            return NextResponse.json({ error: "Failed to generate music." }, { status: 500 });
+        if (response.status === 503) {
+          console.log(`[MUSIC_API] Model is busy, attempt ${attempt}/${MAX_RETRIES}`);
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            continue;
           }
         }
-      } catch (error: any) {
+
+        throw new Error(`HTTP error! status: ${response.status}`);
+      } catch (error: unknown) {
         clearTimeout(timeoutId);
-        if (error.name === "AbortError") {
-          console.error("Request timed out.");
-          return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 504 });
-        } else {
-          console.error("Error during request:", error);
-          return NextResponse.json({ error: "Error generating music." }, { status: 500 });
+        
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            console.error("[MUSIC_API] Request timed out");
+            throw new Error("Request timed out");
+          }
+          throw error;
         }
+        
+        // If it's not an Error instance, create a new Error
+        throw new Error(error instanceof Object ? JSON.stringify(error) : 'An unknown error occurred');
       }
     }
-  } catch (error) {
-    console.error("Music generation error:", error);
-    return NextResponse.json({ error: "Error generating music." }, { status: 500 });
+
+    throw new Error("Failed to generate music after multiple retries");
+  } catch (error: unknown) {
+    console.error("[MUSIC_API_ERROR]", error instanceof Error ? error.message : error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

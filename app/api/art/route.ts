@@ -1,12 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const stylePrompts = {
   "realistic": "ultra realistic, photorealistic, highly detailed, 8k resolution",
@@ -47,16 +41,18 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
 export async function POST(req: Request) {
   try {
     const { userId } = auth();
-    const body = await req.json();
-    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
+    const isPro = await checkSubscription();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!openai.apiKey) {
-      return new NextResponse("OpenAI API Key not configured.", { status: 500 });
+    if (!isPro) {
+      return new NextResponse("Pro subscription required", { status: 403 });
     }
+
+    const body = await req.json();
+    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
 
     if (!prompt) {
       return new NextResponse("Prompt is required", { status: 400 });
@@ -71,36 +67,36 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt too long. Maximum length is 4000 characters.", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
-
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
-    }
-
     // Process and enhance the prompt
     const enhancedPrompt = processPrompt(prompt, style);
 
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: enhancedPrompt,
-      n: 1, // DALL-E-3 only supports n=1
-      size: resolution === "1792x1024" ? "1792x1024" : "1024x1024", // Only these sizes are supported by DALL-E-3
-      quality: "standard",
-      style: "vivid", // Enhanced creativity
-    });
+    const response = await fetch(
+      "https://api.replicate.com/v1/predictions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          version: "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+          input: {
+            prompt: enhancedPrompt,
+            negative_prompt: "ugly, blurry, poor quality, distorted",
+            num_inference_steps: 50,
+          },
+        }),
+      }
+    );
 
-    if (!isPro) {
-      await increaseApiLimit();
+    if (!response.ok) {
+      return new NextResponse("Art generation failed", { status: 500 });
     }
 
-    return NextResponse.json({
-      images: response.data,
-      remaining: await checkApiLimit(),
-      isPro
-    });
-  } catch (error: any) {
-    console.log('[ART_ERROR]', error);
-    return new NextResponse(error?.message || "Internal Error", { status: 500 });
+    const prediction = await response.json();
+    return NextResponse.json(prediction);
+  } catch (error) {
+    console.log("[ART_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

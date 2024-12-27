@@ -27,6 +27,8 @@ export interface Tool {
   category: string;
   bgColor: string;
   color: string;
+  free: boolean;
+  limit?: string;
 }
 
 export const tools: Tool[] = [
@@ -38,7 +40,8 @@ export const tools: Tool[] = [
     href: "/conversation",
     category: "Communication & Writing",
     bgColor: "bg-violet-500/10",
-    color: "text-violet-500"
+    color: "text-violet-500",
+    free: true
   },
   {
     label: "Content Writer",
@@ -47,7 +50,9 @@ export const tools: Tool[] = [
     href: "/content",
     category: "Communication & Writing",
     bgColor: "bg-emerald-500/10",
-    color: "text-emerald-500"
+    color: "text-emerald-500",
+    free: true,
+    limit: "500 words"
   },
   {
     label: "Translation",
@@ -56,95 +61,111 @@ export const tools: Tool[] = [
     href: "/translate",
     category: "Communication & Writing",
     bgColor: "bg-blue-500/10",
-    color: "text-blue-500"
+    color: "text-blue-500",
+    free: true
   },
 
-  // Creative Suite
+  // Visual Creation
   {
     label: "Image Generation",
-    description: "Create stunning images from text descriptions.",
+    description: "Create unique images from text descriptions.",
     icon: ImageIcon,
     href: "/image",
-    category: "Creative Suite",
-    bgColor: "bg-pink-500/10",
-    color: "text-pink-500"
-  },
-  {
-    label: "Music Creation",
-    description: "Compose original music and melodies.",
-    icon: Music,
-    href: "/music",
-    category: "Creative Suite",
-    bgColor: "bg-purple-500/10",
-    color: "text-purple-500"
+    category: "Visual Creation",
+    bgColor: "bg-pink-700/10",
+    color: "text-pink-700",
+    free: true,
+    limit: "25 generations"
   },
   {
     label: "Video Generation",
-    description: "Create and edit videos with AI assistance.",
+    description: "Transform text into engaging video content.",
     icon: VideoIcon,
     href: "/video",
-    category: "Creative Suite",
-    bgColor: "bg-orange-500/10",
-    color: "text-orange-500"
+    category: "Visual Creation",
+    bgColor: "bg-orange-700/10",
+    color: "text-orange-700",
+    free: false
+  },
+  {
+    label: "Art Generation",
+    description: "Create stunning artwork with AI assistance.",
+    icon: Palette,
+    href: "/art",
+    category: "Visual Creation",
+    bgColor: "bg-purple-700/10",
+    color: "text-purple-700",
+    free: true,
+    limit: "Basic styles"
   },
 
-  // Development Tools
+  // Audio & Music
+  {
+    label: "Music Synthesis",
+    description: "Create original music and audio tracks.",
+    icon: Music,
+    href: "/music",
+    category: "Audio & Music",
+    bgColor: "bg-emerald-500/10",
+    color: "text-emerald-500",
+    free: false
+  },
+  {
+    label: "Voice Synthesis",
+    description: "Generate natural-sounding voice narrations.",
+    icon: Mic2,
+    href: "/voice",
+    category: "Audio & Music",
+    bgColor: "bg-yellow-500/10",
+    color: "text-yellow-500",
+    free: true,
+    limit: "Basic voices"
+  },
+
+  // Development & Analysis
   {
     label: "Code Generation",
-    description: "Generate code snippets and entire functions.",
+    description: "Generate code snippets and full components.",
     icon: Code,
     href: "/code",
-    category: "Development Tools",
-    bgColor: "bg-green-500/10",
-    color: "text-green-500"
+    category: "Development & Analysis",
+    bgColor: "bg-green-700/10",
+    color: "text-green-700",
+    free: true,
+    limit: "Basic templates"
   },
   {
-    label: "Code Analysis",
-    description: "Analyze and improve your code quality.",
+    label: "Custom Models",
+    description: "Train and customize AI models for your needs.",
     icon: Brain,
-    href: "/code-analysis",
-    category: "Development Tools",
-    bgColor: "bg-indigo-500/10",
-    color: "text-indigo-500"
+    href: "/custom",
+    category: "Development & Analysis",
+    bgColor: "bg-blue-700/10",
+    color: "text-blue-700",
+    free: false
   },
 
-  // Business Tools
-  {
-    label: "Analytics Insights",
-    description: "Generate insights from your data.",
-    icon: BarChart,
-    href: "/data-insights",
-    category: "Business Tools",
-    bgColor: "bg-yellow-500/10",
-    color: "text-yellow-500"
-  },
+  // Productivity Tools
   {
     label: "Presentation Creator",
-    description: "Create professional presentations instantly.",
-    icon: Sparkles,
+    description: "Create professional presentations quickly.",
+    icon: Share2,
     href: "/presentation",
-    category: "Business Tools",
-    bgColor: "bg-red-500/10",
-    color: "text-red-500"
-  },
-
-  // Learning & Research
-  {
-    label: "Study Assistant",
-    description: "Get help with studying and research.",
-    icon: BookOpen,
-    href: "/study",
-    category: "Learning & Research",
-    bgColor: "bg-teal-500/10",
-    color: "text-teal-500"
+    category: "Productivity Tools",
+    bgColor: "bg-red-700/10",
+    color: "text-red-700",
+    free: true,
+    limit: "Basic templates"
   },
   {
     label: "Idea Generator",
-    description: "Generate creative ideas for any project.",
+    description: "Get creative ideas for any project.",
     icon: Lightbulb,
     href: "/ideas",
-    category: "Learning & Research",
+    category: "Productivity Tools",
     bgColor: "bg-amber-500/10",
-    color: "text-amber-500"
+    color: "text-amber-500",
+    free: true,
+    limit: "5 ideas"
   }
 ];

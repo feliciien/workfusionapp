@@ -19,10 +19,15 @@ import {
   History,
   Moon,
   Sun,
-  Network
+  Network,
+  Lock,
+  FileText,
+  PresentationIcon,
+  Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeCounter } from "@/components/free-counter";
+import { ProLink } from "@/components/pro-link";
 
 const montserrat = Montserrat ({ weight: '600', subsets: ['latin'] });
 
@@ -32,85 +37,97 @@ const routes = [
     icon: LayoutDashboard,
     href: '/dashboard',
     color: "text-sky-500",
-    description: "Overview of your AI workspace and activities."
+    description: "Overview of your AI workspace and activities.",
+    free: true
   },
   {
     label: 'Network Monitor',
     icon: Network,
     href: '/network',
     color: "text-emerald-500",
-    description: "Monitor and analyze network performance metrics."
+    description: "Monitor and analyze network performance metrics.",
+    free: false
   },
   {
     label: 'Conversation',
     icon: MessageSquare,
     href: '/conversation',
     color: "text-violet-500",
-    description: "Chat seamlessly with our AI assistant to brainstorm ideas."
+    description: "Chat seamlessly with our AI assistant to brainstorm ideas.",
+    free: true
   },
   {
     label: 'History',
     icon: History,
     href: '/history',
     color: "text-indigo-500",
-    description: "View your past conversations and interactions."
+    description: "View your past conversations and interactions.",
+    free: true
   },
   {
     label: 'Image Generation',
     icon: ImageIcon,
     color: "text-pink-700",
     href: '/image',
-    description: "Generate unique images using AI"
+    description: "Generate unique images using AI",
+    free: false,
   },
   {
     label: 'Video Creation',
     icon: VideoIcon,
     color: "text-orange-700",
     href: '/video',
-    description: "Convert text-based ideas into short, AI-generated videos."
+    description: "Convert text-based ideas into short, AI-generated videos.",
+    free: false
   },
   {
     label: 'Code Generation',
     icon: Code,
     color: "text-green-700",
     href: '/code',
-    description: "Generate code snippets, functions, or entire modules."
+    description: "Generate code snippets, functions, or entire modules.",
+    free: false,
   },
   {
     label: 'Music Synthesis',
     icon: Music,
     color: "text-emerald-500",
     href: '/music',
-    description: "Produce custom audio tracks suited for your projects."
+    description: "Produce custom audio tracks suited for your projects.",
+    free: false
   },
   {
     label: 'Voice Synthesis',
     icon: Mic2,
     color: "text-yellow-500",
     href: '/voice',
-    description: "Generate voice samples and narrations in various styles."
+    description: "Generate voice samples and narrations in various styles.",
+    free: false,
   },
   {
     label: 'Art Generation',
     icon: Palette,
     color: "text-purple-700",
     href: '/art',
-    description: "Craft stunning AI-assisted artwork and designs."
+    description: "Craft stunning AI-assisted artwork and designs.",
+    free: false,
   },
   {
     label: 'Custom Models',
     icon: Brain,
     color: "text-blue-700",
-    href: '/custom',
-    description: "Train and configure your own AI models for specific tasks."
+    href: '/custom-models',
+    description: "Train and deploy custom AI models.",
+    free: false
   },
   {
     label: 'Settings',
     icon: Settings,
     href: '/settings',
     color: "text-gray-500",
-    description: "Configure your AI workspace preferences."
-  },
+    description: "Manage your account settings and preferences.",
+    free: true
+  }
 ];
 
 interface SidebarProps {
@@ -163,29 +180,36 @@ const Sidebar = ({
         </Link>
         <div className="space-y-1">
           {routes.map((route) => (
-            <Link
+            <ProLink
               key={route.href}
               href={route.href}
+              isPro={isPro}
+              isFree={route.free}
               className={cn(
                 "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400"
               )}
-              onMouseEnter={() => setHoveredRoute(route.href)}
-              onMouseLeave={() => setHoveredRoute(null)}
             >
               <div className="flex items-center flex-1">
                 <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                {route.label}
+                <div>
+                  {route.label}
+                </div>
               </div>
+              {!route.free && !isPro && (
+                <Lock className="h-4 w-4 text-zinc-400" />
+              )}
               {hoveredRoute === route.href && (
                 <div className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-sm rounded shadow-lg z-50 w-48">
                   {route.description}
+                  {!route.free && !isPro && (
+                    <div className="mt-1 text-xs text-yellow-400">
+                      Pro feature - <Link href="/settings" className="underline hover:text-yellow-300">Upgrade to access</Link>
+                    </div>
+                  )}
                 </div>
               )}
-              {pathname === route.href && (
-                <div className="w-1 h-full absolute right-0 top-0 bg-primary rounded-l" />
-              )}
-            </Link>
+            </ProLink>
           ))}
           <button
             onClick={toggleDarkMode}
