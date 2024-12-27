@@ -23,8 +23,14 @@ const stylePrompts = {
 
 // Helper function to process and enhance the prompt
 const processPrompt = (prompt: string, style: string = "realistic") => {
-  // Clean the prompt
+  // Clean and enhance the prompt
   let processedPrompt = prompt.trim();
+  
+  // Add character-specific enhancements if detected
+  if (processedPrompt.toLowerCase().includes("samurai") || 
+      processedPrompt.toLowerCase().includes("warrior")) {
+    processedPrompt += ", full body shot, detailed armor, dramatic lighting, powerful pose";
+  }
   
   // Add style enhancement
   const styleEnhancement = stylePrompts[style as keyof typeof stylePrompts] || "";
@@ -33,7 +39,7 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
   processedPrompt = `${processedPrompt}, ${styleEnhancement}`;
   
   // Add quality boosting terms
-  processedPrompt += ", masterpiece, best quality, highly detailed, sharp focus, professional, trending on artstation";
+  processedPrompt += ", masterpiece, best quality, highly detailed, sharp focus, professional, trending on artstation, 8k uhd, high resolution";
   
   return processedPrompt;
 };

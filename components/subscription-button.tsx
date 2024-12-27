@@ -59,6 +59,11 @@ export const SubscriptionButton = ({ isPro = false }: SubscriptionButtonProps) =
         
         script.onload = () => {
           setScriptLoaded(true);
+          // Add a container for PayPal buttons with controlled z-index
+          const container = document.createElement('div');
+          container.style.position = 'relative';
+          container.style.zIndex = '40'; // Set lower than navigation menu
+          document.body.appendChild(container);
           renderButtons();
         };
 

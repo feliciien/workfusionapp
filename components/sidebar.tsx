@@ -127,15 +127,21 @@ const Sidebar = ({
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
+    // Check localStorage first, then system preference
+    const storedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setDarkMode(prefersDark);
-    if (prefersDark) {
+    const initialDarkMode = storedTheme === 'dark' || (storedTheme === null && prefersDark);
+    
+    setDarkMode(initialDarkMode);
+    if (initialDarkMode) {
       document.documentElement.classList.add('dark');
     }
   }, []);
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
     document.documentElement.classList.toggle('dark');
   };
 

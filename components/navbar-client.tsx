@@ -10,7 +10,7 @@ interface NavbarClientProps {
 
 const NavbarClient = ({ apiLimitCount, isPro }: NavbarClientProps) => {
   return (
-    <div className="flex items-center p-4">
+    <div className="flex items-center p-4 relative z-50">
       <MobileSidebar apiLimitCount={apiLimitCount} isPro={isPro} />
       <div className="flex w-full justify-end">
         <UserButton afterSignOutUrl="/" />
