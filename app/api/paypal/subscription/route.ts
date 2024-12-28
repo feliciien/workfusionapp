@@ -36,6 +36,7 @@ export async function GET(req: Request) {
       },
       body: JSON.stringify({
         plan_id: planId,
+        custom_id: userId,
         application_context: {
           user_action: "SUBSCRIBE_NOW",
           return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=true`,

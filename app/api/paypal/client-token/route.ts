@@ -24,7 +24,7 @@ export async function GET() {
     return NextResponse.json({ 
       clientId,
       apiBase,
-      environment: process.env.NODE_ENV === "production" ? "production" : "sandbox"
+      environment: process.env.NODE_ENV === "production" ? "production" : "live"
     });
   } catch (error) {
     console.error("[PAYPAL_CLIENT_TOKEN_ERROR]", error);

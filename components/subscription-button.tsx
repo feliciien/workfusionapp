@@ -1,11 +1,12 @@
 "use client";
 
 import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
 import cn from "classnames";
+import { useSearchParams } from "next/navigation";
 
 interface SubscriptionButtonProps {
   isPro: boolean;
@@ -21,6 +22,30 @@ export const SubscriptionButton = ({
   children
 }: SubscriptionButtonProps) => {
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const verifySubscription = async () => {
+      const subscriptionId = searchParams.get("subscription_id");
+      const success = searchParams.get("success");
+
+      if (success === "true" && subscriptionId) {
+        try {
+          setLoading(true);
+          await axios.get(`/api/paypal/verify?subscription_id=${subscriptionId}`);
+          toast.success("Thank you for subscribing!");
+          window.location.href = "/dashboard";
+        } catch (error) {
+          console.error("Verification error:", error);
+          toast.error("Failed to verify subscription");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    verifySubscription();
+  }, [searchParams]);
 
   const onClick = async () => {
     try {
