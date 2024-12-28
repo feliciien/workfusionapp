@@ -239,12 +239,14 @@ const routeCategories: RouteCategory[] = [
 ];
 
 interface SidebarProps {
-  apiLimitCount: number;
+  apiLimits: {
+    [key: string]: number;
+  };
   isPro: boolean;
 }
 
 const Sidebar = ({
-  apiLimitCount = 0,
+  apiLimits = {},
   isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
@@ -331,7 +333,7 @@ const Sidebar = ({
                         )}
                         {route.limitedFree && !route.proOnly && !isPro && (
                           <div className="ml-auto text-xs">
-                            {featureUsage[route.href] || 0}/{route.freeLimit}
+                            {featureUsage[route.href] || 0}/{apiLimits[route.href] || route.freeLimit}
                           </div>
                         )}
                       </div>
@@ -353,7 +355,7 @@ const Sidebar = ({
           </Link>
         )}
         <FreeCounter 
-          apiLimitCount={apiLimitCount} 
+          apiLimits={apiLimits} 
           isPro={isPro}
         />
       </div>

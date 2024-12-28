@@ -25,13 +25,13 @@ export default async function DashboardLayout({
   const referer = headersList.get("referer");
   const path = headersList.get("x-pathname");
   
-  const { count: apiLimitCount } = await getApiLimitCount();
+  const apiLimitData = await getApiLimitCount();
   const isPro = await checkSubscription();
 
   console.log("[DASHBOARD_LAYOUT] User status:", {
     userId,
     isPro,
-    apiLimitCount,
+    apiLimitData,
     path,
     referer,
     timestamp: new Date().toISOString()
@@ -41,7 +41,7 @@ export default async function DashboardLayout({
     <div className="h-full relative dark:bg-gray-900">
       <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-gray-900">
         <div className="flex h-full flex-col">
-          <Sidebar apiLimitCount={apiLimitCount} isPro={isPro} />
+          <Sidebar apiLimits={apiLimitData.limits || {}} isPro={isPro} />
         </div>
       </div>
       <main className="md:pl-72 dark:bg-gray-900">

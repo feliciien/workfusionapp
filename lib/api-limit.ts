@@ -121,8 +121,26 @@ export const checkApiLimit = async () => {
 
 export const getApiLimitCount = async () => {
   const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
+  
+  // Get all feature usage
+  const session = await auth();
+  const userId = session?.userId;
+  
+  let limits: { [key: string]: number } = {};
+  
+  if (userId) {
+    const usages = await db.userFeatureUsage.findMany({
+      where: { userId }
+    });
+    
+    for (const usage of usages) {
+      limits[usage.featureType] = usage.count;
+    }
+  }
+  
   return {
     count,
-    limit
+    limit,
+    limits
   };
 };
