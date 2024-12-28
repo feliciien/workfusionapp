@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Increase to 5 minutes
 
 interface Slide {
   type: 'title' | 'intro' | 'content' | 'conclusion';
@@ -46,8 +46,11 @@ const transformSlideType = (slide: any): Slide => {
 
 const formatSlides = (content: string): Slide[] => {
   try {
-    console.log('Raw OpenAI response:', content);
-    const parsed = JSON.parse(content);
+    // Clean the response content by removing markdown code block syntax
+    const cleanedContent = content.replace(/^```json\n|\n```$/g, '').trim();
+    console.log('Cleaned OpenAI response:', cleanedContent);
+    
+    const parsed = JSON.parse(cleanedContent);
     
     if (!parsed.slides || !Array.isArray(parsed.slides)) {
       console.error('Invalid slides format:', parsed);
@@ -88,7 +91,7 @@ export async function POST(req: Request) {
     const templatePrompt = TEMPLATE_PROMPTS[template as keyof typeof TEMPLATE_PROMPTS];
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo-1106", // Use a faster model
       messages: [
         {
           role: "system",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
@@ -33,20 +33,34 @@ const PRESENTATION_TEMPLATES = [
   { id: 'minimal', name: 'Minimal', description: 'Clean and simple design' },
 ];
 
-// We'll load pptxgenjs dynamically only when needed
-let PptxGenJS: any;
-
 export default function PresentationPage() {
+  // Tool loading state
+  const [isLoadingTool, setIsLoadingTool] = useState(true);
+  const [tool, setTool] = useState(tools.find(t => t.href === "/presentation"));
+
+  // Form states
   const [topic, setTopic] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState('business');
+  
+  // Presentation states
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState('business');
+  
+  // Loading and progress states
+  const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Update current slide when slides or index changes
+  // Initialize tool
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoadingTool(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Update current slide
   useEffect(() => {
     if (slides.length > 0 && currentSlideIndex < slides.length) {
       setCurrentSlide(slides[currentSlideIndex]);
@@ -55,7 +69,33 @@ export default function PresentationPage() {
     }
   }, [slides, currentSlideIndex]);
 
-  const tool = tools.find(t => t.label === "Presentation Creator")!;
+  if (isLoadingTool) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading presentation tool...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tool) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-500">Configuration Error</h2>
+        <p className="mt-2 text-muted-foreground">Unable to load presentation tool configuration.</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -115,41 +155,39 @@ export default function PresentationPage() {
     "Effective Leadership Skills"
   ];
 
-  const clearForm = useCallback(() => {
+  const clearForm = () => {
     setTopic("");
     setSlides([]);
     setError(null);
     setCurrentSlideIndex(0);
     setCurrentSlide(null);
-  }, []);
+  };
 
-  const nextSlide = useCallback(() => {
+  const nextSlide = () => {
     if (currentSlideIndex < slides.length - 1) {
       setCurrentSlideIndex(prev => prev + 1);
     }
-  }, [currentSlideIndex, slides.length]);
+  };
 
-  const previousSlide = useCallback(() => {
+  const previousSlide = () => {
     if (currentSlideIndex > 0) {
       setCurrentSlideIndex(prev => prev - 1);
     }
-  }, [currentSlideIndex]);
+  };
 
-  const generatePowerPoint = useCallback(async () => {
+  const generatePowerPoint = async () => {
     if (!slides.length) return;
 
     try {
       // Dynamically import pptxgenjs only when needed
-      if (!PptxGenJS) {
-        const pptxgen = await import('pptxgenjs');
-        PptxGenJS = pptxgen.default;
-      }
+      const pptxgen = await import('pptxgenjs');
+      const PptxGenJS = pptxgen.default;
 
       const pres = new PptxGenJS();
 
       // Set presentation properties
-      pres.author = 'SynthAI';
-      pres.company = 'SynthAI';
+      pres.author = 'WorkFusion';
+      pres.company = 'WorkFusion';
       pres.revision = '1';
       pres.subject = topic;
       pres.title = topic;
@@ -219,9 +257,9 @@ export default function PresentationPage() {
       console.error("Error generating PowerPoint:", error);
       toast.error("Failed to generate PowerPoint presentation");
     }
-  }, [slides, topic]);
+  };
 
-  const copyToClipboard = useCallback(() => {
+  const copyToClipboard = () => {
     if (!slides.length) return;
 
     const presentationText = slides
@@ -236,7 +274,7 @@ export default function PresentationPage() {
     
     navigator.clipboard.writeText(presentationText);
     toast.success('Copied to clipboard!');
-  }, [slides]);
+  };
 
   return (
     <ToolPage

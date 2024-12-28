@@ -60,7 +60,7 @@ async function createSubscription(plan: PlanType, userId: string) {
           email_address: "subscriber@example.com", // This will be updated by PayPal during checkout
         },
         application_context: {
-          brand_name: "SynthAI",
+          brand_name: "WorkFusion",
           locale: "en-US",
           shipping_preference: "NO_SHIPPING",
           user_action: "SUBSCRIBE_NOW",

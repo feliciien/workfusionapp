@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Increase to 5 minutes
 
 interface DataInsightsResponse {
   metrics: Record<string, number | string>;
@@ -45,72 +45,66 @@ export async function POST(req: Request) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo-1106",  // Use a faster model with better JSON capabilities
+      response_format: { type: "json_object" },  // Force JSON response
       messages: [
         {
           role: "system",
-          content: `You are a data analysis expert. Analyze the following data and provide:
-          1. Key metrics and their values
-          2. Notable trends and patterns
-          3. Actionable recommendations
-          
-          Focus on:
-          - Key performance indicators (KPIs)
-          - Growth rates and changes over time
-          - Correlations between different metrics
-          - Areas for improvement
-          - Actionable insights
-          
-          Format your response as JSON with the following structure:
-          {
-            "metrics": {
-              "key_metric_name": number or string value,
-              // Include 3-6 most important metrics
-            },
-            "trends": [
-              "Detailed trend observation 1",
-              "Detailed trend observation 2",
-              // Include 3-5 significant trends
-            ],
-            "recommendations": [
-              "Specific actionable recommendation 1",
-              "Specific actionable recommendation 2",
-              // Include 3-5 practical recommendations
-            ]
-          }
-          
-          Make sure all insights are:
-          1. Data-driven and specific
-          2. Business-focused
-          3. Actionable and practical
-          
-          Return ONLY valid JSON, no additional text.`
+          content: `You are a data analysis expert. Analyze the provided data and return insights in the following JSON format:
+{
+  "metrics": {
+    "key_metric_1": "value1",
+    "key_metric_2": "value2"
+  },
+  "trends": [
+    "trend description 1",
+    "trend description 2"
+  ],
+  "recommendations": [
+    "actionable recommendation 1",
+    "actionable recommendation 2"
+  ]
+}
+
+Make sure all insights are:
+1. Data-driven and specific
+2. Business-focused
+3. Actionable and practical
+
+Return ONLY valid JSON, no additional text.`
         },
         {
           role: "user",
           content: JSON.stringify(data)
         }
       ],
-      temperature: 0.7,
+      temperature: 0.5,  // Lower temperature for more consistent JSON
       max_tokens: 2000,
       top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
     });
 
     if (!response.choices[0].message?.content) {
       throw new Error("No response from OpenAI");
     }
 
-    const analysisResult = JSON.parse(response.choices[0].message.content) as DataInsightsResponse;
-
-    // Validate response structure
-    if (
-      !analysisResult.metrics ||
-      !Array.isArray(analysisResult.trends) ||
-      !Array.isArray(analysisResult.recommendations)
-    ) {
-      throw new Error("Invalid response format from OpenAI");
+    let analysisResult: DataInsightsResponse;
+    try {
+      analysisResult = JSON.parse(response.choices[0].message.content);
+      
+      // Validate response structure
+      if (
+        !analysisResult ||
+        typeof analysisResult !== 'object' ||
+        !analysisResult.metrics ||
+        !Array.isArray(analysisResult.trends) ||
+        !Array.isArray(analysisResult.recommendations)
+      ) {
+        throw new Error("Invalid response structure");
+      }
+    } catch (error) {
+      console.error("[DATA_INSIGHTS_PARSE_ERROR]", error);
+      console.error("Raw response:", response.choices[0].message.content);
+      return NextResponse.json({ error: "Failed to parse analysis results" }, { status: 500 });
     }
 
     // Only try to increase API limit if we successfully checked it

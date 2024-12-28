@@ -3,8 +3,6 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Tool } from "@/app/(dashboard)/(routes)/dashboard/config";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 interface ToolPageProps {
@@ -14,7 +12,15 @@ interface ToolPageProps {
   error?: string | null;
 }
 
-export function ToolPage({ tool, children, isLoading, error }: ToolPageProps) {
+export function ToolPage({ tool, children, isLoading }: ToolPageProps) {
+  if (!tool) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold">Loading...</h2>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8 space-y-4">

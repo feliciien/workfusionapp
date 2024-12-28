@@ -2,14 +2,14 @@ import { Metadata } from "next";
 import { UpdateCard } from "@/components/update-card";
 
 export const metadata: Metadata = {
-  title: "Updates | SynthAI",
-  description: "Stay up to date with the latest features and improvements in SynthAI.",
+  title: "Updates | WorkFusion",
+  description: "Stay up to date with the latest features and improvements in WorkFusion.",
 };
 
 const updates = [
   {
     title: "PayPal Integration & Subscription Management",
-    description: "Seamlessly manage your SynthAI subscription with PayPal integration",
+    description: "Seamlessly manage your WorkFusion subscription with PayPal integration",
     date: "December 2023",
     type: "NEW" as const,
     features: [
@@ -63,7 +63,7 @@ export default function UpdatesPage() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Latest Updates</h1>
         <p className="text-muted-foreground">
-          Stay up to date with the latest features, improvements, and fixes in SynthAI.
+          Stay up to date with the latest features, improvements, and fixes in WorkFusion.
         </p>
       </div>
       

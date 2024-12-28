@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import useProModal from "@/hooks/use-pro-modal";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { tools } from "@/app/(dashboard)/(routes)/dashboard/config";
+import { ToolPage } from "@/components/tool-page";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -49,6 +51,17 @@ const CodePage = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const codeTool = tools.find(t => t.href === '/code');
+
+  if (!codeTool) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-500">Error</h2>
+        <p>Code tool configuration not found</p>
+      </div>
+    );
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -233,122 +246,124 @@ const CodePage = () => {
   }, []);
 
   return (
-    <div className="flex h-full">
-      <div className={cn(
-        "flex flex-col flex-1 p-4",
-        isFullscreen ? "hidden" : "block"
-      )}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold">Code Generator</h1>
-            <Code className="w-6 h-6" />
-          </div>
-          <Select
-            value={language}
-            onValueChange={setLanguage}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(LANGUAGES).map(([key, value]) => (
-                <SelectItem key={key} value={key}>
-                  {value.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
-          {messages.map((message, index) => (
-            <div key={index} className={cn(
-              "p-4 rounded-lg",
-              message.role === "user" ? "bg-gray-800" : "bg-gray-700"
-            )}>
-              <div className="flex items-center space-x-2 mb-2">
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <span className="text-sm">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </span>
-              </div>
-              <ReactMarkdown 
-                className="text-sm prose prose-invert"
-                components={{
-                  pre: ({ node, ...props }) => (
-                    <div className="relative my-2">
-                      <pre {...props} className="bg-black/10 rounded-lg p-4 overflow-x-auto" />
-                    </div>
-                  ),
-                  code: ({ node, ...props }) => (
-                    <code {...props} className="bg-black/10 rounded-lg p-1" />
-                  ),
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center space-x-2">
-          <Input
-            disabled={isLoading}
-            placeholder={`Generate ${LANGUAGES[language as keyof typeof LANGUAGES].name} code for...`}
-            {...form.register("prompt")}
-            className="flex-1"
-          />
-          <Button disabled={isLoading} type="submit">
-            {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Generate"}
-          </Button>
-        </form>
-      </div>
-
-      <div 
-        ref={previewRef}
-        className={cn(
-          "border-l border-gray-800 bg-gray-900",
-          isFullscreen ? "w-screen h-screen fixed inset-0 z-50" : "w-1/2 p-4"
-        )}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Preview</h2>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={copyToClipboard}
-              className="h-8 w-8"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleFullscreen}
-              className="h-8 w-8"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
+    <ToolPage tool={codeTool} isLoading={isLoading}>
+      <div className="flex h-full">
         <div className={cn(
-          "rounded-lg overflow-hidden bg-white h-[calc(100%-3rem)]",
-          isFullscreen ? "w-full" : ""
+          "flex flex-col flex-1 p-4",
+          isFullscreen ? "hidden" : "block"
         )}>
-          <iframe
-            ref={iframeRef}
-            className="w-full h-full"
-            title="Code Preview"
-            sandbox="allow-scripts allow-same-origin"
-          />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-2xl font-bold">Code Generator</h1>
+              <Code className="w-6 h-6" />
+            </div>
+            <Select
+              value={language}
+              onValueChange={setLanguage}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(LANGUAGES).map(([key, value]) => (
+                  <SelectItem key={key} value={key}>
+                    {value.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
+            {messages.map((message, index) => (
+              <div key={index} className={cn(
+                "p-4 rounded-lg",
+                message.role === "user" ? "bg-gray-800" : "bg-gray-700"
+              )}>
+                <div className="flex items-center space-x-2 mb-2">
+                  {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+                  <span className="text-sm">
+                    {message.role === "user" ? "You" : "Assistant"}
+                  </span>
+                </div>
+                <ReactMarkdown 
+                  className="text-sm prose prose-invert"
+                  components={{
+                    pre: ({ node, ...props }) => (
+                      <div className="relative my-2">
+                        <pre {...props} className="bg-black/10 rounded-lg p-4 overflow-x-auto" />
+                      </div>
+                    ),
+                    code: ({ node, ...props }) => (
+                      <code {...props} className="bg-black/10 rounded-lg p-1" />
+                    ),
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center space-x-2">
+            <Input
+              disabled={isLoading}
+              placeholder={`Generate ${LANGUAGES[language as keyof typeof LANGUAGES].name} code for...`}
+              {...form.register("prompt")}
+              className="flex-1"
+            />
+            <Button disabled={isLoading} type="submit">
+              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Generate"}
+            </Button>
+          </form>
+        </div>
+
+        <div 
+          ref={previewRef}
+          className={cn(
+            "border-l border-gray-800 bg-gray-900",
+            isFullscreen ? "w-screen h-screen fixed inset-0 z-50" : "w-1/2 p-4"
+          )}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Preview</h2>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={copyToClipboard}
+                className="h-8 w-8"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="h-8 w-8"
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+          <div className={cn(
+            "rounded-lg overflow-hidden bg-white h-[calc(100%-3rem)]",
+            isFullscreen ? "w-full" : ""
+          )}>
+            <iframe
+              ref={iframeRef}
+              className="w-full h-full"
+              title="Code Preview"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </ToolPage>
   );
 };
 

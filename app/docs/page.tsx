@@ -66,8 +66,8 @@ const sections: Section[] = [
 
 const DocContent: DocContent = {
   introduction: {
-    title: "Introduction to SynthAI",
-    content: `SynthAI is a powerful AI platform that combines state-of-the-art models with an intuitive interface to help you create, innovate, and automate. Our platform provides access to advanced AI capabilities including code generation, content creation, image generation, and more.
+    title: "Introduction to WorkFusion",
+    content: `WorkFusion is a powerful AI platform that combines state-of-the-art models with an intuitive interface to help you create, innovate, and automate. Our platform provides access to advanced AI capabilities including code generation, content creation, image generation, and more.
 
 Key Features:
 • Advanced AI Models - Access to GPT-4, DALL-E 3, and custom models
@@ -86,10 +86,10 @@ Getting Support:
   },
   "quick-start": {
     title: "Quick Start Guide",
-    content: `Getting started with SynthAI is straightforward:
+    content: `Getting started with WorkFusion is straightforward:
 
 1. Sign Up
-   • Visit synthAI.com and click "Sign Up"
+   • Visit workfusion.com and click "Sign Up"
    • Choose your plan (Free, Pro, or Enterprise)
    • Complete the registration process
 
@@ -100,7 +100,7 @@ Getting Support:
 
 3. First Request
    \`\`\`typescript
-   const response = await fetch('https://api.synthai.com/v1/generate', {
+   const response = await fetch('https://api.workfusion.com/v1/generate', {
      method: 'POST',
      headers: {
        'Authorization': 'Bearer YOUR_API_KEY',
@@ -121,38 +121,38 @@ Getting Support:
   },
   installation: {
     title: "Installation",
-    content: `Install the SynthAI SDK using your preferred package manager:
+    content: `Install the WorkFusion SDK using your preferred package manager:
 
 npm:
 \`\`\`bash
-npm install @synthai/sdk
+npm install @workfusion/sdk
 \`\`\`
 
 yarn:
 \`\`\`bash
-yarn add @synthai/sdk
+yarn add @workfusion/sdk
 \`\`\`
 
 pnpm:
 \`\`\`bash
-pnpm add @synthai/sdk
+pnpm add @workfusion/sdk
 \`\`\`
 
 Then import and initialize the SDK:
 
 \`\`\`typescript
-import { SynthAI } from '@synthai/sdk';
+import { WorkFusion } from '@workfusion/sdk';
 
-const synthai = new SynthAI({
+const workfusion = new WorkFusion({
   apiKey: 'YOUR_API_KEY'
 });
 \`\`\``,
   },
   authentication: {
     title: "Authentication",
-    content: `SynthAI uses API keys for authentication. To obtain your API key:
+    content: `WorkFusion uses API keys for authentication. To obtain your API key:
 
-1. Log in to your SynthAI dashboard
+1. Log in to your WorkFusion dashboard
 2. Navigate to Settings > API Keys
 3. Click "Generate New Key"
 4. Copy and store your key securely
@@ -161,13 +161,13 @@ Using your API key:
 
 \`\`\`typescript
 // With SDK
-const synthai = new SynthAI({
-  apiKey: process.env.SYNTHAI_API_KEY
+const workfusion = new WorkFusion({
+  apiKey: process.env.WORKFUSION_API_KEY
 });
 
 // With REST API
 const headers = {
-  'Authorization': \`Bearer \${process.env.SYNTHAI_API_KEY}\`,
+  'Authorization': \`Bearer \${process.env.WORKFUSION_API_KEY}\`,
   'Content-Type': 'application/json'
 };
 \`\`\`
@@ -180,7 +180,7 @@ Security Best Practices:
   },
   "ai-models": {
     title: "AI Models",
-    content: `SynthAI provides access to a variety of state-of-the-art AI models:
+    content: `WorkFusion provides access to a variety of state-of-the-art AI models:
 
 1. Language Models
    • GPT-4 - Most advanced language model for complex tasks
@@ -200,7 +200,7 @@ Security Best Practices:
 Usage Example:
 \`\`\`typescript
 // Using GPT-4 for text generation
-const completion = await synthai.complete({
+const completion = await workfusion.complete({
   model: 'gpt-4',
   prompt: 'Write a product description for...',
   maxTokens: 200,
@@ -208,7 +208,7 @@ const completion = await synthai.complete({
 });
 
 // Using DALL-E 3 for image generation
-const image = await synthai.generateImage({
+const image = await workfusion.generateImage({
   model: 'dall-e-3',
   prompt: 'A futuristic city with...',
   size: '1024x1024',
@@ -224,7 +224,7 @@ Model Selection Guidelines:
   },
   "code-generation": {
     title: "Code Generation",
-    content: `SynthAI's code generation capabilities help developers write better code faster:
+    content: `WorkFusion's code generation capabilities help developers write better code faster:
 
 Features:
 • Multi-language Support - Generate code in 20+ programming languages
@@ -235,7 +235,7 @@ Features:
 Example Usage:
 \`\`\`typescript
 // Generate a React component
-const code = await synthai.generateCode({
+const code = await workfusion.generateCode({
   language: 'typescript',
   framework: 'react',
   prompt: 'Create a form component with email and password fields',
@@ -243,7 +243,7 @@ const code = await synthai.generateCode({
 });
 
 // Generate an API endpoint
-const apiCode = await synthai.generateCode({
+const apiCode = await workfusion.generateCode({
   language: 'python',
   framework: 'fastapi',
   prompt: 'Create a REST API endpoint for user authentication',
@@ -269,7 +269,7 @@ Best Practices:
   },
   "content-creation": {
     title: "Content Creation",
-    content: `Create engaging content with SynthAI's content generation capabilities:
+    content: `Create engaging content with WorkFusion's content generation capabilities:
 
 Content Types:
 • Blog Posts
@@ -289,7 +289,7 @@ Features:
 Example Usage:
 \`\`\`typescript
 // Generate a blog post
-const blogPost = await synthai.generateContent({
+const blogPost = await workfusion.generateContent({
   type: 'blog',
   topic: 'AI in Healthcare',
   tone: 'professional',
@@ -298,7 +298,7 @@ const blogPost = await synthai.generateContent({
 });
 
 // Create social media content
-const socialPosts = await synthai.generateContent({
+const socialPosts = await workfusion.generateContent({
   type: 'social',
   platform: 'twitter',
   campaign: 'Product Launch',
@@ -325,7 +325,7 @@ Content Guidelines:
   },
   "rate-limits": {
     title: "Rate Limits & Quotas",
-    content: `Understanding SynthAI's rate limits and quotas:
+    content: `Understanding WorkFusion's rate limits and quotas:
 
 Rate Limits by Tier:
 • Free Tier
@@ -346,7 +346,7 @@ Rate Limits by Tier:
 Handling Rate Limits:
 \`\`\`typescript
 try {
-  const response = await synthai.generate({
+  const response = await workfusion.generate({
     prompt: 'Your prompt'
   });
 } catch (error) {

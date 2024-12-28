@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Documentation - SynthAI",
-  description: "Comprehensive documentation for SynthAI platform. Learn about our AI models, features, API integration, and best practices.",
+  title: "Documentation - WorkFusion",
+  description: "Comprehensive documentation for WorkFusion platform. Learn about our AI models, features, API integration, and best practices.",
   keywords: [
-    "SynthAI documentation",
+    "WorkFusion documentation",
     "AI platform docs",
     "API reference",
     "code generation",

@@ -90,7 +90,7 @@ export const tools: Tool[] = [
   {
     label: 'Idea Generator',
     icon: Lightbulb,
-    href: '/idea',
+    href: '/ideas',
     color: "text-yellow-500",
     bgColor: "bg-yellow-500/10",
     description: "Generate creative ideas and solutions.",
@@ -141,7 +141,7 @@ export const tools: Tool[] = [
   {
     label: 'Data Insights',
     icon: LineChart,
-    href: '/data',
+    href: '/data-insights',
     color: "text-violet-500",
     bgColor: "bg-violet-500/10",
     description: "Generate insights from your data.",

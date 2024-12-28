@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface DataInsightsResponse {
   metrics: Record<string, number | string>;
@@ -20,8 +20,45 @@ export default function DataInsightsPage() {
   const [data, setData] = useState("");
   const [insights, setInsights] = useState<DataInsightsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTool, setIsLoadingTool] = useState(true);
 
-  const tool = tools.find(t => t.label === "Analytics Insights")!;
+  useEffect(() => {
+    // Simulate a quick loading state for tool configuration
+    const timer = setTimeout(() => {
+      setIsLoadingTool(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoadingTool) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading data insights tool...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tool = tools.find(t => t.href === "/data-insights");
+
+  if (!tool) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-500">Configuration Error</h2>
+        <p className="mt-2 text-muted-foreground">Unable to load data insights tool configuration.</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   const exampleData = {
     sales_data: [
