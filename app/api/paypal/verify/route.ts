@@ -1,8 +1,6 @@
 import { auth as clerkAuth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
-
-export const runtime = "edge";
+import prisma from "@/lib/prisma";
 
 export async function GET(req: Request) {
   try {
@@ -40,8 +38,8 @@ export async function GET(req: Request) {
 
     const subscription = await response.json();
 
-    // Update subscription in database
-    const userSubscription = await prismaEdge.userSubscription.upsert({
+    // Update subscription in database using regular Prisma client
+    const userSubscription = await prisma.userSubscription.upsert({
       where: { userId },
       create: {
         userId,
@@ -50,21 +48,20 @@ export async function GET(req: Request) {
         paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
           ? new Date(subscription.billing_info.next_billing_time)
           : null,
+        paypalCustomerId: subscription.subscriber.payer_id,
+        paypalPlanId: subscription.plan_id
       },
       update: {
-        paypalSubscriptionId: subscription.id,
         paypalStatus: subscription.status,
         paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
           ? new Date(subscription.billing_info.next_billing_time)
           : null,
+        paypalCustomerId: subscription.subscriber.payer_id,
+        paypalPlanId: subscription.plan_id
       },
     });
 
-    return NextResponse.json({
-      subscriptionId: userSubscription.paypalSubscriptionId,
-      status: userSubscription.paypalStatus,
-      currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
-    });
+    return NextResponse.json(userSubscription);
   } catch (error) {
     console.error("[PAYPAL_VERIFY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
