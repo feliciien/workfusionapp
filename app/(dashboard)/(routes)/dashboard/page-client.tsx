@@ -22,11 +22,12 @@ interface Tool {
   description: string;
   icon: LucideIcon;
   href: string;
-  category: string;
   bgColor: string;
   color: string;
-  free?: boolean;
-  limit?: string;
+  limitedFree?: boolean;
+  freeLimit?: number;
+  proOnly?: boolean;
+  featureType?: string;
 }
 
 interface UsageStats {
@@ -47,7 +48,7 @@ export default function DashboardClient() {
   const { isPro, isLoading: isLoadingSubscription } = useSubscription();
 
   const handleToolClick = (tool: Tool) => {
-    if (!tool.free && !isPro) {
+    if (tool.proOnly && !isPro) {
       proModal.setSelectedTool(tool);
       proModal.onOpen();
     } else {
@@ -81,8 +82,7 @@ export default function DashboardClient() {
   // Filter tools based on search query
   const filteredTools = tools.filter(tool => 
     tool.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tool.category.toLowerCase().includes(searchQuery.toLowerCase())
+    tool.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Toggle favorite status
@@ -180,10 +180,10 @@ export default function DashboardClient() {
 
       {/* Tools Grid */}
       <div className="space-y-8">
-        {Object.entries(groupBy(filteredTools, 'category')).map(([category, tools]) => (
-          <div key={category} className="space-y-4">
+        {Object.entries(groupBy(filteredTools, 'featureType')).map(([featureType, tools]) => (
+          <div key={featureType} className="space-y-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">{category}</h2>
+              <h2 className="text-xl font-semibold">{featureType}</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-800"></div>
             </div>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -192,7 +192,7 @@ export default function DashboardClient() {
                   key={tool.href}
                   className={cn(
                     "group relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300",
-                    !tool.free && !isPro && "opacity-90 hover:opacity-100 cursor-not-allowed"
+                    tool.proOnly && !isPro && "opacity-90 hover:opacity-100 cursor-not-allowed"
                   )}
                   onClick={() => handleToolClick(tool)}
                 >
@@ -209,20 +209,20 @@ export default function DashboardClient() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-semibold truncate">{tool.label}</h3>
-                          {tool.free ? (
-                            <Badge variant="outline" className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                              Free
-                            </Badge>
-                          ) : (
+                          {tool.proOnly ? (
                             <Badge variant="premium" className="animate-shimmer">
                               Pro
                             </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                              Free
+                            </Badge>
                           )}
                         </div>
-                        {tool.free && tool.limit && (
+                        {tool.limitedFree && tool.freeLimit && (
                           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {tool.limit}
+                            {tool.freeLimit}
                           </p>
                         )}
                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -230,7 +230,7 @@ export default function DashboardClient() {
                         </p>
                       </div>
                     </div>
-                    {!tool.free && (
+                    {!tool.proOnly && (
                       <div className="absolute top-3 right-3">
                         <div className="p-2 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-sm">
                           <Lock className="h-4 w-4 text-muted-foreground" />
