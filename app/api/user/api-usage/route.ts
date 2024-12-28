@@ -2,11 +2,12 @@
 
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
+import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
-export const runtime = "edge";
+// Remove edge runtime
+// export const runtime = "edge";
 
 const FREE_CREDITS = 5;
 
@@ -18,8 +19,8 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Fetch user data from the database
-    const userApiLimit = await prismaEdge.userApiLimit.findUnique({
+    // Fetch user data from the database using regular Prisma client
+    const userApiLimit = await prisma.userApiLimit.findUnique({
       where: {
         userId: userId
       }
