@@ -1,9 +1,7 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
+import prisma from "@/lib/prisma";
 import { verifySubscription } from "@/lib/paypal";
-
-export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
@@ -27,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Update subscription in database
-    const subscription = await prismaEdge.userSubscription.upsert({
+    const subscription = await prisma.userSubscription.upsert({
       where: {
         userId,
       },
