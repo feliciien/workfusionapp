@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { auth as clerkAuth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { prismaEdge } from "@/lib/prisma-edge";
 
@@ -6,7 +6,7 @@ export const runtime = "edge";
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = clerkAuth();
     const { searchParams } = new URL(req.url);
     const subscriptionId = searchParams.get("subscription_id");
 
@@ -18,58 +18,52 @@ export async function GET(req: Request) {
       return new NextResponse("Subscription ID required", { status: 400 });
     }
 
-    // Get PayPal access token
-    const tokenResponse = await fetch(`${process.env.PAYPAL_API_BASE}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`,
-      },
-      body: "grant_type=client_credentials",
-    });
+    // Basic auth token
+    const basicAuth = Buffer.from(
+      `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+    ).toString("base64");
 
-    const { access_token } = await tokenResponse.json();
-
-    // Verify subscription with PayPal
-    const response = await fetch(`${process.env.PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
-
-    const subscription = await response.json();
+    // Get subscription details from PayPal
+    const response = await fetch(
+      `${process.env.PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+        },
+      }
+    );
 
     if (!response.ok) {
-      console.error("PayPal API Error:", subscription);
+      console.error("PayPal API Error:", await response.text());
       return new NextResponse("PayPal API Error", { status: 500 });
     }
 
-    // Create or update subscription in database
-    const existingSubscription = await prismaEdge.userSubscription.upsert({
-      where: {
-        userId: userId,
-      },
+    const subscription = await response.json();
+
+    // Update subscription in database
+    const userSubscription = await prismaEdge.userSubscription.upsert({
+      where: { userId },
       create: {
-        userId: userId,
+        userId,
         paypalSubscriptionId: subscription.id,
         paypalStatus: subscription.status,
-        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time ? new Date(subscription.billing_info.next_billing_time) : null,
-        paypalPayerId: subscription.subscriber.payer_id,
-        paypalPlanId: subscription.plan_id,
+        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
+          ? new Date(subscription.billing_info.next_billing_time)
+          : null,
       },
       update: {
         paypalSubscriptionId: subscription.id,
         paypalStatus: subscription.status,
-        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time ? new Date(subscription.billing_info.next_billing_time) : null,
-        paypalPayerId: subscription.subscriber.payer_id,
-        paypalPlanId: subscription.plan_id,
+        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
+          ? new Date(subscription.billing_info.next_billing_time)
+          : null,
       },
     });
 
     return NextResponse.json({
-      subscriptionId: existingSubscription.paypalSubscriptionId,
-      status: existingSubscription.paypalStatus,
-      currentPeriodEnd: existingSubscription.paypalCurrentPeriodEnd,
+      subscriptionId: userSubscription.paypalSubscriptionId,
+      status: userSubscription.paypalStatus,
+      currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
     });
   } catch (error) {
     console.error("[PAYPAL_VERIFY_ERROR]", error);
