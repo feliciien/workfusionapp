@@ -1,8 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
-
-export const runtime = "edge";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     // Get subscription from database
-    const subscription = await prismaEdge.userSubscription.findUnique({
+    const subscription = await prisma.userSubscription.findUnique({
       where: {
         userId,
       },
