@@ -1,8 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
-
-export const runtime = "edge";
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -20,7 +18,7 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const userSubscription = await prismaEdge.userSubscription.findUnique({
+    const userSubscription = await prisma.userSubscription.findUnique({
       where: {
         userId: userId
       }
