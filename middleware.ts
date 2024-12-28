@@ -1,11 +1,6 @@
 import { authMiddleware } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
-import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
-import prisma from "@/lib/prisma";
-import type { PrismaClient } from '@prisma/client';
-
-type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 // List of routes that require pro subscription
 const proRoutes = [
@@ -14,16 +9,6 @@ const proRoutes = [
   "/custom",
   "/models",
 ];
-
-// Routes with free tier limits
-const limitedRoutes = {
-  "/image": FEATURE_TYPES.IMAGE_GENERATION,
-  "/code": FEATURE_TYPES.CODE_GENERATION,
-  "/voice": FEATURE_TYPES.VOICE_SYNTHESIS,
-  "/content": FEATURE_TYPES.CONTENT_WRITER,
-  "/presentation": FEATURE_TYPES.PRESENTATION,
-  "/ideas": FEATURE_TYPES.IDEA_GENERATOR,
-};
 
 // List of public routes that don't require authentication
 const publicRoutes = [
@@ -59,7 +44,6 @@ export default authMiddleware({
     return NextResponse.next();
   },
   async afterAuth(auth, req) {
-    const start = Date.now();
     const url = req.nextUrl;
     const path = url.pathname;
 
@@ -86,42 +70,7 @@ export default authMiddleware({
       }
     }
 
-    // Check feature limits for limited routes
-    const limitedRoute = Object.entries(limitedRoutes).find(([route]) => path.startsWith(route));
-    if (limitedRoute) {
-      const [_, featureType] = limitedRoute;
-      const isPro = await checkSubscription();
-      
-      if (!isPro) {
-        // For API routes, we'll handle the limit check in the route handler
-        if (path.startsWith('/api')) {
-          return NextResponse.next();
-        }
-        
-        try {
-          // For page routes, redirect to upgrade if limit reached
-          const usage = await prisma.userFeatureUsage.findUnique({
-            where: {
-              userId_featureType: {
-                userId: auth.userId,
-                featureType
-              }
-            }
-          });
-          
-          const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS];
-          if (usage && usage.count >= limit) {
-            console.log("[MIDDLEWARE] Free tier limit reached, redirecting to upgrade");
-            return NextResponse.redirect(new URL("/", req.url));
-          }
-        } catch (error) {
-          console.error("[MIDDLEWARE_ERROR] Failed to check feature usage:", error);
-          // On error, allow access as a fallback
-          return NextResponse.next();
-        }
-      }
-    }
-
+    // Feature usage checks are now handled in individual API routes
     console.log("[MIDDLEWARE_AFTER_AUTH] Request started:", {
       path,
       userId: auth.userId,

@@ -44,7 +44,8 @@ export const FEATURE_TYPES = {
   DATA_INSIGHTS: 'data',
   NETWORK_ANALYSIS: 'network',
   STUDY_ASSISTANT: 'study',
-  RESEARCH_ASSISTANT: 'research'
+  RESEARCH_ASSISTANT: 'research',
+  API_USAGE: 'api'
 } as const;
 
 export const tools = [

@@ -25,7 +25,7 @@ export default async function DashboardLayout({
   const referer = headersList.get("referer");
   const path = headersList.get("x-pathname");
   
-  const apiLimitCount = await getApiLimitCount();
+  const { count: apiLimitCount } = await getApiLimitCount();
   const isPro = await checkSubscription();
 
   console.log("[DASHBOARD_LAYOUT] User status:", {

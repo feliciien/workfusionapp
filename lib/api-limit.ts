@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
-import { MAX_FREE_COUNTS } from "@/constants";
+import { MAX_FREE_COUNTS, FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 
 const FREE_CREDITS = MAX_FREE_COUNTS;
 
-export const increaseApiLimit = async () => {
+export const increaseFeatureUsage = async (featureType: string) => {
   try {
     const session = await auth();
     const userId = session?.userId;
@@ -14,26 +14,32 @@ export const increaseApiLimit = async () => {
       return;
     }
 
-    const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId: userId },
+    const usage = await db.userFeatureUsage.upsert({
+      where: {
+        userId_featureType: {
+          userId,
+          featureType
+        }
+      },
+      create: {
+        userId,
+        featureType,
+        count: 1
+      },
+      update: {
+        count: {
+          increment: 1
+        }
+      }
     });
 
-    if (userApiLimit) {
-      await db.userApiLimit.update({
-        where: { userId: userId },
-        data: { count: userApiLimit.count + 1 },
-      });
-    } else {
-      await db.userApiLimit.create({
-        data: { userId: userId, count: 1 },
-      });
-    }
+    return usage;
   } catch (error) {
-    console.error("[INCREASE_API_LIMIT_ERROR]", error);
+    console.error("[INCREASE_FEATURE_USAGE_ERROR]", error);
   }
 };
 
-export const checkApiLimit = async () => {
+export const checkFeatureLimit = async (featureType: string) => {
   try {
     const session = await auth();
     const userId = session?.userId;
@@ -47,41 +53,76 @@ export const checkApiLimit = async () => {
       return true;
     }
 
-    const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId: userId },
+    const usage = await db.userFeatureUsage.findUnique({
+      where: {
+        userId_featureType: {
+          userId,
+          featureType
+        }
+      }
     });
 
-    if (!userApiLimit || userApiLimit.count < FREE_CREDITS) {
+    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
+    if (!usage || usage.count < limit) {
       return true;
     }
 
     return false;
   } catch (error) {
-    console.error("[CHECK_API_LIMIT_ERROR]", error);
+    console.error("[CHECK_FEATURE_LIMIT_ERROR]", error);
     return false;
   }
 };
 
-export const getApiLimitCount = async () => {
+export const getFeatureUsage = async (featureType: string) => {
   try {
     const session = await auth();
     const userId = session?.userId;
 
     if (!userId) {
-      return 0;
+      return {
+        count: 0,
+        limit: FREE_CREDITS
+      };
     }
 
-    const userApiLimit = await db.userApiLimit.findUnique({
-      where: { userId },
+    const usage = await db.userFeatureUsage.findUnique({
+      where: {
+        userId_featureType: {
+          userId,
+          featureType
+        }
+      }
     });
 
-    if (!userApiLimit) {
-      return 0;
-    }
+    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
 
-    return userApiLimit.count;
+    return {
+      count: usage?.count || 0,
+      limit
+    };
   } catch (error) {
-    console.error("[GET_API_LIMIT_COUNT_ERROR]", error);
-    return 0;
+    console.error("[GET_FEATURE_USAGE_ERROR]", error);
+    return {
+      count: 0,
+      limit: FREE_CREDITS
+    };
   }
+};
+
+// Keep existing functions for backward compatibility
+export const increaseApiLimit = async () => {
+  return increaseFeatureUsage(FEATURE_TYPES.API_USAGE);
+};
+
+export const checkApiLimit = async () => {
+  return checkFeatureLimit(FEATURE_TYPES.API_USAGE);
+};
+
+export const getApiLimitCount = async () => {
+  const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
+  return {
+    count,
+    limit
+  };
 };
