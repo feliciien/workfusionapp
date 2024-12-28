@@ -46,11 +46,27 @@ const CodePage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [previewCode, setPreviewCode] = useState("");
   const [language, setLanguage] = useState("typescript");
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      prompt: "",
+    },
+  });
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const codeTool = tools.find(t => t.href === '/code');
 
@@ -62,13 +78,6 @@ const CodePage = () => {
       </div>
     );
   }
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      prompt: "",
-    },
-  });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -235,15 +244,6 @@ const CodePage = () => {
     }
     setIsFullscreen(!isFullscreen);
   };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   return (
     <ToolPage tool={codeTool} isLoading={isLoading}>
