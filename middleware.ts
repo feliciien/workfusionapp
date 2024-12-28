@@ -2,8 +2,8 @@ import { authMiddleware } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
 import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
-import { prismaEdge } from "@/lib/prisma-edge";
-import type { PrismaClient } from '@prisma/client/edge';
+import prisma from "@/lib/prisma";
+import type { PrismaClient } from '@prisma/client';
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
@@ -100,7 +100,7 @@ export default authMiddleware({
         
         try {
           // For page routes, redirect to upgrade if limit reached
-          const usage = await prismaEdge.userFeatureUsage.findUnique({
+          const usage = await prisma.userFeatureUsage.findUnique({
             where: {
               userId_featureType: {
                 userId: auth.userId,
