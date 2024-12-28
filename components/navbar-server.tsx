@@ -3,10 +3,10 @@ import { checkSubscription } from "@/lib/subscription";
 import NavbarClient from "./navbar-client";
 
 const Navbar = async () => {
-  const apiLimitCount = await getApiLimitCount();
+  const apiLimitData = await getApiLimitCount();
   const isPro = await checkSubscription();
 
-  return <NavbarClient apiLimitCount={apiLimitCount} isPro={isPro} />;
+  return <NavbarClient apiLimits={apiLimitData.limits || {}} isPro={isPro} />;
 };
 
 export default Navbar;

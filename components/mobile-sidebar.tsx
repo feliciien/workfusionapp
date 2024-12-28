@@ -6,23 +6,25 @@ import Sidebar from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 
 interface MobileSidebarProps {
-  apiLimitCount: number;
+  apiLimits: {
+    [key: string]: number;
+  };
   isPro: boolean;
 }
 
 const MobileSidebar = ({
-  apiLimitCount = 0,
+  apiLimits = {},
   isPro = false
 }: MobileSidebarProps) => {
   return (
     <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+      <SheetTrigger asChild className="md:hidden pr-4">
+        <Button variant="ghost" size="icon">
           <Menu />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 bg-gray-900">
-        <Sidebar isPro={isPro} apiLimitCount={apiLimitCount} />
+        <Sidebar apiLimits={apiLimits} isPro={isPro} />
       </SheetContent>
     </Sheet>
   );
