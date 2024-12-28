@@ -13,9 +13,9 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const count = await getApiLimitCount();
+    const apiLimitData = await getApiLimitCount();
 
-    return NextResponse.json({ count });
+    return NextResponse.json(apiLimitData);
   } catch (error) {
     console.error("[API_LIMIT_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });

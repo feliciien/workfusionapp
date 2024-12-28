@@ -2,8 +2,8 @@
 
 import { FC, useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react"
-import { MAX_FREE_COUNTS, FREE_CONTENT_WORD_LIMIT, FREE_IDEA_LIMIT } from "@/constants";
-import { Zap, Info } from "lucide-react";
+import { MAX_FREE_COUNTS } from "@/constants";
+import { Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -15,6 +15,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+
+interface ApiLimitData {
+  count: number;
+  limit: number;
+  limits: {
+    [key: string]: number;
+  };
+}
 
 interface FreeCounterProps {
   apiLimits: {
@@ -28,7 +36,11 @@ export const FreeCounter: FC<FreeCounterProps> = ({
   isPro = false 
 }) => {
   const [mounted, setMounted] = useState(false);
-  const [limits, setLimits] = useState(apiLimits);
+  const [apiData, setApiData] = useState<ApiLimitData>({
+    count: 0,
+    limit: MAX_FREE_COUNTS,
+    limits: apiLimits
+  });
   const router = useRouter();
   const { isSignedIn } = useAuth();
 
@@ -41,7 +53,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
       try {
         const response = await fetch('/api/api-limit');
         const data = await response.json();
-        setLimits(data.limits || {});
+        setApiData(data);
       } catch (error) {
         console.error('Failed to fetch API limits:', error);
       }
@@ -63,21 +75,17 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     return null;
   }
 
-  // Calculate total usage and limit
-  const totalUsage = Object.values(limits).reduce((sum, count) => sum + (count || 0), 0);
-  const totalLimit = Object.values(MAX_FREE_COUNTS).reduce((sum, limit) => sum + limit, 0);
-
   return (
     <div className="px-3">
       <Card className="bg-white/10 border-0">
         <CardContent className="py-6">
           <div className="text-sm text-center text-white mb-4 space-y-2">
             <p>
-              {totalUsage} / {totalLimit} Free Credits Used
+              {apiData.count} / {apiData.limit} Free Credits Used
             </p>
             <Progress
               className="h-3"
-              value={(totalUsage / totalLimit) * 100}
+              value={(apiData.count / apiData.limit) * 100}
             />
           </div>
           <TooltipProvider>
