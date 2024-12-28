@@ -34,7 +34,12 @@ export const SubscriptionButton = ({
           setLoading(true);
           await axios.get(`/api/paypal/verify?subscription_id=${subscriptionId}`);
           toast.success("Thank you for subscribing!");
-          window.location.href = "/dashboard";
+          
+          // Get base URL for redirect
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (
+            process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : window.location.origin
+          );
+          window.location.href = `${baseUrl}/dashboard`;
         } catch (error) {
           console.error("Verification error:", error);
           toast.error("Failed to verify subscription");

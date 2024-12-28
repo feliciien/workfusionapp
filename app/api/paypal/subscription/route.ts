@@ -28,6 +28,10 @@ export async function GET(req: Request) {
     const { access_token } = await tokenResponse.json();
 
     // Create subscription
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"
+    );
+
     const response = await fetch(`${process.env.PAYPAL_API_BASE}/v1/billing/subscriptions`, {
       method: "POST",
       headers: {
@@ -39,8 +43,8 @@ export async function GET(req: Request) {
         custom_id: userId,
         application_context: {
           user_action: "SUBSCRIBE_NOW",
-          return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=true`,
-          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?canceled=true`,
+          return_url: `${baseUrl}/settings?success=true`,
+          cancel_url: `${baseUrl}/settings?canceled=true`,
         },
       }),
     });
