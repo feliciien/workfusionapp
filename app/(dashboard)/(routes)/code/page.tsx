@@ -287,15 +287,15 @@ const CodePage = () => {
                   </span>
                 </div>
                 <ReactMarkdown 
-                  className="text-sm prose prose-invert"
+                  className="text-sm prose prose-invert max-w-full break-words whitespace-pre-wrap"
                   components={{
                     pre: ({ node, ...props }) => (
                       <div className="relative my-2">
-                        <pre {...props} className="bg-black/10 rounded-lg p-4 overflow-x-auto" />
+                        <pre {...props} className="bg-black/10 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap" />
                       </div>
                     ),
                     code: ({ node, ...props }) => (
-                      <code {...props} className="bg-black/10 rounded-lg p-1" />
+                      <code {...props} className="bg-black/10 rounded-lg p-1 whitespace-pre-wrap" />
                     ),
                   }}
                 >
@@ -322,7 +322,7 @@ const CodePage = () => {
           ref={previewRef}
           className={cn(
             "border-l border-gray-800 bg-gray-900",
-            isFullscreen ? "w-screen h-screen fixed inset-0 z-50" : "w-1/2 p-4"
+            isFullscreen ? "w-screen h-screen fixed inset-0 z-50" : "w-[50%] p-4"
           )}
         >
           <div className="flex items-center justify-between mb-4">
