@@ -6,7 +6,7 @@ export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const webhookId = headersList.get("paypal-transmission-id");
     const eventType = headersList.get("paypal-event-type");
 

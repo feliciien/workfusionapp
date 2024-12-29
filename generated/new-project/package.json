@@ -1,0 +1,17 @@
+{
+  "name": "new-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "devDependencies": {},
+  "description": "Detailed project documentation.",
+  "main": "next.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   }
   
   // Force revalidation by including current timestamp
-  const headersList = headers();
+  const headersList = await headers();
   const referer = headersList.get("referer");
   const path = headersList.get("x-pathname");
   

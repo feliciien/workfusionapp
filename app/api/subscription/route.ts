@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     const user = await currentUser();
 
     console.log("[SUBSCRIPTION_API] Check started:", {

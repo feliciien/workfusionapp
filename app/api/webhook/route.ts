@@ -114,7 +114,10 @@ export async function POST(req: Request) {
     });
 
     // Verify webhook signature
-    const isVerified = await verifyPayPalWebhook(body, headersList);
+    const isVerified = await verifyPayPalWebhook(
+      body, 
+      await headersList
+    );
     if (!isVerified) {
       console.error('[WEBHOOK_ERROR] Invalid webhook signature');
       return new NextResponse("Invalid webhook signature", { status: 400 });

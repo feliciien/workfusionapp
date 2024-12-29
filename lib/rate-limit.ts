@@ -22,7 +22,7 @@ export async function rateLimit(
     limit = 10, // number of requests per interval
   } = config;
 
-  const ip = req.ip ?? '127.0.0.1';
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1';
   const tokenKey = `rate-limit:${ip}`;
   const timestamp = Date.now();
   const window = Math.floor(timestamp / (interval * 1000));
