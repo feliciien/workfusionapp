@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Code, Copy, Check, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { Code, Copy, Check, RefreshCw, Maximize2, Minimize2, Download, Share2, Bookmark, BookmarkCheck, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
@@ -19,10 +19,22 @@ import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tools } from "@/app/(dashboard)/(routes)/dashboard/config";
 import { ToolPage } from "@/components/tool-page";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Message {
   role: "user" | "assistant" | "system";
   content: string;
+  timestamp?: Date;
+}
+
+interface SavedCode {
+  id: string;
+  title: string;
+  code: string;
+  language: string;
+  timestamp: Date;
 }
 
 const formSchema = z.object({
@@ -32,12 +44,12 @@ const formSchema = z.object({
 });
 
 const LANGUAGES = {
-  typescript: { name: 'TypeScript', mode: 'text/typescript' },
-  javascript: { name: 'JavaScript', mode: 'text/javascript' },
-  python: { name: 'Python', mode: 'text/x-python' },
-  html: { name: 'HTML', mode: 'text/html' },
-  css: { name: 'CSS', mode: 'text/css' },
-  sql: { name: 'SQL', mode: 'text/x-sql' },
+  typescript: { name: 'TypeScript', mode: 'text/typescript', icon: '📘' },
+  javascript: { name: 'JavaScript', mode: 'text/javascript', icon: '📒' },
+  python: { name: 'Python', mode: 'text/x-python', icon: '🐍' },
+  html: { name: 'HTML', mode: 'text/html', icon: '🌐' },
+  css: { name: 'CSS', mode: 'text/css', icon: '🎨' },
+  sql: { name: 'SQL', mode: 'text/x-sql', icon: '📊' },
 };
 
 const CodePage = () => {
@@ -51,6 +63,115 @@ const CodePage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [savedCodes, setSavedCodes] = useState<SavedCode[]>([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [codeTitle, setCodeTitle] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    const loadSavedCodes = () => {
+      const saved = localStorage.getItem('savedCodes');
+      if (saved) {
+        setSavedCodes(JSON.parse(saved));
+      }
+    };
+    loadSavedCodes();
+  }, []);
+
+  const saveCode = () => {
+    if (!previewCode) {
+      toast.error("No code to save");
+      return;
+    }
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveCode = () => {
+    if (!codeTitle.trim()) {
+      toast.error("Please enter a title");
+      return;
+    }
+
+    const newCode: SavedCode = {
+      id: Date.now().toString(),
+      title: codeTitle,
+      code: previewCode,
+      language,
+      timestamp: new Date(),
+    };
+
+    const updatedCodes = [...savedCodes, newCode];
+    setSavedCodes(updatedCodes);
+    localStorage.setItem('savedCodes', JSON.stringify(updatedCodes));
+    setShowSaveDialog(false);
+    setCodeTitle("");
+    toast.success("Code saved successfully");
+  };
+
+  const loadSavedCode = (code: SavedCode) => {
+    setPreviewCode(code.code);
+    setLanguage(code.language);
+    updatePreview(code.code);
+    setShowHistory(false);
+    toast.success("Code loaded successfully");
+  };
+
+  const deleteSavedCode = (id: string) => {
+    const updatedCodes = savedCodes.filter(code => code.id !== id);
+    setSavedCodes(updatedCodes);
+    localStorage.setItem('savedCodes', JSON.stringify(updatedCodes));
+    toast.success("Code deleted successfully");
+  };
+
+  const shareCode = async () => {
+    if (!previewCode) {
+      toast.error("No code to share");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(previewCode);
+      toast.success("Code copied to clipboard for sharing");
+    } catch (error) {
+      toast.error("Failed to copy code");
+    }
+  };
+
+  const downloadCode = () => {
+    if (!previewCode) {
+      toast.error("No code to download");
+      return;
+    }
+
+    const blob = new Blob([previewCode], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code.${language}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    toast.success("Code downloaded successfully");
+  };
+
+  const undoLastMessage = () => {
+    if (messages.length === 0) return;
+    const newMessages = messages.slice(0, -2); // Remove last user and assistant message
+    setMessages(newMessages);
+    if (newMessages.length === 0) {
+      setPreviewCode("");
+    } else {
+      const lastAssistantMessage = newMessages.findLast(m => m.role === "assistant");
+      if (lastAssistantMessage) {
+        const code = extractCode(lastAssistantMessage.content);
+        if (code) {
+          setPreviewCode(code);
+          updatePreview(code);
+        }
+      }
+    }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -269,16 +390,21 @@ const CodePage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setMessages([]);
-                  setPreviewCode("");
-                  form.reset();
-                }}
+                onClick={undoLastMessage}
                 disabled={messages.length === 0 || isLoading}
                 className="hover:bg-white/5 text-white/80 hover:text-white transition-colors"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Clear Chat
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Undo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHistory(true)}
+                className="hover:bg-white/5 text-white/80 hover:text-white transition-colors"
+              >
+                <Bookmark className="w-4 h-4 mr-2" />
+                History
               </Button>
               <Select
                 value={language}
@@ -294,7 +420,10 @@ const CodePage = () => {
                       value={key} 
                       className="text-white/80 hover:bg-white/5 focus:bg-white/5 focus:text-white"
                     >
-                      {value.name}
+                      <div className="flex items-center">
+                        <span className="mr-2">{value.icon}</span>
+                        {value.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -422,6 +551,12 @@ const CodePage = () => {
                       placeholder={`Generate ${LANGUAGES[language as keyof typeof LANGUAGES].name} code for...`}
                       {...form.register("prompt")}
                       className="w-full bg-black/40 border-white/10 text-white/80 placeholder:text-white/20 focus:border-blue-500/50 focus:ring-blue-500/20 pr-24"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          form.handleSubmit(onSubmit)();
+                        }
+                      }}
                     />
                     {isLoading && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -463,6 +598,30 @@ const CodePage = () => {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={saveCode}
+                className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
+              >
+                <Bookmark className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={shareCode}
+                className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={downloadCode}
+                className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={copyToClipboard}
                 className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
               >
@@ -494,6 +653,97 @@ const CodePage = () => {
             />
           </div>
         </div>
+
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent className="bg-gray-900 border border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-white">Save Code</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Give your code a title to save it for later use.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-white">Title</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter a title for your code"
+                  value={codeTitle}
+                  onChange={(e) => setCodeTitle(e.target.value)}
+                  className="bg-black/40 border-white/10 text-white"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="ghost"
+                onClick={() => setShowSaveDialog(false)}
+                className="text-white/80 hover:text-white hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveCode}
+                className="relative group"
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition"></div>
+                <span className="relative px-4 py-1.5 bg-black rounded-lg text-white ring-1 ring-white/10 font-medium">
+                  Save
+                </span>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent className="bg-gray-900 border border-white/10 max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-white">Saved Code History</DialogTitle>
+              <DialogDescription className="text-white/60">
+                View and manage your saved code snippets.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {savedCodes.length === 0 ? (
+                <p className="text-white/40 text-center py-4">No saved codes yet</p>
+              ) : (
+                savedCodes.map((code) => (
+                  <div
+                    key={code.id}
+                    className="relative group p-4 bg-black/40 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white font-medium">{code.title}</h3>
+                        <p className="text-white/40 text-sm">
+                          {LANGUAGES[code.language as keyof typeof LANGUAGES].icon} {LANGUAGES[code.language as keyof typeof LANGUAGES].name} • {new Date(code.timestamp).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => loadSavedCode(code)}
+                          className="text-white/80 hover:text-white hover:bg-white/5"
+                        >
+                          Load
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteSavedCode(code.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
