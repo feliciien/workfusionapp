@@ -30,7 +30,8 @@ import {
   Trash2,
   ChevronRight,
   ChevronDown,
-  FolderOpen
+  FolderOpen,
+  Download
 } from "lucide-react";
 import {
   ResizableHandle,
@@ -266,6 +267,7 @@ export default function CodePage() {
   const [activeFile, setActiveFile] = useState<FileStructure | null>(null);
   const [editorTheme] = useState('vs-dark');
   const [isTerminalVisible] = useState(true);
+  const [projectPath, setProjectPath] = useState<string>('');
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>({
     installing: false,
     running: false,
@@ -321,7 +323,86 @@ export default function CodePage() {
     return Object.values(structure).filter(item => !item.path.includes('/'));
   }, []);
 
-  const handleCreateProject = useCallback(async () => {
+  const createDownloadableProject = useCallback(async (project: Project) => {
+    if (!project || !project.files) {
+      toast.error('No project to create');
+      return;
+    }
+
+    try {
+      addTerminalOutput('\n📦 Preparing project for download...');
+
+      // Create package.json
+      const packageJson = {
+        name: project.name,
+        version: "0.1.0",
+        private: true,
+        scripts: project.scripts,
+        dependencies: project.dependencies,
+        devDependencies: project.devDependencies
+      };
+
+      // Add package.json to the files
+      project.files.push({
+        path: 'package.json',
+        content: JSON.stringify(packageJson, null, 2),
+        type: 'file'
+      });
+
+      // Add README.md with setup instructions
+      const readmeContent = `# ${project.name}
+
+${project.description}
+
+## Getting Started
+
+1. Install dependencies:
+\`\`\`bash
+npm install
+\`\`\`
+
+2. Run the development server:
+\`\`\`bash
+npm run dev
+\`\`\`
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`;
+
+      project.files.push({
+        path: 'README.md',
+        content: readmeContent,
+        type: 'file'
+      });
+
+      // Create a zip file containing all project files
+      const response = await axios.post('/api/code/download', {
+        files: project.files
+      }, {
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${project.name}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      addTerminalOutput('✅ Project ready for download!');
+      toast.success('Project downloaded successfully!');
+    } catch (error) {
+      console.error('Error preparing project for download:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to prepare project for download';
+      toast.error(errorMessage);
+      addTerminalOutput(`❌ Error: ${errorMessage}`);
+    }
+  }, [addTerminalOutput]);
+
+  const handlePromptSubmit = useCallback(async () => {
     if (!prompt.trim() || isProcessing) {
       toast.error('Please enter a project description');
       return;
@@ -359,24 +440,32 @@ export default function CodePage() {
         });
       }
 
-      // Update project state
-      setCurrentProject({
-        name: 'restaurant-website',
+      const project = {
+        name: response.data.name || 'generated-project',
         description: prompt,
         type: 'next',
         files,
-        dependencies,
-        devDependencies: {},
+        dependencies: dependencies?.production || {},
+        devDependencies: dependencies?.development || {},
         scripts: {
           "dev": "next dev",
           "build": "next build",
           "start": "next start"
         },
-        setupCommands: [],
+        setupCommands: [
+          {
+            command: "npm install",
+            description: "Install dependencies"
+          }
+        ],
         command: "npm run dev"
-      });
+      };
 
+      setCurrentProject(project);
       toast.success('Project generated successfully!');
+      
+      // Create downloadable project
+      await createDownloadableProject(project);
     } catch (error: any) {
       console.error('Project generation error:', error);
       toast.error(error.message || 'Failed to generate project');
@@ -384,7 +473,7 @@ export default function CodePage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [prompt, isProcessing, messages, addTerminalOutput, convertToFileStructure]);
+  }, [prompt, isProcessing, messages, addTerminalOutput, convertToFileStructure, createDownloadableProject]);
 
   const updateProjectMetrics = useCallback(() => {
     if (!currentProject) return;
@@ -405,11 +494,6 @@ export default function CodePage() {
     updateProjectMetrics();
   }, [currentProject, updateProjectMetrics]);
 
-  const handlePromptSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    await handleCreateProject();
-  }, [handleCreateProject]);
-
   const buildFileTree = useCallback((files: GeneratedFile[] = []): FileStructure[] => {
     const root: FileStructure[] = [];
     const map: Record<string, FileStructure> = {};
@@ -418,7 +502,7 @@ export default function CodePage() {
       const parts = file.path.split('/');
       let currentPath = '';
 
-      parts.forEach((part, index) => {
+      parts.forEach((part: string, index: number) => {
         const isLast = index === parts.length - 1;
         currentPath = currentPath ? `${currentPath}/${part}` : part;
 
@@ -607,112 +691,176 @@ export default function CodePage() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* File Explorer Panel */}
-          <ResizablePanel defaultSize={15} minSize={10}>
-            <div className="h-full flex flex-col bg-[#1E1E1E]/50 backdrop-blur-sm border-r border-gray-800/50">
-              <div className="px-3 py-2 border-b border-gray-800/50 flex items-center justify-between">
-                <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider">Files</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowNewProjectDialog(true)}
-                  className="h-6 w-6 p-0 rounded-lg hover:bg-white/5"
-                >
-                  <Plus className="h-3.5 w-3.5 text-gray-400" />
-                </Button>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {renderFileTree(fileStructure, activeFile, setActiveFile, toggleDirectory)}
+        <div className="h-full relative">
+          <ResizablePanelGroup direction="horizontal">
+            {/* File Explorer Panel */}
+            <ResizablePanel defaultSize={15} minSize={10}>
+              <div className="h-full flex flex-col bg-[#1E1E1E]/50 backdrop-blur-sm border-r border-gray-800/50">
+                <div className="px-3 py-2 border-b border-gray-800/50 flex items-center justify-between">
+                  <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider">Files</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowNewProjectDialog(true)}
+                    className="h-6 w-6 p-0 rounded-lg hover:bg-white/5"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-gray-400" />
+                  </Button>
                 </div>
-              </ScrollArea>
-            </div>
-          </ResizablePanel>
+                <ScrollArea className="flex-1">
+                  <div className="p-2 space-y-1">
+                    {renderFileTree(fileStructure, activeFile, setActiveFile, toggleDirectory)}
+                  </div>
+                </ScrollArea>
+              </div>
+            </ResizablePanel>
 
-          <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
 
-          {/* Editor Panel */}
-          <ResizablePanel defaultSize={70} minSize={30}>
-            <div className="h-full flex flex-col bg-[#1E1E1E]">
-              {activeFile ? (
-                <>
-                  <div className="flex items-center justify-between px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50">
-                    <div className="flex items-center space-x-2">
-                      <Code className="h-4 w-4 text-indigo-400" />
-                      <span className="text-sm text-gray-300 font-medium">{activeFile.path}</span>
+            {/* Editor Panel */}
+            <ResizablePanel defaultSize={55} minSize={30}>
+              <div className="h-full flex flex-col bg-[#1E1E1E]">
+                {activeFile ? (
+                  <>
+                    <div className="flex items-center justify-between px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50">
+                      <div className="flex items-center space-x-2">
+                        <Code className="h-4 w-4 text-indigo-400" />
+                        <span className="text-sm text-gray-300 font-medium">{activeFile.path}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <Editor
+                        className="h-full"
+                        defaultLanguage={getFileLanguage(activeFile.path)}
+                        value={activeFile.content}
+                        onChange={handleFileChange}
+                        theme="vs-dark"
+                        options={{
+                          fontSize: 14,
+                          fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
+                          minimap: { enabled: true },
+                          scrollBeyondLastLine: false,
+                          smoothScrolling: true,
+                          cursorSmoothCaretAnimation: "on",
+                          cursorBlinking: "blink",
+                          lineNumbers: "on",
+                          renderWhitespace: "selection",
+                          padding: { top: 16, bottom: 16 },
+                          folding: true,
+                          automaticLayout: true,
+                          formatOnPaste: true,
+                          formatOnType: true,
+                          suggestOnTriggerCharacters: true,
+                          tabSize: 2,
+                          glyphMargin: true,
+                          renderLineHighlight: "all",
+                          bracketPairColorization: {
+                            enabled: true,
+                          },
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center bg-[#1E1E1E]">
+                    <div className="text-center space-y-4 max-w-md px-6">
+                      <div className="p-4 rounded-2xl bg-gradient-to-b from-gray-800/30 to-gray-800/10 backdrop-blur-sm">
+                        <FileCode2 className="h-12 w-12 text-indigo-400/50 mx-auto" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-gray-300 font-medium">No file selected</p>
+                        <p className="text-gray-500 text-sm">Enter a prompt above to generate code or select a file from the explorer</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex-1 min-h-0">
-                    <Editor
-                      className="h-full"
-                      defaultLanguage={getFileLanguage(activeFile.path)}
-                      value={activeFile.content}
-                      onChange={handleFileChange}
-                      theme="vs-dark"
-                      options={{
-                        fontSize: 14,
-                        fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
-                        minimap: { enabled: true },
-                        scrollBeyondLastLine: false,
-                        smoothScrolling: true,
-                        cursorSmoothCaretAnimation: "on",
-                        cursorBlinking: "blink",
-                        lineNumbers: "on",
-                        renderWhitespace: "selection",
-                        padding: { top: 16, bottom: 16 },
-                        folding: true,
-                        automaticLayout: true,
-                        formatOnPaste: true,
-                        formatOnType: true,
-                        suggestOnTriggerCharacters: true,
-                        tabSize: 2,
-                        glyphMargin: true,
-                        renderLineHighlight: "all",
-                        bracketPairColorization: {
-                          enabled: true,
-                        },
-                      }}
+                )}
+              </div>
+            </ResizablePanel>
+
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+
+            {/* Terminal Panel */}
+            <ResizablePanel defaultSize={15} minSize={10}>
+              <div className="h-full flex flex-col bg-[#1E1E1E]/80 backdrop-blur-sm">
+                <div className="px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center space-x-2">
+                  <Terminal className="h-4 w-4 text-indigo-400" />
+                  <span className="text-xs font-medium text-gray-300">Terminal</span>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="p-4 font-mono text-xs space-y-1.5">
+                    {terminalOutput.map((line, index) => (
+                      <div key={index} className="text-gray-300/90">
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </ResizablePanel>
+
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+
+            {/* Project Information Panel */}
+            <ResizablePanel defaultSize={15} minSize={10}>
+              <div className="h-full flex flex-col bg-[#1E1E1E]/80 backdrop-blur-sm">
+                <div className="px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center space-x-2">
+                  <Coffee className="h-4 w-4 text-indigo-400" />
+                  <span className="text-xs font-medium text-gray-300">Project</span>
+                </div>
+                <div className="flex-1 overflow-auto p-4 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300">Description</label>
+                    <textarea
+                      className="w-full resize-none rounded-md bg-[#1E1E1E] border border-gray-800/50 p-2 text-sm text-gray-300 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25"
+                      placeholder="Describe your project..."
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      rows={4}
                     />
                   </div>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center bg-[#1E1E1E]">
-                  <div className="text-center space-y-4 max-w-md px-6">
-                    <div className="p-4 rounded-2xl bg-gradient-to-b from-gray-800/30 to-gray-800/10 backdrop-blur-sm">
-                      <FileCode2 className="h-12 w-12 text-indigo-400/50 mx-auto" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-gray-300 font-medium">No file selected</p>
-                      <p className="text-gray-500 text-sm">Enter a prompt above to generate code or select a file from the explorer</p>
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={handlePromptSubmit}
+                      disabled={isProcessing}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate
+                        </>
+                      )}
+                    </Button>
+                    {currentProject && (
+                      <Button
+                        onClick={() => createDownloadableProject(currentProject)}
+                        variant="outline"
+                        className="w-full border-gray-800/50 text-gray-300 hover:bg-white/5"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Project
+                      </Button>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
-
-          {/* Terminal Panel */}
-          <ResizablePanel defaultSize={15} minSize={10}>
-            <div className="h-full flex flex-col bg-[#1E1E1E]/80 backdrop-blur-sm">
-              <div className="px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center space-x-2">
-                <Terminal className="h-4 w-4 text-indigo-400" />
-                <span className="text-xs font-medium text-gray-300">Terminal</span>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-4 font-mono text-xs space-y-1.5">
-                  {terminalOutput.map((line, index) => (
-                    <div key={index} className="text-gray-300/90">
-                      {line}
+                  {currentProject && (
+                    <div className="rounded-md bg-[#252526] border border-gray-800/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-300">{currentProject.name}</span>
+                        <span className="text-xs text-gray-500">{currentProject.files.length} files</span>
+                      </div>
+                      <p className="text-xs text-gray-400">{currentProject.description}</p>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </ScrollArea>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       </div>
 
       {/* New Project Dialog */}
