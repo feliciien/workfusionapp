@@ -2,9 +2,10 @@ import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import OpenAI from 'openai';
 
 // Initialize OpenAI client
-let openai: any | null = null;
+let openai: OpenAI | null = null;
 
 try {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -12,41 +13,7 @@ try {
     console.error('OPENAI_API_KEY is not set in environment variables');
     throw new Error('OpenAI API key is not configured');
   }
-  openai = {
-    chat: {
-      completions: {
-        create: async () => {
-          // Mock implementation for testing purposes
-          return {
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    name: "project name",
-                    description: "project description",
-                    files: [
-                      {
-                        path: "relative/path/to/file",
-                        content: "file content",
-                        type: "file"
-                      }
-                    ],
-                    dependencies: {
-                      production: { "package": "version" },
-                      development: { "package": "version" }
-                    },
-                    scripts: {
-                      "script-name": "command"
-                    }
-                  })
-                }
-              }
-            ]
-          };
-        }
-      }
-    }
-  };
+  openai = new OpenAI({ apiKey });
   console.log('OpenAI client initialized successfully');
 } catch (error) {
   console.error('Failed to initialize OpenAI client:', error);
@@ -407,11 +374,13 @@ module.exports = {
 
 async function generateCode(prompt: string, context: string): Promise<ProjectStructure> {
   if (!openai) {
+    console.error('OpenAI client not initialized');
     throw new Error('OpenAI client not initialized');
   }
 
   try {
-    console.log(`Generating ${context} with prompt:`, prompt);
+    console.log('Starting OpenAI request with prompt:', prompt);
+    console.log('Using model: gpt-4-1106-preview');
     
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
@@ -424,67 +393,95 @@ async function generateCode(prompt: string, context: string): Promise<ProjectStr
           role: "user",
           content: `Generate a complete Next.js project based on this description: ${prompt}
 
-CRITICAL: Your response must:
-1. Start with "{"
-2. End with "}"
-3. Contain NO markdown formatting
-4. Contain NO explanatory text
-5. Be valid JSON`
+Your response must be a valid JSON object with this exact structure:
+{
+  "name": "project-name",
+  "description": "Project description",
+  "files": [
+    {
+      "path": "relative/path/to/file",
+      "content": "file content",
+      "type": "file"
+    }
+  ],
+  "dependencies": {
+    "production": {
+      "next": "^14.0.4",
+      "react": "^18.2.0",
+      "react-dom": "^18.2.0"
+    },
+    "development": {
+      "typescript": "^5.3.3",
+      "@types/node": "^20.10.6",
+      "@types/react": "^18.2.46"
+    }
+  }
+}`
         }
       ],
       temperature: 0.7,
-      seed: 42,
-      max_tokens: 4000
+      max_tokens: 4000,
+      response_format: { type: "json_object" }
     });
 
-    console.log('OpenAI response received');
-    const response = completion.choices[0]?.message?.content?.trim();
+    console.log('OpenAI API call completed');
+    const response = completion.choices[0]?.message?.content;
+    
     if (!response) {
+      console.error('No content in OpenAI response');
       throw new Error('No response from OpenAI');
     }
 
-    console.log('Raw response:', response.substring(0, 100) + '...');
-
-    // Remove any markdown formatting or extra text
-    let cleanedResponse = response;
-    if (response.includes('```')) {
-      cleanedResponse = response.replace(/```json\n|\n```|```/g, '').trim();
-      console.log('Cleaned response:', cleanedResponse.substring(0, 100) + '...');
-    }
+    console.log('Response received, length:', response.length);
+    console.log('First 100 chars of response:', response.substring(0, 100));
 
     try {
-      const parsedResponse = JSON.parse(cleanedResponse);
-      console.log('Successfully parsed response');
+      console.log('Attempting to parse response as JSON');
+      const parsedResponse = JSON.parse(response);
+      console.log('Successfully parsed response as JSON');
       
       // Validate response structure
       if (!parsedResponse.name || !parsedResponse.description || !Array.isArray(parsedResponse.files)) {
-        console.error('Invalid response structure:', parsedResponse);
-        throw new Error('Invalid response structure: missing required fields');
+        console.error('Invalid response structure. Missing required fields:', {
+          hasName: !!parsedResponse.name,
+          hasDescription: !!parsedResponse.description,
+          hasFiles: Array.isArray(parsedResponse.files)
+        });
+        throw new Error('Invalid response structure from AI: missing required fields');
       }
+
+      console.log('Response structure validation passed');
+      console.log('Number of files:', parsedResponse.files.length);
 
       // Validate each file has required fields
       parsedResponse.files.forEach((file: GeneratedFile, index: number) => {
         if (!file.path) {
+          console.error(`File at index ${index} is missing path`);
           throw new Error(`File at index ${index} is missing path`);
         }
         if (typeof file.content !== 'string') {
+          console.error(`File at index ${index} (${file.path}) is missing content`);
           throw new Error(`File at index ${index} (${file.path}) is missing content`);
+        }
+        if (!file.type) {
+          console.log(`File at index ${index} (${file.path}): defaulting type to 'file'`);
+          file.type = 'file';
         }
       });
 
+      console.log('File validation passed for all files');
       return parsedResponse;
     } catch (parseError) {
-      console.error('Failed to parse response:', response);
-      console.error('Cleaned response:', cleanedResponse);
-      console.error('Parse error:', parseError);
-      throw new Error(`Failed to parse ${context}: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      console.error('Failed to parse AI response:', parseError);
+      console.error('Response that failed to parse:', response);
+      throw new Error('Failed to parse AI response: ' + (parseError instanceof Error ? parseError.message : String(parseError)));
     }
   } catch (error) {
-    console.error(`Error generating ${context}:`, error);
+    console.error('Error in generateCode:', error);
     if (error instanceof Error) {
-      throw error;
+      throw new Error(`AI generation failed: ${error.message}`);
     }
-    throw new Error(`Failed to generate ${context}: ${String(error)}`);
+    throw new Error(`AI generation failed: ${String(error)}`);
   }
 }
 
@@ -525,139 +522,28 @@ export async function POST(req: Request) {
       return new NextResponse("Error checking API limits", { status: 500 });
     }
 
-    // Generate initial file structure
-    const projectFiles = [
-      {
-        path: 'pages/index.tsx',
-        content: `
-import Head from 'next/head';
-import { Menu } from '@/components/Menu';
-
-export default function Home() {
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Head>
-        <title>Gourmet Place - Fine Dining Restaurant</title>
-        <meta name="description" content="Welcome to Gourmet Place - Experience fine dining at its best" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-center mb-8">Welcome to Gourmet Place</h1>
-        <Menu />
-      </main>
-    </div>
-  );
-}`,
-        type: 'file'
-      },
-      {
-        path: 'components/Menu.tsx',
-        content: [
-          'import { useState } from \'react\';',
-          '',
-          'interface MenuItem {',
-          '  name: string;',
-          '  description: string;',
-          '  price: number;',
-          '}',
-          '',
-          'export function Menu() {',
-          '  const [menuItems] = useState<MenuItem[]>([',
-          '    {',
-          '      name: "Signature Steak",',
-          '      description: "Prime cut beef with truffle sauce",',
-          '      price: 45',
-          '    },',
-          '    {',
-          '      name: "Fresh Seafood Platter",',
-          '      description: "Daily selection of fresh seafood",',
-          '      price: 65',
-          '    },',
-          '    {',
-          '      name: "Vegetarian Delight",',
-          '      description: "Seasonal vegetables with quinoa",',
-          '      price: 28',
-          '    }',
-          '  ]);',
-          '',
-          '  return (',
-          '    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">',
-          '      {menuItems.map((item, index) => (',
-          '        <div key={index} className="bg-white p-6 rounded-lg shadow-md">',
-          '          <h3 className="text-xl font-semibold mb-2">{item.name}</h3>',
-          '          <p className="text-gray-600 mb-4">{item.description}</p>',
-          '          <p className="text-lg font-bold">${item.price}</p>',
-          '        </div>',
-          '      ))}',
-          '    </div>',
-          '  );',
-          '}',
-        ].join('\n'),
-        type: 'file'
-      },
-      {
-        path: 'styles/globals.css',
-        content: `
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
-}
-
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-}`,
-        type: 'file'
-      }
-    ];
-
-    console.log('[CODE_GENERATE] Generated files:', projectFiles.length);
-
+    // Generate the code based on the prompt
     try {
+      console.log('[CODE_GENERATE] Starting code generation with prompt:', prompt);
+      const generatedProject = await generateCode(prompt, 'project structure');
+      console.log('[CODE_GENERATE] Project generated successfully');
+
       if (!isPro) {
         await increaseApiLimit();
       }
+
+      return NextResponse.json(generatedProject);
     } catch (error) {
-      console.error('[CODE_GENERATE] Error increasing API limit:', error);
-      // Continue even if increasing API limit fails
+      console.error('[CODE_GENERATE] Generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate code';
+      console.error('[CODE_GENERATE] Returning error to client:', errorMessage);
+      return new NextResponse(errorMessage, { 
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
-
-    const response = {
-      files: projectFiles,
-      dependencies: {
-        "next": "^13.4.7",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "tailwindcss": "^3.3.2",
-        "@types/node": "^20.3.1",
-        "@types/react": "^18.2.12",
-        "@types/react-dom": "^18.2.5",
-        "typescript": "^5.1.3",
-        "autoprefixer": "^10.4.14",
-        "postcss": "^8.4.24"
-      }
-    };
-
-    console.log('[CODE_GENERATE] Sending response');
-    return new NextResponse(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('[CODE_GENERATE] Fatal error:', error);
-    console.error('[CODE_GENERATE] Error stack:', error.stack);
-    return new NextResponse(JSON.stringify({
-      error: 'Internal Server Error',
-      message: error.message || 'Something went wrong',
-      stack: error.stack
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new NextResponse('Internal server error', { status: 500 });
   }
 }
