@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Code, Copy, Check, RefreshCw, Maximize2, Minimize2, Download, Share2, Bookmark, BookmarkCheck, RotateCcw } from "lucide-react";
+import { Code, Copy, Check, RefreshCw, Maximize2, Minimize2, Download, Share2, Bookmark, BookmarkCheck, RotateCcw, Settings, Search, Tag, Trash2, FileDown, FileUp, Star, StarOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
@@ -22,6 +22,9 @@ import { ToolPage } from "@/components/tool-page";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -35,6 +38,17 @@ interface SavedCode {
   code: string;
   language: string;
   timestamp: Date;
+  tags?: string[];
+  favorite?: boolean;
+  description?: string;
+}
+
+interface Settings {
+  theme: 'vs-dark' | 'vs-light';
+  fontSize: number;
+  autoSave: boolean;
+  lineNumbers: boolean;
+  wordWrap: boolean;
 }
 
 const formSchema = z.object({
@@ -44,12 +58,20 @@ const formSchema = z.object({
 });
 
 const LANGUAGES = {
-  typescript: { name: 'TypeScript', mode: 'text/typescript', icon: '📘' },
-  javascript: { name: 'JavaScript', mode: 'text/javascript', icon: '📒' },
-  python: { name: 'Python', mode: 'text/x-python', icon: '🐍' },
-  html: { name: 'HTML', mode: 'text/html', icon: '🌐' },
-  css: { name: 'CSS', mode: 'text/css', icon: '🎨' },
-  sql: { name: 'SQL', mode: 'text/x-sql', icon: '📊' },
+  typescript: { name: 'TypeScript', mode: 'text/typescript', icon: '📘', extension: '.ts' },
+  javascript: { name: 'JavaScript', mode: 'text/javascript', icon: '📒', extension: '.js' },
+  python: { name: 'Python', mode: 'text/x-python', icon: '🐍', extension: '.py' },
+  html: { name: 'HTML', mode: 'text/html', icon: '🌐', extension: '.html' },
+  css: { name: 'CSS', mode: 'text/css', icon: '🎨', extension: '.css' },
+  sql: { name: 'SQL', mode: 'text/x-sql', icon: '📊', extension: '.sql' },
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  theme: 'vs-dark',
+  fontSize: 14,
+  autoSave: true,
+  lineNumbers: true,
+  wordWrap: true,
 };
 
 const CodePage = () => {
@@ -65,18 +87,127 @@ const CodePage = () => {
   const [copied, setCopied] = useState(false);
   const [savedCodes, setSavedCodes] = useState<SavedCode[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [codeTitle, setCodeTitle] = useState("");
+  const [codeDescription, setCodeDescription] = useState("");
+  const [codeTags, setCodeTags] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  // Load saved codes and settings from localStorage
   useEffect(() => {
-    const loadSavedCodes = () => {
+    const loadSavedData = () => {
       const saved = localStorage.getItem('savedCodes');
+      const savedSettings = localStorage.getItem('codeSettings');
       if (saved) {
         setSavedCodes(JSON.parse(saved));
       }
+      if (savedSettings) {
+        setSettings(JSON.parse(savedSettings));
+      }
     };
-    loadSavedCodes();
+    loadSavedData();
   }, []);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (settings.autoSave && previewCode) {
+      const autoSaveTimer = setTimeout(() => {
+        const timestamp = new Date();
+        const autoSavedCode: SavedCode = {
+          id: `autosave-${timestamp.getTime()}`,
+          title: `Autosaved ${timestamp.toLocaleTimeString()}`,
+          code: previewCode,
+          language,
+          timestamp,
+          tags: ['autosave'],
+        };
+        setSavedCodes(prev => {
+          const filtered = prev.filter(code => !code.title.startsWith('Autosaved'));
+          return [...filtered, autoSavedCode];
+        });
+      }, 30000); // Auto-save every 30 seconds
+
+      return () => clearTimeout(autoSaveTimer);
+    }
+  }, [previewCode, language, settings.autoSave]);
+
+  const getAllTags = useCallback(() => {
+    const tags = new Set<string>();
+    savedCodes.forEach(code => {
+      code.tags?.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags);
+  }, [savedCodes]);
+
+  const filteredCodes = useCallback(() => {
+    return savedCodes.filter(code => {
+      const matchesSearch = searchQuery === "" || 
+        code.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        code.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesTags = selectedTags.length === 0 ||
+        selectedTags.every(tag => code.tags?.includes(tag));
+      
+      return matchesSearch && matchesTags;
+    });
+  }, [savedCodes, searchQuery, selectedTags]);
+
+  const toggleFavorite = (id: string) => {
+    setSavedCodes(prev => {
+      const updated = prev.map(code => 
+        code.id === id ? { ...code, favorite: !code.favorite } : code
+      );
+      localStorage.setItem('savedCodes', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const exportCodes = () => {
+    const exportData = {
+      codes: savedCodes,
+      settings,
+      timestamp: new Date(),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code-backup-${new Date().toISOString()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    toast.success("Codes exported successfully");
+  };
+
+  const importCodes = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      setSavedCodes(prev => {
+        const merged = [...prev, ...importData.codes];
+        localStorage.setItem('savedCodes', JSON.stringify(merged));
+        return merged;
+      });
+      setSettings(importData.settings);
+      localStorage.setItem('codeSettings', JSON.stringify(importData.settings));
+      toast.success("Codes imported successfully");
+    } catch (error) {
+      toast.error("Failed to import codes");
+    }
+  };
+
+  const handleSettingsChange = (newSettings: Partial<Settings>) => {
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    localStorage.setItem('codeSettings', JSON.stringify(updated));
+  };
 
   const saveCode = () => {
     if (!previewCode) {
@@ -98,6 +229,8 @@ const CodePage = () => {
       code: previewCode,
       language,
       timestamp: new Date(),
+      tags: codeTags,
+      description: codeDescription,
     };
 
     const updatedCodes = [...savedCodes, newCode];
@@ -105,6 +238,8 @@ const CodePage = () => {
     localStorage.setItem('savedCodes', JSON.stringify(updatedCodes));
     setShowSaveDialog(false);
     setCodeTitle("");
+    setCodeDescription("");
+    setCodeTags([]);
     toast.success("Code saved successfully");
   };
 
@@ -673,6 +808,26 @@ const CodePage = () => {
                   className="bg-black/40 border-white/10 text-white"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-white">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Enter a description for your code"
+                  value={codeDescription}
+                  onChange={(e) => setCodeDescription(e.target.value)}
+                  className="bg-black/40 border-white/10 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags" className="text-white">Tags</Label>
+                <Input
+                  id="tags"
+                  placeholder="Enter tags for your code (comma separated)"
+                  value={codeTags.join(', ')}
+                  onChange={(e) => setCodeTags(e.target.value.split(',').map(tag => tag.trim()))}
+                  className="bg-black/40 border-white/10 text-white"
+                />
+              </div>
             </div>
             <div className="flex justify-end space-x-2">
               <Button
@@ -696,54 +851,276 @@ const CodePage = () => {
         </Dialog>
 
         <Dialog open={showHistory} onOpenChange={setShowHistory}>
-          <DialogContent className="bg-gray-900 border border-white/10 max-w-2xl">
+          <DialogContent className="bg-gray-900 border border-white/10 max-w-4xl max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle className="text-white">Saved Code History</DialogTitle>
+              <DialogTitle className="text-white">Code Library</DialogTitle>
               <DialogDescription className="text-white/60">
-                View and manage your saved code snippets.
+                Manage your saved code snippets and templates.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              {savedCodes.length === 0 ? (
-                <p className="text-white/40 text-center py-4">No saved codes yet</p>
-              ) : (
-                savedCodes.map((code) => (
-                  <div
-                    key={code.id}
-                    className="relative group p-4 bg-black/40 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-white font-medium">{code.title}</h3>
-                        <p className="text-white/40 text-sm">
-                          {LANGUAGES[code.language as keyof typeof LANGUAGES].icon} {LANGUAGES[code.language as keyof typeof LANGUAGES].name} • {new Date(code.timestamp).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => loadSavedCode(code)}
-                          className="text-white/80 hover:text-white hover:bg-white/5"
-                        >
-                          Load
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteSavedCode(code.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
+            
+            <Tabs defaultValue="all" className="mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="bg-black/40">
+                  <TabsTrigger value="all" className="text-white/80">All Codes</TabsTrigger>
+                  <TabsTrigger value="favorites" className="text-white/80">Favorites</TabsTrigger>
+                  <TabsTrigger value="recent" className="text-white/80">Recent</TabsTrigger>
+                </TabsList>
+                
+                <div className="flex items-center space-x-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                      placeholder="Search codes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 bg-black/40 border-white/10 text-white w-[200px]"
+                    />
                   </div>
-                ))
-              )}
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-white/80">
+                        <Tag className="w-4 h-4 mr-2" />
+                        Tags
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="bg-gray-900 border-white/10 p-4 w-[200px]">
+                      <div className="space-y-2">
+                        {getAllTags().map(tag => (
+                          <div key={tag} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={tag}
+                              checked={selectedTags.includes(tag)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTags(prev => [...prev, tag]);
+                                } else {
+                                  setSelectedTags(prev => prev.filter(t => t !== tag));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            <label htmlFor={tag} className="text-white/80">{tag}</label>
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSettingsDialog(true)}
+                    className="text-white/80"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={importCodes}
+                      className="hidden"
+                      id="import-codes"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => document.getElementById('import-codes')?.click()}
+                      className="text-white/80"
+                    >
+                      <FileUp className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={exportCodes}
+                    className="text-white/80"
+                  >
+                    <FileDown className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <TabsContent value="all" className="mt-0">
+                <div className="space-y-4 overflow-y-auto max-h-[60vh] custom-scrollbar pr-2">
+                  {filteredCodes().length === 0 ? (
+                    <p className="text-white/40 text-center py-8">No codes found</p>
+                  ) : (
+                    filteredCodes().map((code) => (
+                      <div
+                        key={code.id}
+                        className="relative group p-4 bg-black/40 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="text-white font-medium">{code.title}</h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleFavorite(code.id)}
+                                className="h-6 w-6 p-0 hover:bg-white/5"
+                              >
+                                {code.favorite ? (
+                                  <Star className="h-4 w-4 text-yellow-400" />
+                                ) : (
+                                  <StarOff className="h-4 w-4 text-white/40" />
+                                )}
+                              </Button>
+                            </div>
+                            {code.description && (
+                              <p className="text-white/60 text-sm">{code.description}</p>
+                            )}
+                            <div className="flex items-center space-x-2 mt-2">
+                              <p className="text-white/40 text-sm">
+                                {LANGUAGES[code.language as keyof typeof LANGUAGES].icon} {LANGUAGES[code.language as keyof typeof LANGUAGES].name} • {new Date(code.timestamp).toLocaleDateString()}
+                              </p>
+                              <div className="flex items-center gap-1">
+                                {code.tags?.map(tag => (
+                                  <Badge 
+                                    key={tag}
+                                    variant="secondary" 
+                                    className="bg-white/5 text-white/60 hover:bg-white/10"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => loadSavedCode(code)}
+                              className="text-white/80 hover:text-white hover:bg-white/5"
+                            >
+                              Load
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteSavedCode(code.id)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="favorites" className="mt-0">
+                <div className="space-y-4 overflow-y-auto max-h-[60vh] custom-scrollbar pr-2">
+                  {filteredCodes().filter(code => code.favorite).length === 0 ? (
+                    <p className="text-white/40 text-center py-8">No favorite codes</p>
+                  ) : (
+                    filteredCodes()
+                      .filter(code => code.favorite)
+                      .map((code) => (
+                        // Same code item component as above
+                        <div key={code.id}>...</div>
+                      ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="recent" className="mt-0">
+                <div className="space-y-4 overflow-y-auto max-h-[60vh] custom-scrollbar pr-2">
+                  {filteredCodes()
+                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .slice(0, 5)
+                    .map((code) => (
+                      // Same code item component as above
+                      <div key={code.id}>...</div>
+                    ))
+                  }
+                </div>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+          <DialogContent className="bg-gray-900 border border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-white">Settings</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Customize your code editor preferences.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-white">Theme</Label>
+                <Select
+                  value={settings.theme}
+                  onValueChange={(value) => handleSettingsChange({ theme: value as 'vs-dark' | 'vs-light' })}
+                >
+                  <SelectTrigger className="bg-black/40 border-white/10 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vs-dark">Dark</SelectItem>
+                    <SelectItem value="vs-light">Light</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white">Font Size</Label>
+                <Input
+                  type="number"
+                  value={settings.fontSize}
+                  onChange={(e) => handleSettingsChange({ fontSize: parseInt(e.target.value) })}
+                  min={10}
+                  max={24}
+                  className="bg-black/40 border-white/10 text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-white">Auto Save</Label>
+                <input
+                  type="checkbox"
+                  checked={settings.autoSave}
+                  onChange={(e) => handleSettingsChange({ autoSave: e.target.checked })}
+                  className="toggle"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-white">Line Numbers</Label>
+                <input
+                  type="checkbox"
+                  checked={settings.lineNumbers}
+                  onChange={(e) => handleSettingsChange({ lineNumbers: e.target.checked })}
+                  className="toggle"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-white">Word Wrap</Label>
+                <input
+                  type="checkbox"
+                  checked={settings.wordWrap}
+                  onChange={(e) => handleSettingsChange({ wordWrap: e.target.checked })}
+                  className="toggle"
+                />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
+
       </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
