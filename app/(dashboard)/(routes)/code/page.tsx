@@ -624,7 +624,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
           </div>
           <div className="h-6 w-px bg-gray-800/50" />
           <div className="flex-1 max-w-3xl">
-            <form onSubmit={handlePromptSubmit} className="flex items-center space-x-3">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handlePromptSubmit();
+            }} className="flex items-center space-x-3">
               <div className="flex-1 relative group">
                 <input
                   type="text"
