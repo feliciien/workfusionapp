@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+export type ImageStyle = "realistic" | "artistic" | "digital" | "vintage" | "minimalist" | "fantasy" | "comic" | "cinematic";
+
 export const formSchema = z.object({
   prompt: z.string().min(1, {
     message: "Image prompt is required",
@@ -8,7 +10,7 @@ export const formSchema = z.object({
   resolution: z.enum(["1024x1024", "1792x1024", "1024x1792"], {
     required_error: "Please select a resolution",
   }),
-  style: z.enum(["realistic", "artistic", "digital", "vintage", "minimalist", "fantasy", "comic", "cinematic"], {
+  style: z.enum(["realistic", "artistic", "digital", "vintage", "minimalist", "fantasy", "comic", "cinematic"] as const, {
     required_error: "Please select a style",
   }),
 });

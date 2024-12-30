@@ -18,7 +18,7 @@ import { Card, CardFooter } from "@/components/ui/card";
 import useProModal from "@/hooks/use-pro-modal";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
-import { formSchema } from "./constants";
+import { formSchema, ImageStyle } from "./constants";
 import { cn } from "@/lib/utils";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
@@ -29,10 +29,11 @@ const ImagePage = () => {
   const [images, setImages] = useState<string[]>([]);
   const [imageHistory, setImageHistory] = useState<Array<{
     prompt: string;
-    style: string;
+    style: ImageStyle;
     url: string;
   }>>([]);
   const [isPro, setIsPro] = useState(false);
+  const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
 
   const imageTool = tools.find(tool => tool.href === "/image");
 
@@ -105,131 +106,241 @@ const ImagePage = () => {
 
   return (
     <ToolPage tool={imageTool}>
-      <div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2">
-            <FormField
-              name="prompt"
-              render={({ field }) => (
-                <FormItem className="col-span-12">
-                  <FormControl className="m-0 p-0">
-                    <Input
-                      className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                      disabled={isLoading} 
-                      placeholder="A picture of a horse in Swiss alps" 
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+      <div className="space-y-8">
+        <div className="flex space-x-2 border-b">
+          <button
+            onClick={() => setActiveTab('generate')}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors",
+              activeTab === 'generate' 
+                ? "border-b-2 border-primary text-primary" 
+                : "text-muted-foreground hover:text-primary"
+            )}
+          >
+            Generate
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors",
+              activeTab === 'history' 
+                ? "border-b-2 border-primary text-primary" 
+                : "text-muted-foreground hover:text-primary"
+            )}
+          >
+            History
+          </button>
+        </div>
+
+        {activeTab === 'generate' ? (
+          <div className="space-y-8">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border w-full p-6 px-3 md:px-8 focus-within:shadow-lg grid grid-cols-12 gap-4 bg-white/50 backdrop-blur-sm transition-all hover:shadow-md">
+                <FormField
+                  name="prompt"
+                  render={({ field }) => (
+                    <FormItem className="col-span-12">
+                      <FormControl className="m-0 p-0">
+                        <Input
+                          className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent text-lg placeholder:text-muted-foreground/50"
+                          disabled={isLoading} 
+                          placeholder="A picture of a horse in Swiss alps" 
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="style"
+                  render={({ field }) => (
+                    <FormItem className="col-span-12 lg:col-span-6">
+                      <Select
+                        disabled={isLoading}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-white/80 backdrop-blur-sm">
+                            <SelectValue defaultValue={field.value} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="realistic">
+                            ✨ Realistic
+                          </SelectItem>
+                          <SelectItem value="artistic">
+                            🎨 Artistic
+                          </SelectItem>
+                          <SelectItem value="digital">
+                            💻 Digital
+                          </SelectItem>
+                          <SelectItem value="vintage">
+                            📷 Vintage
+                          </SelectItem>
+                          <SelectItem value="minimalist">
+                            ⚪ Minimalist
+                          </SelectItem>
+                          <SelectItem value="fantasy">
+                            🌟 Fantasy
+                          </SelectItem>
+                          <SelectItem value="comic">
+                            💭 Comic
+                          </SelectItem>
+                          <SelectItem value="cinematic">
+                            🎬 Cinematic
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="resolution"
+                  render={({ field }) => (
+                    <FormItem className="col-span-12 lg:col-span-6">
+                      <Select
+                        disabled={isLoading}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-white/80 backdrop-blur-sm">
+                            <SelectValue defaultValue={field.value} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="256x256">
+                            256x256 - Draft
+                          </SelectItem>
+                          <SelectItem value="512x512">
+                            512x512 - Standard
+                          </SelectItem>
+                          <SelectItem value="1024x1024">
+                            1024x1024 - HD
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button 
+                  className="col-span-12 w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-6 text-lg font-medium transition-all rounded-xl shadow-md hover:shadow-lg" 
+                  type="submit" 
+                  disabled={isLoading} 
+                  size="icon"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader className="animate-spin" /> Generating...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="w-5 h-5" /> Generate Image
+                    </div>
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="space-y-4">
+              {images.length === 0 && !isLoading && (
+                <div className="p-12 rounded-xl w-full flex items-center justify-center bg-muted/30 border-2 border-dashed">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="p-4 rounded-full bg-primary/10">
+                      <ImageIcon className="h-8 w-8 text-primary" />
+                    </div>
+                    <p className="text-muted-foreground font-medium">No images generated yet</p>
+                    <p className="text-muted-foreground/60 text-sm text-center max-w-[200px]">
+                      Enter a prompt above to start generating amazing images
+                    </p>
+                  </div>
+                </div>
               )}
-            />
-            <FormField
-              control={form.control}
-              name="style"
-              render={({ field }) => (
-                <FormItem className="col-span-12 lg:col-span-6">
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue defaultValue={field.value} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="realistic">
-                        Realistic
-                      </SelectItem>
-                      <SelectItem value="artistic">
-                        Artistic
-                      </SelectItem>
-                      <SelectItem value="anime">
-                        Anime
-                      </SelectItem>
-                      <SelectItem value="digital-art">
-                        Digital Art
-                      </SelectItem>
-                      <SelectItem value="illustration">
-                        Illustration
-                      </SelectItem>
-                      <SelectItem value="minimalist">
-                        Minimalist
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="resolution"
-              render={({ field }) => (
-                <FormItem className="col-span-12 lg:col-span-6">
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue defaultValue={field.value} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="256x256">
-                        256x256
-                      </SelectItem>
-                      <SelectItem value="512x512">
-                        512x512
-                      </SelectItem>
-                      <SelectItem value="1024x1024">
-                        1024x1024
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button className="col-span-12" type="submit" disabled={isLoading} size="icon">
-              Generate
-            </Button>
-          </form>
-        </Form>
-        {isLoading && (
-          <div className="p-20">
-            <Loader />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {images.map((src) => (
+                  <Card key={src} className="rounded-xl overflow-hidden border-2 hover:shadow-lg transition-all group">
+                    <div className="relative aspect-square">
+                      <Image
+                        alt="Generated"
+                        src={src}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                    <CardFooter className="p-2">
+                      <Button 
+                        onClick={() => window.open(src)}
+                        variant="secondary" 
+                        className="w-full rounded-lg"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {imageHistory.length === 0 ? (
+              <div className="p-12 rounded-xl w-full flex items-center justify-center bg-muted/30 border-2 border-dashed">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="p-4 rounded-full bg-primary/10">
+                    <ImageIcon className="h-8 w-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">No generation history</p>
+                  <p className="text-muted-foreground/60 text-sm text-center max-w-[200px]">
+                    Your generated images will appear here
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {imageHistory.map((item, index) => (
+                  <Card key={index} className="rounded-xl overflow-hidden border hover:shadow-lg transition-all">
+                    <div className="relative aspect-square">
+                      <Image
+                        alt="Generated"
+                        src={item.url}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-4 space-y-2 bg-white/50 backdrop-blur-sm">
+                      <p className="text-sm font-medium truncate">{item.prompt}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Wand2 className="h-3 w-3" /> {item.style}
+                        </span>
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          form.setValue('prompt', item.prompt);
+                          form.setValue('style', item.style);
+                          setActiveTab('generate');
+                        }}
+                        variant="secondary" 
+                        className="w-full mt-2 text-xs"
+                      >
+                        Regenerate
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
-        {images.length === 0 && !isLoading && (
-          <Empty label="No images generated." />
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-          {images.map((src) => (
-            <Card key={src} className="rounded-lg overflow-hidden">
-              <div className="relative aspect-square">
-                <Image
-                  fill
-                  alt="Generated"
-                  src={src}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-              </div>
-              <CardFooter className="p-2">
-                <Button onClick={() => window.open(src)} variant="secondary" className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
       </div>
     </ToolPage>
   );
