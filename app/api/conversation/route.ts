@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { trackEvent } from "@/lib/analytics";
 import prismadb from "@/lib/prismadb";
+import { trackEvent } from "@/lib/analytics";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,14 +13,14 @@ const openai = new OpenAI({
 export const maxDuration = 60; // Maximum allowed duration for hobby plan
 
 interface ConversationMessage {
-  content: string;
   role: 'user' | 'assistant';
-  timestamp?: Date;
+  content: string;
 }
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const authResult = await auth();
+    const userId = authResult?.userId;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     let conversationTitle = "New Conversation";
     if (!conversationId && messages.length > 0) {
       try {
-        const titleResponse = await openai.chat.completions.create({
+        const titleCompletion = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",
           messages: [
             {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
           max_tokens: 20,
         });
         
-        conversationTitle = titleResponse.choices[0].message.content?.trim() || "New Conversation";
+        conversationTitle = titleCompletion.choices[0].message.content?.trim() || "New Conversation";
       } catch (error) {
         console.error("[TITLE_GENERATION_ERROR]", error);
         // Fall back to using the first few words of the user's message
@@ -76,14 +76,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: messages.map((msg: any) => ({
         role: msg.role,
         content: msg.content
       })),
       temperature: 0.7,
-      stream: false,
       presence_penalty: 0.6,
       frequency_penalty: 0.5,
     });
@@ -99,13 +98,16 @@ export async function POST(req: Request) {
       status: "success"
     });
 
+    let savedConversation;
+
     // Store conversation in database
-    const messageContent = response.choices[0].message.content || "";
+    const messageContent = completion.choices[0].message.content || "";
     if (conversationId) {
       try {
-        await prismadb.conversation.update({
+        savedConversation = await prismadb.conversation.update({
           where: {
             id: conversationId,
+            userId: userId,
           },
           data: {
             messages: {
@@ -115,6 +117,9 @@ export async function POST(req: Request) {
               },
             },
           },
+          include: {
+            messages: true,
+          },
         });
       } catch (dbError) {
         console.error("[DB_ERROR]", dbError);
@@ -123,7 +128,7 @@ export async function POST(req: Request) {
     } else {
       try {
         // Create new conversation with generated title
-        await prismadb.conversation.create({
+        savedConversation = await prismadb.conversation.create({
           data: {
             userId,
             title: conversationTitle,
@@ -136,7 +141,10 @@ export async function POST(req: Request) {
                 role: "assistant",
               }])
             },
-          }
+          },
+          include: {
+            messages: true,
+          },
         });
       } catch (dbError) {
         console.error("[DB_ERROR]", dbError);
@@ -146,6 +154,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       content: messageContent,
+      conversationId: savedConversation?.id,
+      title: savedConversation?.title || conversationTitle,
     });
   } catch (error) {
     console.error("[CONVERSATION_ERROR]", error);

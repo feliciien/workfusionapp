@@ -5,7 +5,8 @@ import prismadb from "@/lib/prismadb";
 // Get all conversations for the current user
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const authResult = await auth();
+    const userId = authResult?.userId;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
