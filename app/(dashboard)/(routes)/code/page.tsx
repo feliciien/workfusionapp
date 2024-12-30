@@ -265,7 +265,7 @@ export default function CodePage() {
   const [fileStructure, setFileStructure] = useState<FileStructure[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [activeFile, setActiveFile] = useState<FileStructure | null>(null);
-  const [editorTheme] = useState('vs-dark');
+  const [editorTheme, setEditorTheme] = useState('vs-dark');
   const [isTerminalVisible] = useState(true);
   const [projectPath, setProjectPath] = useState<string>('');
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>({
@@ -284,6 +284,8 @@ export default function CodePage() {
 
   useEffect(() => {
     setMounted(true);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setEditorTheme(prefersDark ? 'vs-dark' : 'light');
   }, []);
 
   const addTerminalOutput = useCallback((message: string) => {
@@ -612,42 +614,47 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
   }, [addTerminalOutput]);
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col bg-gradient-to-b from-[#1a1a1a] to-[#1E1E1E]">
-      {/* Header with glass effect */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#252526]/80 backdrop-blur-lg border-b border-gray-800/50">
+    <div className="flex h-[calc(100vh-3rem)] flex-col bg-white dark:bg-[#0F172A]">
+      {/* Header with enhanced glass effect */}
+      <div className="flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-[#1E293B]/80 backdrop-blur-xl border-b border-gray-200 dark:border-indigo-500/10 shadow-sm">
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10">
-              <FileCode2 className="h-5 w-5 text-indigo-400" />
+            <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-gradient-to-br from-indigo-500/20 to-purple-500/20 shadow-inner border border-gray-200 dark:border-white/5">
+              <FileCode2 className="h-5 w-5 text-gray-600 dark:text-indigo-300" />
             </div>
-            <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent">Code Editor</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:bg-gradient-to-r dark:from-indigo-200 dark:to-purple-200 dark:bg-clip-text dark:text-transparent">Code Generator</h1>
           </div>
-          <div className="h-6 w-px bg-gray-800/50" />
+          <div className="h-6 w-px bg-gray-200 dark:bg-indigo-500/10" />
           <div className="flex-1 max-w-3xl">
             <form onSubmit={(e) => {
               e.preventDefault();
               handlePromptSubmit();
             }} className="flex items-center space-x-3">
               <div className="flex-1 relative group">
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-100 to-gray-50 dark:from-indigo-500/20 dark:to-purple-500/20 opacity-0 
+                              group-hover:opacity-100 blur-xl transition-all duration-300 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Describe what you want to build... (e.g., 'Create a restaurant menu component')"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full px-4 py-2 bg-[#1E1E1E]/50 border border-gray-700/50 rounded-xl text-gray-200 
-                           placeholder-gray-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 
-                           text-sm transition-all duration-200 shadow-lg"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1E293B]/50 border border-gray-200 dark:border-indigo-500/20 rounded-xl 
+                           text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 
+                           focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 
+                           text-sm transition-all duration-200 shadow-sm dark:shadow-lg backdrop-blur-sm"
                 />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 
-                              group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </div>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 
-                         text-white px-6 py-2 h-[38px] rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-200
-                         hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98]"
+                className="relative group bg-indigo-600 dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 
+                         hover:bg-indigo-500 dark:hover:from-indigo-400 dark:hover:to-purple-400 
+                         text-white px-6 py-2.5 h-[42px] rounded-xl shadow-sm dark:shadow-lg transition-all duration-300
+                         hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 
+                         disabled:cursor-not-allowed disabled:hover:scale-100"
                 disabled={isProcessing || !prompt.trim()}
               >
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent opacity-0 
+                              group-hover:opacity-100 transition-opacity duration-300" />
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -668,18 +675,20 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
             variant="ghost"
             size="sm"
             onClick={saveFile}
-            className="text-gray-400 hover:text-white hover:bg-white/5 border-0"
+            className="text-gray-600 hover:text-gray-900 dark:text-indigo-300 dark:hover:text-indigo-200 
+                     hover:bg-gray-100 dark:hover:bg-indigo-500/10 border-0 transition-colors duration-200"
             disabled={!activeFile}
           >
             <Save className="h-4 w-4 mr-1.5" />
             <span className="text-sm">Save</span>
           </Button>
-          <div className="w-px h-4 bg-gray-800/50" />
+          <div className="w-px h-4 bg-gray-200 dark:bg-indigo-500/10" />
           <Button
             variant="ghost"
             size="sm"
             onClick={runProject}
-            className="text-gray-400 hover:text-white hover:bg-white/5 border-0"
+            className="text-gray-600 hover:text-gray-900 dark:text-indigo-300 dark:hover:text-indigo-200 
+                     hover:bg-gray-100 dark:hover:bg-indigo-500/10 border-0 transition-colors duration-200"
             disabled={isProcessing}
           >
             {isProcessing ? (
@@ -698,16 +707,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
           <ResizablePanelGroup direction="horizontal">
             {/* File Explorer Panel */}
             <ResizablePanel defaultSize={15} minSize={10}>
-              <div className="h-full flex flex-col bg-[#1E1E1E]/50 backdrop-blur-sm border-r border-gray-800/50">
-                <div className="px-3 py-2 border-b border-gray-800/50 flex items-center justify-between">
-                  <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wider">Files</h2>
+              <div className="h-full flex flex-col bg-gray-50/50 dark:bg-[#1E293B]/50 backdrop-blur-xl 
+                            border-r border-gray-200 dark:border-indigo-500/10">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-indigo-500/10 flex items-center justify-between">
+                  <h2 className="text-xs font-medium text-gray-600 dark:text-indigo-300 uppercase tracking-wider">Files</h2>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowNewProjectDialog(true)}
-                    className="h-6 w-6 p-0 rounded-lg hover:bg-white/5"
+                    className="h-6 w-6 p-0 rounded-lg hover:bg-gray-100 dark:hover:bg-indigo-500/10 
+                             text-gray-600 hover:text-gray-900 dark:text-indigo-300 dark:hover:text-indigo-200 
+                             transition-colors duration-200"
                   >
-                    <Plus className="h-3.5 w-3.5 text-gray-400" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
                 <ScrollArea className="flex-1">
@@ -718,17 +730,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
               </div>
             </ResizablePanel>
 
-            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-200 to-gray-100 dark:from-indigo-500/10 
+                                     dark:to-purple-500/10 hover:bg-indigo-500/20 transition-colors" />
 
             {/* Editor Panel */}
             <ResizablePanel defaultSize={55} minSize={30}>
-              <div className="h-full flex flex-col bg-[#1E1E1E]">
+              <div className="h-full flex flex-col bg-white dark:bg-[#0F172A]">
                 {activeFile ? (
                   <>
-                    <div className="flex items-center justify-between px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50">
+                    <div className="flex items-center justify-between px-4 py-2 bg-gray-50/80 dark:bg-[#1E293B]/80 
+                                  backdrop-blur-xl border-b border-gray-200 dark:border-indigo-500/10">
                       <div className="flex items-center space-x-2">
-                        <Code className="h-4 w-4 text-indigo-400" />
-                        <span className="text-sm text-gray-300 font-medium">{activeFile.path}</span>
+                        <Code className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
+                        <span className="text-sm text-gray-900 dark:text-indigo-100 font-medium">{activeFile.path}</span>
                       </div>
                     </div>
                     <div className="flex-1 min-h-0">
@@ -737,7 +751,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                         defaultLanguage={getFileLanguage(activeFile.path)}
                         value={activeFile.content}
                         onChange={handleFileChange}
-                        theme="vs-dark"
+                        theme={editorTheme}
                         options={{
                           fontSize: 14,
                           fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
@@ -765,14 +779,17 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                     </div>
                   </>
                 ) : (
-                  <div className="h-full flex items-center justify-center bg-[#1E1E1E]">
+                  <div className="h-full flex items-center justify-center bg-white dark:bg-[#0F172A]">
                     <div className="text-center space-y-4 max-w-md px-6">
-                      <div className="p-4 rounded-2xl bg-gradient-to-b from-gray-800/30 to-gray-800/10 backdrop-blur-sm">
-                        <FileCode2 className="h-12 w-12 text-indigo-400/50 mx-auto" />
+                      <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gradient-to-b dark:from-indigo-500/10 dark:to-purple-500/10 
+                                    backdrop-blur-xl border border-gray-200 dark:border-indigo-500/10">
+                        <FileCode2 className="h-14 w-14 text-gray-400 dark:text-indigo-300 mx-auto" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-gray-300 font-medium">No file selected</p>
-                        <p className="text-gray-500 text-sm">Enter a prompt above to generate code or select a file from the explorer</p>
+                        <p className="text-gray-900 dark:text-indigo-100 font-medium">No file selected</p>
+                        <p className="text-gray-600 dark:text-indigo-300/70 text-sm">
+                          Enter a prompt above to generate code or select a file from the explorer
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -780,19 +797,21 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
               </div>
             </ResizablePanel>
 
-            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-200 to-gray-100 dark:from-indigo-500/10 
+                                     dark:to-purple-500/10 hover:bg-indigo-500/20 transition-colors" />
 
             {/* Terminal Panel */}
             <ResizablePanel defaultSize={15} minSize={10}>
-              <div className="h-full flex flex-col bg-[#1E1E1E]/80 backdrop-blur-sm">
-                <div className="px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center space-x-2">
-                  <Terminal className="h-4 w-4 text-indigo-400" />
-                  <span className="text-xs font-medium text-gray-300">Terminal</span>
+              <div className="h-full flex flex-col bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl">
+                <div className="px-4 py-2 bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl 
+                              border-b border-gray-200 dark:border-indigo-500/10 flex items-center space-x-2">
+                  <Terminal className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
+                  <span className="text-xs font-medium text-gray-900 dark:text-indigo-100">Terminal</span>
                 </div>
                 <ScrollArea className="flex-1">
                   <div className="p-4 font-mono text-xs space-y-1.5">
                     {terminalOutput.map((line, index) => (
-                      <div key={index} className="text-gray-300/90">
+                      <div key={index} className="text-gray-900 dark:text-indigo-100/90">
                         {line}
                       </div>
                     ))}
@@ -801,20 +820,24 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
               </div>
             </ResizablePanel>
 
-            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-800/50 to-gray-800/30 hover:bg-indigo-500/50 transition-colors" />
+            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-200 to-gray-100 dark:from-indigo-500/10 
+                                     dark:to-purple-500/10 hover:bg-indigo-500/20 transition-colors" />
 
             {/* Project Information Panel */}
             <ResizablePanel defaultSize={15} minSize={10}>
-              <div className="h-full flex flex-col bg-[#1E1E1E]/80 backdrop-blur-sm">
-                <div className="px-4 py-2 bg-[#252526]/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center space-x-2">
-                  <Coffee className="h-4 w-4 text-indigo-400" />
-                  <span className="text-xs font-medium text-gray-300">Project</span>
+              <div className="h-full flex flex-col bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl">
+                <div className="px-4 py-2 bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl 
+                              border-b border-gray-200 dark:border-indigo-500/10 flex items-center space-x-2">
+                  <Coffee className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
+                  <span className="text-xs font-medium text-gray-900 dark:text-indigo-100">Project</span>
                 </div>
                 <div className="flex-1 overflow-auto p-4 space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">Description</label>
+                    <label className="text-sm font-medium text-gray-700 dark:text-indigo-200">Description</label>
                     <textarea
-                      className="w-full resize-none rounded-md bg-[#1E1E1E] border border-gray-800/50 p-2 text-sm text-gray-300 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25"
+                      className="w-full resize-none rounded-xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-indigo-500/20 
+                               p-3 text-sm text-gray-900 dark:text-indigo-100 focus:border-indigo-500/50 focus:ring-2 
+                               focus:ring-indigo-500/20 transition-all duration-200"
                       placeholder="Describe your project..."
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
@@ -825,7 +848,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                     <Button
                       onClick={handlePromptSubmit}
                       disabled={isProcessing}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 
+                               dark:hover:from-indigo-400 dark:hover:to-purple-400 text-white shadow-sm dark:shadow-lg 
+                               transition-all duration-300 hover:shadow-indigo-500/40"
                     >
                       {isProcessing ? (
                         <>
@@ -843,7 +868,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                       <Button
                         onClick={() => createDownloadableProject(currentProject)}
                         variant="outline"
-                        className="w-full border-gray-800/50 text-gray-300 hover:bg-white/5"
+                        className="w-full border-gray-200 dark:border-indigo-500/20 text-gray-700 dark:text-indigo-200 
+                                 hover:bg-gray-50 dark:hover:bg-indigo-500/10 hover:border-gray-300 
+                                 dark:hover:border-indigo-500/30 transition-all duration-200"
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Download Project
@@ -851,12 +878,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                     )}
                   </div>
                   {currentProject && (
-                    <div className="rounded-md bg-[#252526] border border-gray-800/50 p-3 space-y-2">
+                    <div className="rounded-xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-indigo-500/20 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-300">{currentProject.name}</span>
-                        <span className="text-xs text-gray-500">{currentProject.files.length} files</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-indigo-200">{currentProject.name}</span>
+                        <span className="text-xs text-gray-600 dark:text-indigo-300/70 bg-gray-100 dark:bg-indigo-500/10 
+                                      px-2 py-1 rounded-full">
+                          {currentProject.files.length} files
+                        </span>
                       </div>
-                      <p className="text-xs text-gray-400">{currentProject.description}</p>
+                      <p className="text-xs text-gray-600 dark:text-indigo-300/70 leading-relaxed">{currentProject.description}</p>
                     </div>
                   )}
                 </div>
