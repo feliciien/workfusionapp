@@ -48,6 +48,34 @@ export async function POST(req: Request) {
       );
     }
 
+    // Generate a title if this is a new conversation
+    let conversationTitle = "New Conversation";
+    if (!conversationId && messages.length > 0) {
+      try {
+        const titleResponse = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "Generate a short, concise title (max 6 words) for this conversation based on the user's first message. Just return the title, nothing else."
+            },
+            {
+              role: "user",
+              content: messages[0].content
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 20,
+        });
+        
+        conversationTitle = titleResponse.choices[0].message.content?.trim() || "New Conversation";
+      } catch (error) {
+        console.error("[TITLE_GENERATION_ERROR]", error);
+        // Fall back to using the first few words of the user's message
+        conversationTitle = messages[0].content.slice(0, 40) + "...";
+      }
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: messages.map((msg: any) => ({
@@ -94,11 +122,11 @@ export async function POST(req: Request) {
       }
     } else {
       try {
-        // Create new conversation
+        // Create new conversation with generated title
         await prismadb.conversation.create({
           data: {
             userId,
-            title: "New Conversation",
+            title: conversationTitle,
             messages: {
               create: messages.map((msg: any) => ({
                 content: msg.content,

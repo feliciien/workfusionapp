@@ -43,6 +43,7 @@ export default function ConversationPage() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [title, setTitle] = useState<string>("New Conversation");
 
   // Only run client-side
   useEffect(() => {
@@ -78,6 +79,7 @@ export default function ConversationPage() {
         content: typeof msg.content === 'string' ? msg.content : msg.content.text || '',
       }));
       setMessages(formattedMessages);
+      setTitle(response.data.title || "New Conversation");
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load conversation');
     } finally {
@@ -100,55 +102,58 @@ export default function ConversationPage() {
         id: messageId,
       };
 
-      const newMessages = [...messages, userMessage];
-      setMessages(newMessages);
+      // Optimistically add user message
+      setMessages((current) => [...current, userMessage]);
 
-      const response = await axios.post('/api/conversation', {
-        messages: newMessages,
+      const response = await axios.post("/api/conversation", {
+        messages: [...messages, userMessage].map(({ role, content }) => ({
+          role,
+          content,
+        })),
         conversationId,
       });
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: typeof response.data === 'string' 
-          ? response.data 
-          : response.data.content || response.data.text || '',
-        timestamp: new Date(),
-        status: 'sent',
-        id: Date.now().toString(),
-      };
-
-      setMessages((current) => 
-        current.map(msg => msg.id === messageId ? { ...msg, status: 'sent' as const } : msg)
-        .concat([assistantMessage])
-      );
-
-    } catch (error: any) {
-      if (retryCount < 2) {
-        setRetrying(true);
-        setTimeout(() => {
-          onSubmit(values, retryCount + 1);
-        }, 1000 * (retryCount + 1));
-        return;
-      }
-
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
-        setShowUpgrade(true);
-        toast.error("Free trial limit reached. Please upgrade to continue.");
-      } else {
-        toast.error("Something went wrong. Please try again.");
-      }
-      console.error('[CONVERSATION_ERROR]', error);
-      
       setMessages((current) =>
-        current.map(msg => 
-          msg.status === 'sending' ? { ...msg, status: 'error' as const } : msg
+        current.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, status: 'sent' }
+            : msg
         )
       );
+
+      // Add assistant's response
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: response.data.content,
+          timestamp: new Date(),
+          status: 'sent',
+        },
+      ]);
+
+      // If this is a new conversation, update the URL with the conversation ID
+      if (!conversationId && response.data.conversationId) {
+        router.push(`/conversation?id=${response.data.conversationId}`);
+      }
+
+    } catch (error: any) {
+      if (error?.response?.status === 403) {
+        setShowUpgrade(true);
+      } else {
+        toast.error("Something went wrong.");
+        // Mark the message as error
+        setMessages((current) =>
+          current.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, status: 'error' }
+              : msg
+          )
+        );
+      }
     } finally {
       setLoading(false);
       setIsTyping(false);
-      setRetrying(false);
     }
   };
 
@@ -180,7 +185,7 @@ export default function ConversationPage() {
     <div className="flex flex-col h-[calc(100vh-100px)]">
       <div className="flex items-center justify-between px-4 lg:px-8 py-4 border-b">
         <Heading
-          title="AI Conversation"
+          title={title}
           description="Have a natural conversation with our advanced AI"
           icon={MessageSquare}
           iconColor="text-violet-500"
