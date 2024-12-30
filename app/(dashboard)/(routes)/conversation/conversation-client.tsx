@@ -73,14 +73,16 @@ export function ConversationClient({
         conversationId,
       });
 
-      const assistantMessage = {
-        role: 'assistant' as const,
-        content: typeof response.data === 'string' 
-          ? response.data 
-          : response.data.content || response.data.text || '',
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: response.data.content
       };
 
-      setMessages((current) => [...current, assistantMessage]);
+      setMessages(current => [...current, assistantMessage]);
 
     } catch (error: any) {
       console.error('[CONVERSATION_ERROR]', error);

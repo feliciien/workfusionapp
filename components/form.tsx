@@ -4,8 +4,9 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form as FormProvider, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ChatInput } from "@/components/chat-input";
+import { Send } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(1, {
@@ -42,10 +43,11 @@ export const Form = ({ isLoading, onSubmit }: FormProps) => {
           render={({ field }) => (
             <FormItem className="col-span-12 lg:col-span-10">
               <FormControl className="m-0 p-0">
-                <Input
+                <ChatInput
                   className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                   disabled={isLoading}
-                  placeholder="How can I help you today?"
+                  placeholder="Message SynthAI..."
+                  onSubmit={form.handleSubmit(handleSubmit)}
                   {...field}
                 />
               </FormControl>
@@ -53,12 +55,13 @@ export const Form = ({ isLoading, onSubmit }: FormProps) => {
           )}
         />
         <Button 
-          className="col-span-12 lg:col-span-2 w-full" 
+          className="col-span-12 lg:col-span-2 w-full gap-2" 
           type="submit" 
           disabled={isLoading}
-          size="icon"
+          size="lg"
         >
-          Generate
+          <Send className="w-4 h-4" />
+          Send
         </Button>
       </form>
     </FormProvider>

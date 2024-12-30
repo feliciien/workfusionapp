@@ -20,8 +20,7 @@ interface ConversationMessage {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const { userId } = await auth();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -51,7 +50,10 @@ export async function POST(req: Request) {
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",
-      messages,
+      messages: messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content
+      })),
       temperature: 0.7,
       stream: false,
       presence_penalty: 0.6,
@@ -98,17 +100,13 @@ export async function POST(req: Request) {
             userId,
             title: "New Conversation",
             messages: {
-              create: [
-                ...messages.map((msg: ConversationMessage) => ({
-                  content: msg.content,
-                  role: msg.role,
-                  timestamp: new Date(),
-                })),
-                {
-                  content: messageContent,
-                  role: "assistant",
-                }
-              ]
+              create: messages.map((msg: any) => ({
+                content: msg.content,
+                role: msg.role,
+              })).concat([{
+                content: messageContent,
+                role: "assistant",
+              }])
             },
           }
         });
@@ -119,10 +117,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      id: Date.now().toString(),
       content: messageContent,
-      timestamp: new Date(),
-      status: 'sent',
     });
   } catch (error) {
     console.error("[CONVERSATION_ERROR]", error);
