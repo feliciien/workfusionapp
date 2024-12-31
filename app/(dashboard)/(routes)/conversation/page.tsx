@@ -57,6 +57,172 @@ export default function ConversationPage() {
   const [retrying, setRetrying] = useState(false);
   const [title, setTitle] = useState<string>("New Conversation");
 
+  // Store messages in local storage
+  useEffect(() => {
+    if (conversationId && messages.length > 0) {
+      localStorage.setItem(`conversation-${conversationId}`, JSON.stringify(messages));
+    }
+  }, [messages, conversationId]);
+
+  // Load messages from local storage
+  useEffect(() => {
+    if (conversationId) {
+      const savedMessages = localStorage.getItem(`conversation-${conversationId}`);
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages);
+          setMessages(parsedMessages);
+        } catch (e) {
+          console.error('Error loading saved messages:', e);
+        }
+      }
+    }
+  }, [conversationId]);
+
+  // Dark mode persistence
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', darkMode.toString());
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  const generateMessageId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  };
+
+  const handleRetry = async () => {
+    if (messages.length === 0) return;
+    
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMessage) return;
+
+    setRetrying(true);
+    try {
+      await onSubmit({ prompt: lastUserMessage.content });
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    if (loading || isTyping) return;
+
+    const prompt = values.prompt.trim();
+    if (!prompt) return;
+
+    try {
+      setLoading(true);
+      setShowUpgrade(false);
+      setIsTyping(true);
+      setError(null);
+
+      const messageId = generateMessageId();
+      const userMessage: Message = {
+        role: 'user',
+        content: prompt,
+        timestamp: new Date(),
+        status: 'sending',
+        id: messageId,
+      };
+
+      // Optimistically add user message
+      setMessages((current) => [...current, userMessage]);
+      form.reset();
+
+      const response = await axios.post<{ conversationId: string; message: Message }>("/api/conversation", {
+        messages: [...messages, userMessage].map(({ role, content }) => ({
+          role,
+          content,
+        })),
+        conversationId,
+      }, {
+        timeout: 60000, // 1 minute timeout
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Update user message status to sent
+      setMessages((current) => 
+        current.map((msg) => 
+          msg.id === messageId ? { ...msg, status: 'sent' } : msg
+        )
+      );
+
+      // Add assistant's response
+      if (response.data.message) {
+        setMessages((current) => [
+          ...current,
+          {
+            ...response.data.message,
+            timestamp: new Date(),
+            status: 'sent',
+            id: generateMessageId(),
+          },
+        ]);
+
+        // Update conversation title if it's a new conversation
+        if (!title || title === "New Conversation") {
+          setTitle(prompt.slice(0, 30) + (prompt.length > 30 ? '...' : ''));
+        }
+      }
+
+      // Update conversation ID in URL if this is a new conversation
+      if (!conversationId && response.data.conversationId) {
+        router.push(`/conversation?id=${response.data.conversationId}`, { scroll: false });
+      }
+
+    } catch (error) {
+      console.error('Conversation error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 403) {
+          setShowUpgrade(true);
+          toast.error("You've reached your limit. Please upgrade to continue.");
+        } else if (error.code === 'ECONNABORTED') {
+          toast.error("Request timed out. Please try again.");
+        } else {
+          toast.error(error.response?.data?.message || "Failed to send message. Please try again.");
+        }
+      } else {
+        toast.error("An unexpected error occurred. Please try again.");
+      }
+
+      // Mark the last message as error
+      setMessages((current) => {
+        const lastMessage = current[current.length - 1];
+        return lastMessage
+          ? current.map((msg) =>
+              msg.id === lastMessage.id
+                ? { ...msg, status: 'error' }
+                : msg
+            )
+          : current;
+      });
+
+    } finally {
+      setLoading(false);
+      setIsTyping(false);
+    }
+  };
+
+  const clearConversation = () => {
+    if (conversationId) {
+      localStorage.removeItem(`conversation-${conversationId}`);
+    }
+    setMessages([]);
+    setTitle("New Conversation");
+    router.push('/conversation', { scroll: false });
+  };
+
   // Only run client-side
   useEffect(() => {
     setMounted(true);
@@ -97,96 +263,6 @@ export default function ConversationPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const onSubmit = async (values: FormValues) => {
-    if (loading || isTyping) return;
-
-    try {
-      setLoading(true);
-      setShowUpgrade(false);
-      setIsTyping(true);
-
-      const messageId = `${Date.now()}-${Math.random()}`;
-      const userMessage: Message = {
-        role: 'user',
-        content: values.prompt.trim(),
-        timestamp: new Date(),
-        status: 'sending',
-        id: messageId,
-      };
-
-      // Optimistically add user message
-      setMessages((current) => [...current, userMessage]);
-      form.reset();
-
-      const response = await axios.post<{ conversationId: string; message: Message }>("/api/conversation", {
-        messages: [...messages, userMessage].map(({ role, content }) => ({
-          role,
-          content,
-        })),
-        conversationId,
-      });
-
-      // Update user message status to sent
-      setMessages((current) => 
-        current.map((msg) => 
-          msg.id === messageId ? { ...msg, status: 'sent' } : msg
-        )
-      );
-
-      // Add assistant's response
-      if (response.data.message) {
-        setMessages((current) => [
-          ...current,
-          {
-            ...response.data.message,
-            timestamp: new Date(),
-            status: 'sent',
-            id: `${Date.now()}-${Math.random()}`,
-          },
-        ]);
-      }
-
-      // Update conversation ID in URL if this is a new conversation
-      if (!conversationId && response.data.conversationId) {
-        router.push(`/conversation?id=${response.data.conversationId}`);
-      }
-
-    } catch (error) {
-      console.error('Conversation error:', error);
-      
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 403) {
-          setShowUpgrade(true);
-        } else {
-          toast.error(error.response?.data?.message || "Failed to send message. Please try again.");
-        }
-      } else {
-        toast.error("An unexpected error occurred. Please try again.");
-      }
-
-      // Mark the last message as error
-      setMessages((current) => {
-        const lastMessage = current[current.length - 1];
-        return lastMessage
-          ? current.map((msg) =>
-              msg.id === lastMessage.id
-                ? { ...msg, status: 'error' }
-                : msg
-            )
-          : current;
-      });
-
-    } finally {
-      setLoading(false);
-      setIsTyping(false);
-    }
-  };
-
-  const clearConversation = () => {
-    setMessages([]);
-    router.refresh();
   };
 
   // Don't render anything until mounted to prevent hydration mismatch
@@ -328,24 +404,58 @@ export default function ConversationPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input
-                        disabled={loading}
-                        placeholder="Type a message..."
-                        {...field}
-                        className="w-full"
-                      />
+                      <div className="relative">
+                        <Input
+                          disabled={loading}
+                          placeholder="Type a message..."
+                          {...field}
+                          className={cn(
+                            "w-full pr-12 focus:outline-none focus:ring-2 focus:ring-offset-2",
+                            loading && "opacity-50 cursor-not-allowed"
+                          )}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              form.handleSubmit(onSubmit)();
+                            }
+                          }}
+                        />
+                        {loading && (
+                          <div className="absolute right-3 top-3">
+                            <Loader />
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
                     {form.formState.errors.prompt && (
-                      <div className="text-xs text-red-500">
+                      <div className="text-xs text-red-500 mt-1">
                         {form.formState.errors.prompt.message}
                       </div>
                     )}
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={loading}>
-                Send Message
-              </Button>
+              <div className="flex justify-between items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRetry}
+                  disabled={loading || messages.length === 0}
+                >
+                  Retry Last Message
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className={cn(
+                    "bg-primary hover:bg-primary/90",
+                    loading && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Send Message
+                </Button>
+              </div>
             </form>
           </Form>
         </div>
