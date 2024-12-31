@@ -10,7 +10,7 @@ export async function GET() {
     console.log("[SUBSCRIPTION_API] Check started:", {
       userId,
       userExists: !!user,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (!userId || !user) {

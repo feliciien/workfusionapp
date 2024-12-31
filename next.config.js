@@ -5,15 +5,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'img.clerk.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'oaidalleapiprodscus.blob.core.windows.net',
-      },
+    domains: [
+      "oaidalleapiprodscus.blob.core.windows.net",
+      "cdn.openai.com"
     ],
   },
   experimental: {
@@ -22,7 +16,6 @@ const nextConfig = {
     },
   },
   reactStrictMode: true,
-  swcMinify: true,
   async headers() {
     return [
       {

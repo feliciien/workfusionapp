@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import * as path from 'path';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { useLocalStorage } from '../../../hooks/use-local-storage';
+import type { editor } from 'monaco-editor';
 import {
   Code,
   FileCode2,
@@ -31,7 +34,11 @@ import {
   ChevronRight,
   ChevronDown,
   FolderOpen,
-  Download
+  Download,
+  Search,
+  Settings,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import {
   ResizableHandle,
@@ -39,20 +46,22 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
+const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+
+// Editor types
+type EditorSettings = {
+  fontSize: number;
+  tabSize: number;
+  wordWrap: 'on' | 'off' | 'bounded';
+  minimap: boolean;
+  lineNumbers: boolean;
+  formatOnSave: boolean;
+};
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  timestamp?: Date;
-  files?: string[];
-}
-
-interface PackageJson {
-  name: string;
-  version: string;
-  private: boolean;
-  scripts: Record<string, string>;
-  dependencies: Record<string, string>;
-  devDependencies: Record<string, string>;
+  id: string;
 }
 
 interface FileStructure {
@@ -60,32 +69,48 @@ interface FileStructure {
   path: string;
   type: 'file' | 'directory';
   content?: string;
-  children?: FileStructure[];
-  size?: number;
-  expanded?: boolean;
+  children: FileStructure[];
+  expanded: boolean;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  path: string;
+  description: string;
+  type?: string;
+  files?: any[];
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  scripts?: {
+    dev: string;
+    build: string;
+    start: string;
+  };
+  setupCommands?: Array<{
+    command: string;
+    description: string;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface ProjectConfig {
   name: string;
   description: string;
-  dependencies: Record<string, string>;
-  scripts: Record<string, string>;
-  setupCommands: {
-    command: string;
-    description: string;
-  }[];
-}
-
-interface Project {
-  name: string;
-  description: string;
   type: string;
-  files: GeneratedFile[];
+  files: any[];
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
-  scripts: Record<string, string>;
-  setupCommands: Array<{ command: string; description: string; }>;
-  command: string;
+  scripts: {
+    dev: string;
+    build: string;
+    start: string;
+  };
+  setupCommands: Array<{
+    command: string;
+    description: string;
+  }>;
 }
 
 interface GeneratedFile {
@@ -126,136 +151,6 @@ const getFileLanguage = (fileName: string) => {
   return 'plaintext';
 };
 
-// Helper function for rendering file tree
-const renderFileTree = (
-  items: FileStructure[],
-  activeFile: FileStructure | null,
-  setActiveFile: (file: FileStructure) => void,
-  toggleDirectory: (path: string) => void
-): React.ReactNode => {
-  return items.map((item, index) => {
-    const isActive = activeFile?.path === item.path;
-    const isDirectory = item.type === 'directory';
-    const isExpanded = item.expanded;
-
-    return (
-      <div key={`${item.path}-${index}`} className="select-none">
-        <div
-          className={cn(
-            "flex items-center py-1 px-2 rounded-md cursor-pointer hover:bg-gray-800",
-            isActive && "bg-gray-800"
-          )}
-          onClick={() => {
-            if (isDirectory) {
-              toggleDirectory(item.path);
-            } else {
-              setActiveFile(item);
-            }
-          }}
-        >
-          <div className="flex items-center flex-1 overflow-hidden">
-            {isDirectory ? (
-              <div className="flex items-center">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 mr-1" />
-                )}
-                <FolderOpen className="h-4 w-4 mr-2" />
-              </div>
-            ) : (
-              <FileCode2 className="h-4 w-4 mr-2" />
-            )}
-            <span className="text-sm truncate">{item.name}</span>
-          </div>
-        </div>
-        {isDirectory && isExpanded && item.children && (
-          <div className="pl-4">
-            {renderFileTree(item.children, activeFile, setActiveFile, toggleDirectory)}
-          </div>
-        )}
-      </div>
-    );
-  });
-};
-
-const FileTreeItem: React.FC<{
-  item: FileStructure;
-  onSelect: (file: FileStructure) => void;
-  onToggle: (path: string) => void;
-  level: number;
-}> = ({ item, onSelect, onToggle, level }) => {
-  const isActive = item.path === item.path;
-  
-  return (
-    <div style={{ marginLeft: `${level * 12}px` }}>
-      <div
-        className={cn(
-          "flex items-center space-x-2 rounded px-2 py-1 cursor-pointer text-sm group hover:bg-gray-800",
-          isActive && "bg-blue-500/20"
-        )}
-        onClick={() => item.type === 'file' ? onSelect(item) : onToggle(item.path)}
-      >
-        <div className="flex items-center">
-          {item.type === 'directory' && (
-            <ChevronRight
-              className={cn(
-                "h-4 w-4 shrink-0 transition-transform",
-                item.expanded && "rotate-90"
-              )}
-            />
-          )}
-          {item.type === 'file' ? (
-            <FileCode2 className="h-4 w-4 text-gray-400" />
-          ) : (
-            <FolderOpen className="h-4 w-4 text-gray-400" />
-          )}
-        </div>
-        <span className={cn(
-          "text-sm",
-          item.type === 'file' ? 'text-gray-300' : 'text-gray-200 font-medium'
-        )}>
-          {item.name}
-        </span>
-      </div>
-      
-      {item.type === 'directory' && item.expanded && item.children && (
-        <div className="mt-1">
-          {item.children.map((child, index) => (
-            <FileTreeItem
-              key={child.path + index}
-              item={child}
-              onSelect={onSelect}
-              onToggle={onToggle}
-              level={level + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const Editor = dynamic(
-  () => import('@monaco-editor/react'),
-  { ssr: false }
-);
-
-const PanelGroup = dynamic(
-  () => import('react-resizable-panels').then(mod => mod.PanelGroup),
-  { ssr: false }
-);
-
-const Panel = dynamic(
-  () => import('react-resizable-panels').then(mod => mod.Panel),
-  { ssr: false }
-);
-
-const PanelResizeHandle = dynamic(
-  () => import('react-resizable-panels').then((mod) => mod.PanelResizeHandle),
-  { ssr: false }
-);
-
 export default function CodePage() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
@@ -266,7 +161,7 @@ export default function CodePage() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [activeFile, setActiveFile] = useState<FileStructure | null>(null);
   const [editorTheme, setEditorTheme] = useState('vs-dark');
-  const [isTerminalVisible] = useState(true);
+  const [isTerminalVisible, setIsTerminalVisible] = useState(true);
   const [projectPath, setProjectPath] = useState<string>('');
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>({
     installing: false,
@@ -280,43 +175,153 @@ export default function CodePage() {
     testCoverage: 0
   });
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recentFiles, setRecentFiles] = useLocalStorage<string[]>('recent-files', []);
+  const [editorSettings, setEditorSettings] = useLocalStorage<EditorSettings>('editor-settings', {
+    fontSize: 14,
+    tabSize: 2,
+    wordWrap: 'on',
+    minimap: true,
+    lineNumbers: true,
+    formatOnSave: true,
+  });
+  const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setEditorTheme(prefersDark ? 'vs-dark' : 'light');
+  // API functions
+  const createProject = useCallback(async (project: Project): Promise<void> => {
+    try {
+      await axios.post('/api/code/project', project);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      throw error;
+    }
   }, []);
 
-  const addTerminalOutput = useCallback((message: string) => {
-    setTerminalOutput(prev => [...prev, message]);
+  const createDownloadableProject = useCallback(async (project: Project): Promise<void> => {
+    try {
+      await axios.post('/api/code/download', project);
+    } catch (error) {
+      console.error('Failed to create downloadable project:', error);
+      throw error;
+    }
+  }, []);
+
+  // Utility functions
+  const getAllFiles = useCallback((structure: FileStructure[]): { path: string; content: string }[] => {
+    let files: { path: string; content: string }[] = [];
+    
+    const traverse = (items: FileStructure[]) => {
+      items.forEach(item => {
+        if (item.type === 'file' && item.content !== undefined) {
+          files.push({
+            path: item.path,
+            content: item.content
+          });
+        }
+        if (item.children) {
+          traverse(item.children);
+        }
+      });
+    };
+    
+    traverse(structure);
+    return files;
+  }, []);
+
+  const handleDownloadProject = useCallback(async () => {
+    try {
+      const allFiles = getAllFiles(fileStructure);
+      if (allFiles.length === 0) {
+        toast.error('No files to download');
+        return;
+      }
+
+      const response = await axios.post('/api/code/download', {
+        files: allFiles
+      }, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'project.zip');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Project downloaded successfully');
+    } catch (error) {
+      console.error('Project download error:', error);
+      toast.error('Failed to download project');
+    }
+  }, [fileStructure, getAllFiles]);
+
+  const filterFileStructure = useCallback((files: FileStructure[], query: string): FileStructure[] => {
+    return files.map(file => {
+      if (file.type === 'directory' && file.children) {
+        const filteredChildren = filterFileStructure(file.children, query);
+        if (filteredChildren.length > 0) {
+          return { ...file, children: filteredChildren };
+        }
+      }
+      if (file.name.toLowerCase().includes(query)) {
+        return file;
+      }
+      return null;
+    }).filter((file): file is FileStructure => file !== null);
+  }, []);
+
+  const findFileByPath = useCallback((files: FileStructure[], targetPath: string): FileStructure | null => {
+    for (const file of files) {
+      if (file.path === targetPath) {
+        return file;
+      }
+      if (file.type === 'directory' && file.children) {
+        const found = findFileByPath(file.children, targetPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  const findFirstFile = useCallback((items: FileStructure[]): FileStructure | null => {
+    for (const item of items) {
+      if (item.type === 'file') return item;
+      if (item.children) {
+        const found = findFirstFile(item.children);
+        if (found) return found;
+      }
+    }
+    return null;
   }, []);
 
   const convertToFileStructure = useCallback((files: any[]): FileStructure[] => {
-    const structure: Record<string, FileStructure> = {};
+    const structure: { [key: string]: FileStructure } = {};
     
     files.forEach(file => {
       const parts = file.path.split('/');
       let currentPath = '';
       
       parts.forEach((part: string, index: number) => {
+        const isFile = index === parts.length - 1;
         const parentPath = currentPath;
         currentPath = currentPath ? `${currentPath}/${part}` : part;
         
         if (!structure[currentPath]) {
-          const isFile = index === parts.length - 1;
           structure[currentPath] = {
             name: part,
             path: currentPath,
             type: isFile ? 'file' : 'directory',
             content: isFile ? file.content : undefined,
-            children: isFile ? undefined : [],
+            children: [],
             expanded: true
           };
           
-          if (parentPath) {
-            structure[parentPath].children = structure[parentPath].children || [];
-            structure[parentPath].children.push(structure[currentPath]);
+          if (parentPath && structure[parentPath]) {
+            const parent = structure[parentPath];
+            parent.children.push(structure[currentPath]);
           }
         }
       });
@@ -324,177 +329,6 @@ export default function CodePage() {
     
     return Object.values(structure).filter(item => !item.path.includes('/'));
   }, []);
-
-  const createDownloadableProject = useCallback(async (project: Project) => {
-    if (!project || !project.files) {
-      toast.error('No project to create');
-      return;
-    }
-
-    try {
-      addTerminalOutput('\n📦 Preparing project for download...');
-
-      // Create package.json
-      const packageJson = {
-        name: project.name,
-        version: "0.1.0",
-        private: true,
-        scripts: project.scripts,
-        dependencies: project.dependencies,
-        devDependencies: project.devDependencies
-      };
-
-      // Add package.json to the files
-      project.files.push({
-        path: 'package.json',
-        content: JSON.stringify(packageJson, null, 2),
-        type: 'file'
-      });
-
-      // Add README.md with setup instructions
-      const readmeContent = `# ${project.name}
-
-${project.description}
-
-## Getting Started
-
-1. Install dependencies:
-\`\`\`bash
-npm install
-\`\`\`
-
-2. Run the development server:
-\`\`\`bash
-npm run dev
-\`\`\`
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-`;
-
-      project.files.push({
-        path: 'README.md',
-        content: readmeContent,
-        type: 'file'
-      });
-
-      // Create a zip file containing all project files
-      const response = await axios.post('/api/code/download', {
-        files: project.files
-      }, {
-        responseType: 'blob'
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${project.name}.zip`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      addTerminalOutput('✅ Project ready for download!');
-      toast.success('Project downloaded successfully!');
-    } catch (error) {
-      console.error('Error preparing project for download:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to prepare project for download';
-      toast.error(errorMessage);
-      addTerminalOutput(`❌ Error: ${errorMessage}`);
-    }
-  }, [addTerminalOutput]);
-
-  const handlePromptSubmit = useCallback(async () => {
-    if (!prompt.trim() || isProcessing) {
-      toast.error('Please enter a project description');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      addTerminalOutput('\n🔨 Starting project generation...');
-      
-      const response = await axios.post('/api/code/generate', {
-        prompt,
-        context: messages.slice(-5)
-      });
-
-      const { files, dependencies } = response.data;
-      
-      if (!files || !Array.isArray(files)) {
-        throw new Error('Invalid response format: missing files array');
-      }
-
-      addTerminalOutput('✓ Code generation completed');
-      addTerminalOutput(`Generated ${files.length} files`);
-
-      const fileStructure = convertToFileStructure(files);
-      setFileStructure(fileStructure);
-      
-      // Set the first file as active
-      const firstFile = files.find(f => f.type === 'file');
-      if (firstFile) {
-        setActiveFile({
-          name: firstFile.path.split('/').pop() || '',
-          path: firstFile.path,
-          type: 'file',
-          content: firstFile.content
-        });
-      }
-
-      const project = {
-        name: response.data.name || 'generated-project',
-        description: prompt,
-        type: 'next',
-        files,
-        dependencies: dependencies?.production || {},
-        devDependencies: dependencies?.development || {},
-        scripts: {
-          "dev": "next dev",
-          "build": "next build",
-          "start": "next start"
-        },
-        setupCommands: [
-          {
-            command: "npm install",
-            description: "Install dependencies"
-          }
-        ],
-        command: "npm run dev"
-      };
-
-      setCurrentProject(project);
-      toast.success('Project generated successfully!');
-      
-      // Create downloadable project
-      await createDownloadableProject(project);
-    } catch (error: any) {
-      console.error('Project generation error:', error);
-      toast.error(error.message || 'Failed to generate project');
-      addTerminalOutput('❌ Error: ' + (error.message || 'Failed to generate project'));
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [prompt, isProcessing, messages, addTerminalOutput, convertToFileStructure, createDownloadableProject]);
-
-  const updateProjectMetrics = useCallback(() => {
-    if (!currentProject) return;
-
-    const fileCount = currentProject.files.length;
-    const totalSize = currentProject.files.reduce((acc, file) => acc + file.content.length, 0);
-    const lastModified = new Date();
-
-    setProjectMetrics({
-      fileCount,
-      totalSize,
-      lastModified,
-      testCoverage: 0
-    });
-  }, [currentProject]);
-
-  useEffect(() => {
-    updateProjectMetrics();
-  }, [currentProject, updateProjectMetrics]);
 
   const buildFileTree = useCallback((files: GeneratedFile[] = []): FileStructure[] => {
     const root: FileStructure[] = [];
@@ -514,7 +348,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
             path: currentPath,
             type: isLast ? 'file' : 'directory',
             content: isLast ? file.content : undefined,
-            children: isLast ? undefined : [],
+            children: [],
             expanded: true
           };
 
@@ -536,16 +370,153 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
     return root;
   }, []);
 
-  const findFirstFile = useCallback((items: FileStructure[]): FileStructure | null => {
-    for (const item of items) {
-      if (item.type === 'file') return item;
-      if (item.children) {
-        const found = findFirstFile(item.children);
-        if (found) return found;
-      }
+  // Keyboard shortcuts
+  useHotkeys('ctrl+s, cmd+s', (e) => {
+    e.preventDefault();
+    handleSaveFile();
+  });
+
+  useHotkeys('ctrl+p, cmd+p', (e) => {
+    e.preventDefault();
+    document.getElementById('file-search')?.focus();
+  });
+
+  useHotkeys('ctrl+`, cmd+`', (e) => {
+    e.preventDefault();
+    toggleTerminal();
+  });
+
+  // Memoized filtered file structure
+  const filteredFileStructure = useMemo(() => {
+    if (!searchQuery) return fileStructure;
+    return filterFileStructure(fileStructure, searchQuery.toLowerCase());
+  }, [fileStructure, searchQuery]);
+
+  const handleSaveFile = useCallback(async () => {
+    if (!activeFile?.content) return;
+
+    try {
+      await axios.post('/api/save-file', {
+        path: activeFile.path,
+        content: activeFile.content
+      });
+      toast.success('File saved successfully');
+      
+      // Update last modified
+      setProjectMetrics(prev => ({
+        ...prev,
+        lastModified: new Date()
+      }));
+    } catch (error) {
+      toast.error('Failed to save file');
     }
-    return null;
+  }, [activeFile]);
+
+  const handleFileSelect = useCallback((file: FileStructure) => {
+    setActiveFile(file);
+    // Update recent files
+    setRecentFiles((prev: string[]) => {
+      const newRecent = [file.path, ...prev.filter((p: string) => p !== file.path)].slice(0, 10);
+      return newRecent;
+    });
+  }, [setRecentFiles]);
+
+  const toggleTerminal = useCallback(() => {
+    setIsTerminalVisible((prev: boolean) => !prev);
   }, []);
+
+  // Auto-save on content change
+  useEffect(() => {
+    if (!activeFile?.content || !editorSettings.formatOnSave) return;
+    
+    const timeoutId = setTimeout(() => {
+      handleSaveFile();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeFile?.content, editorSettings.formatOnSave, handleSaveFile]);
+
+  const addTerminalOutput = useCallback((message: string) => {
+    setTerminalOutput(prev => [...prev, message]);
+  }, []);
+
+  const handlePromptSubmit = useCallback(async () => {
+    if (!prompt.trim() || isProcessing) {
+      toast.error('Please enter a project description');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      addTerminalOutput('\n🔨 Starting project generation...');
+      
+      const response = await axios.post('/api/code/generate', {
+        prompt,
+        context: messages.slice(-5)
+      });
+
+      const { files, dependencies, name } = response.data;
+      
+      if (!files || !Array.isArray(files)) {
+        throw new Error('Invalid response format: missing files array');
+      }
+
+      addTerminalOutput('✓ Code generation completed');
+      addTerminalOutput(`Generated ${files.length} files`);
+
+      const fileStructure = convertToFileStructure(files);
+      setFileStructure(fileStructure);
+      
+      // Set the first file as active
+      const firstFile = files.find(f => f.type === 'file');
+      if (firstFile) {
+        setActiveFile({
+          name: firstFile.path.split('/').pop() || '',
+          path: firstFile.path,
+          type: 'file',
+          content: firstFile.content,
+          children: [],
+          expanded: true
+        });
+      }
+
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: name || 'generated-project',
+        path: `/projects/${name || 'generated-project'}`,
+        description: prompt,
+        type: 'next',
+        files,
+        dependencies: dependencies?.production || {},
+        devDependencies: dependencies?.development || {},
+        scripts: {
+          "dev": "next dev",
+          "build": "next build",
+          "start": "next start"
+        },
+        setupCommands: [
+          {
+            command: "npm install",
+            description: "Install dependencies"
+          }
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      setCurrentProject(newProject);
+      toast.success('Project generated successfully!');
+      
+      // Create downloadable project
+      await createDownloadableProject(newProject);
+    } catch (error: any) {
+      console.error('Project generation error:', error);
+      toast.error(error.message || 'Failed to generate project');
+      addTerminalOutput('❌ Error: ' + (error.message || 'Failed to generate project'));
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [prompt, isProcessing, messages, addTerminalOutput, convertToFileStructure, createDownloadableProject]);
 
   const handleFileChange = useCallback((value: string | undefined) => {
     if (activeFile && value !== undefined) {
@@ -613,6 +584,163 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
     }
   }, [addTerminalOutput]);
 
+  const openFile = useCallback((filePath: string) => {
+    const file = findFileByPath(fileStructure, filePath);
+    if (file && file.type === 'file') {
+      handleFileSelect(file);
+    }
+  }, [fileStructure, handleFileSelect]);
+
+  const handleProjectCreate = async (projectConfig: ProjectConfig) => {
+    try {
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: projectConfig.name,
+        path: `/projects/${projectConfig.name}`,
+        description: projectConfig.description,
+        type: projectConfig.type,
+        files: projectConfig.files,
+        dependencies: projectConfig.dependencies,
+        devDependencies: projectConfig.devDependencies,
+        scripts: projectConfig.scripts,
+        setupCommands: projectConfig.setupCommands,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setCurrentProject(newProject);
+      await createProject(newProject);
+      setShowNewProjectDialog(false);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      toast.error('Failed to create project');
+    }
+  };
+
+  // Helper function for rendering file tree
+  const renderFileTree = (
+    items: FileStructure[],
+    activeFile: FileStructure | null,
+    setActiveFile: (file: FileStructure) => void,
+    toggleDirectory: (path: string) => void
+  ): React.ReactNode => {
+    return items.map((item, index) => {
+      const isActive = activeFile?.path === item.path;
+      const isDirectory = item.type === 'directory';
+      const isExpanded = item.expanded;
+
+      return (
+        <div key={`${item.path}-${index}`} className="select-none">
+          <div
+            className={cn(
+              "flex items-center py-1 px-2 rounded-md cursor-pointer hover:bg-gray-800",
+              isActive && "bg-gray-800"
+            )}
+            onClick={() => {
+              if (isDirectory) {
+                toggleDirectory(item.path);
+              } else {
+                setActiveFile(item);
+              }
+            }}
+          >
+            <div className="flex items-center flex-1 overflow-hidden">
+              {isDirectory ? (
+                <div className="flex items-center">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                </div>
+              ) : (
+                <FileCode2 className="h-4 w-4 mr-2" />
+              )}
+              <span className="text-sm truncate">{item.name}</span>
+            </div>
+          </div>
+          {isDirectory && isExpanded && item.children && (
+            <div className="pl-4">
+              {renderFileTree(item.children, activeFile, setActiveFile, toggleDirectory)}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
+
+  const FileTreeItem: React.FC<{
+    item: FileStructure;
+    onSelect: (file: FileStructure) => void;
+    onToggle: (path: string) => void;
+    level: number;
+  }> = ({ item, onSelect, onToggle, level }) => {
+    const isActive = item.path === item.path;
+    
+    return (
+      <div style={{ marginLeft: `${level * 12}px` }}>
+        <div
+          className={cn(
+            "flex items-center space-x-2 rounded px-2 py-1 cursor-pointer text-sm group hover:bg-gray-800",
+            isActive && "bg-blue-500/20"
+          )}
+          onClick={() => item.type === 'file' ? onSelect(item) : onToggle(item.path)}
+        >
+          <div className="flex items-center">
+            {item.type === 'directory' && (
+              <ChevronRight
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  item.expanded && "rotate-90"
+                )}
+              />
+            )}
+            {item.type === 'file' ? (
+              <FileCode2 className="h-4 w-4 text-gray-400" />
+            ) : (
+              <FolderOpen className="h-4 w-4 text-gray-400" />
+            )}
+          </div>
+          <span className={cn(
+            "text-sm",
+            item.type === 'file' ? 'text-gray-300' : 'text-gray-200 font-medium'
+          )}>
+            {item.name}
+          </span>
+        </div>
+        
+        {item.type === 'directory' && item.expanded && item.children && (
+          <div className="mt-1">
+            {item.children.map((child, index) => (
+              <FileTreeItem
+                key={child.path + index}
+                item={child}
+                onSelect={onSelect}
+                onToggle={onToggle}
+                level={level + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const PanelGroup = dynamic(
+    () => import('react-resizable-panels').then(mod => mod.PanelGroup),
+    { ssr: false }
+  );
+
+  const Panel = dynamic(
+    () => import('react-resizable-panels').then(mod => mod.Panel),
+    { ssr: false }
+  );
+
+  const PanelResizeHandle = dynamic(
+    () => import('react-resizable-panels').then((mod) => mod.PanelResizeHandle),
+    { ssr: false }
+  );
+
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col bg-white dark:bg-[#0F172A]">
       {/* Header with enhanced glass effect */}
@@ -624,49 +752,35 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
             </div>
             <h1 className="text-lg font-semibold text-gray-900 dark:bg-gradient-to-r dark:from-indigo-200 dark:to-purple-200 dark:bg-clip-text dark:text-transparent">Code Generator</h1>
           </div>
-          <div className="h-6 w-px bg-gray-200 dark:bg-indigo-500/10" />
           <div className="flex-1 max-w-3xl">
             <form onSubmit={(e) => {
               e.preventDefault();
               handlePromptSubmit();
-            }} className="flex items-center space-x-3">
-              <div className="flex-1 relative group">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-100 to-gray-50 dark:from-indigo-500/20 dark:to-purple-500/20 opacity-0 
-                              group-hover:opacity-100 blur-xl transition-all duration-300 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Describe what you want to build... (e.g., 'Create a restaurant menu component')"
+            }}>
+              <div className="flex items-center space-x-2">
+                <Textarea
+                  placeholder="Describe your project..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1E293B]/50 border border-gray-200 dark:border-indigo-500/20 rounded-xl 
-                           text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 
-                           focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 
-                           text-sm transition-all duration-200 shadow-sm dark:shadow-lg backdrop-blur-sm"
+                  className="h-9 min-h-[36px] w-full resize-none bg-transparent px-3 py-1.5"
                 />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isProcessing || !prompt.trim()}
+                  className={cn(
+                    "px-3",
+                    isProcessing && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">Generate</span>
+                </Button>
               </div>
-              <Button
-                type="submit"
-                className="relative group bg-indigo-600 dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 
-                         hover:bg-indigo-500 dark:hover:from-indigo-400 dark:hover:to-purple-400 
-                         text-white px-6 py-2.5 h-[42px] rounded-xl shadow-sm dark:shadow-lg transition-all duration-300
-                         hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 
-                         disabled:cursor-not-allowed disabled:hover:scale-100"
-                disabled={isProcessing || !prompt.trim()}
-              >
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent opacity-0 
-                              group-hover:opacity-100 transition-opacity duration-300" />
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    <span className="text-sm font-medium">Generating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    <span className="text-sm font-medium">Generate</span>
-                  </>
-                )}
-              </Button>
             </form>
           </div>
         </div>
@@ -692,7 +806,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
             disabled={isProcessing}
           >
             {isProcessing ? (
-              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4 mr-1.5" />
             )}
@@ -709,22 +823,80 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
             <ResizablePanel defaultSize={15} minSize={10}>
               <div className="h-full flex flex-col bg-gray-50/50 dark:bg-[#1E293B]/50 backdrop-blur-xl 
                             border-r border-gray-200 dark:border-indigo-500/10">
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-indigo-500/10 flex items-center justify-between">
-                  <h2 className="text-xs font-medium text-gray-600 dark:text-indigo-300 uppercase tracking-wider">Files</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowNewProjectDialog(true)}
-                    className="h-6 w-6 p-0 rounded-lg hover:bg-gray-100 dark:hover:bg-indigo-500/10 
-                             text-gray-600 hover:text-gray-900 dark:text-indigo-300 dark:hover:text-indigo-200 
-                             transition-colors duration-200"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-indigo-500/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-xs font-medium text-gray-600 dark:text-indigo-300 uppercase tracking-wider">Files</h2>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSettings(true)}
+                        className="h-6 w-6 p-0 rounded-lg hover:bg-gray-100 dark:hover:bg-indigo-500/10"
+                      >
+                        <Settings className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowNewProjectDialog(true)}
+                        className="h-6 w-6 p-0 rounded-lg hover:bg-gray-100 dark:hover:bg-indigo-500/10"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="file-search"
+                      type="text"
+                      placeholder="Search files..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full px-2 py-1 text-sm bg-white/50 dark:bg-[#1E293B]/50 border border-gray-200 
+                               dark:border-indigo-500/10 rounded-md focus:outline-none focus:ring-2 
+                               focus:ring-indigo-500/40 dark:focus:ring-indigo-400/40"
+                    />
+                    <Search className="absolute right-2 top-1.5 h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
                 <ScrollArea className="flex-1">
-                  <div className="p-2 space-y-1">
-                    {renderFileTree(fileStructure, activeFile, setActiveFile, toggleDirectory)}
+                  {recentFiles.length > 0 && (
+                    <div className="p-2 border-b border-gray-200 dark:border-indigo-500/10">
+                      <h3 className="text-xs font-medium text-gray-500 dark:text-indigo-400 mb-1">Recent Files</h3>
+                      <div className="space-y-1">
+                        {recentFiles.map(filePath => {
+                          const fileName = path.basename(filePath);
+                          return (
+                            <button
+                              key={filePath}
+                              onClick={() => {
+                                const file = findFileByPath(fileStructure, filePath);
+                                if (file) handleFileSelect(file);
+                              }}
+                              className="w-full text-left px-2 py-1 text-sm text-gray-600 dark:text-indigo-200 
+                                       hover:bg-gray-100 dark:hover:bg-indigo-500/10 rounded-md truncate"
+                            >
+                              {fileName}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-2 border-t border-gray-200 dark:border-indigo-500/10">
+                    {filteredFileStructure.length > 0 ? (
+                      <div className="space-y-1">
+                        <h3 className="text-xs font-medium text-gray-500 dark:text-indigo-400 mb-2">Files</h3>
+                        {renderFileTree(filteredFileStructure, activeFile, handleFileSelect, toggleDirectory)}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-4">
+                        <FileCode2 className="h-8 w-8 text-gray-400 dark:text-indigo-300/50 mb-2" />
+                        <p className="text-sm text-gray-500 dark:text-indigo-300 text-center">
+                          No files found
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
               </div>
@@ -742,154 +914,107 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
                                   backdrop-blur-xl border-b border-gray-200 dark:border-indigo-500/10">
                       <div className="flex items-center space-x-2">
                         <Code className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
-                        <span className="text-sm text-gray-900 dark:text-indigo-100 font-medium">{activeFile.path}</span>
+                        <span className="text-sm text-gray-900 dark:text-indigo-100 font-medium">
+                          {activeFile.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(activeFile.content || '');
+                            toast.success('Copied to clipboard');
+                          }}
+                          className="h-7 px-2 text-gray-600 hover:text-gray-900 dark:text-indigo-300 
+                                   dark:hover:text-indigo-200"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          Copy
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSaveFile}
+                          className="h-7 px-2 text-gray-600 hover:text-gray-900 dark:text-indigo-300 
+                                   dark:hover:text-indigo-200"
+                        >
+                          <Save className="h-3.5 w-3.5 mr-1" />
+                          Save
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const response = await axios.post('/api/code/download', {
+                                files: [{
+                                  path: activeFile.path,
+                                  content: activeFile.content
+                                }]
+                              }, {
+                                responseType: 'blob'
+                              });
+                              
+                              const url = window.URL.createObjectURL(new Blob([response.data]));
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.setAttribute('download', `${activeFile.name}.zip`);
+                              document.body.appendChild(link);
+                              link.click();
+                              link.remove();
+                              window.URL.revokeObjectURL(url);
+                              
+                              toast.success('File downloaded successfully');
+                            } catch (error) {
+                              console.error('Download error:', error);
+                              toast.error('Failed to download file');
+                            }
+                          }}
+                          className="h-7 px-2 text-gray-600 hover:text-gray-900 dark:text-indigo-300 
+                                   dark:hover:text-indigo-200"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          Download
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 relative">
                       <Editor
-                        className="h-full"
-                        defaultLanguage={getFileLanguage(activeFile.path)}
+                        height="100%"
+                        defaultLanguage={getFileLanguage(activeFile.name)}
                         value={activeFile.content}
-                        onChange={handleFileChange}
                         theme={editorTheme}
+                        onChange={(value) => {
+                          setActiveFile(prev => prev ? { ...prev, content: value || '' } : null);
+                        }}
                         options={{
-                          fontSize: 14,
-                          fontFamily: 'JetBrains Mono, Menlo, Monaco, Courier New, monospace',
-                          minimap: { enabled: true },
+                          fontSize: editorSettings.fontSize,
+                          tabSize: editorSettings.tabSize,
+                          wordWrap: editorSettings.wordWrap,
+                          minimap: { enabled: editorSettings.minimap },
+                          lineNumbers: editorSettings.lineNumbers ? 'on' : 'off',
                           scrollBeyondLastLine: false,
                           smoothScrolling: true,
-                          cursorSmoothCaretAnimation: "on",
-                          cursorBlinking: "blink",
-                          lineNumbers: "on",
-                          renderWhitespace: "selection",
-                          padding: { top: 16, bottom: 16 },
-                          folding: true,
-                          automaticLayout: true,
+                          cursorSmoothCaretAnimation: 'on',
                           formatOnPaste: true,
                           formatOnType: true,
-                          suggestOnTriggerCharacters: true,
-                          tabSize: 2,
-                          glyphMargin: true,
-                          renderLineHighlight: "all",
-                          bracketPairColorization: {
-                            enabled: true,
-                          },
-                        }}
+                          automaticLayout: true,
+                        } satisfies editor.IStandaloneEditorConstructionOptions}
                       />
                     </div>
                   </>
                 ) : (
-                  <div className="h-full flex items-center justify-center bg-white dark:bg-[#0F172A]">
-                    <div className="text-center space-y-4 max-w-md px-6">
-                      <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gradient-to-b dark:from-indigo-500/10 dark:to-purple-500/10 
-                                    backdrop-blur-xl border border-gray-200 dark:border-indigo-500/10">
-                        <FileCode2 className="h-14 w-14 text-gray-400 dark:text-indigo-300 mx-auto" />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-gray-900 dark:text-indigo-100 font-medium">No file selected</p>
-                        <p className="text-gray-600 dark:text-indigo-300/70 text-sm">
-                          Enter a prompt above to generate code or select a file from the explorer
-                        </p>
-                      </div>
+                  <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-[#1E293B]/50">
+                    <div className="text-center">
+                      <FileCode2 className="h-12 w-12 mx-auto text-gray-400 dark:text-indigo-300/50" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-indigo-100">No file selected</h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-indigo-300">
+                        Select a file from the sidebar to start editing
+                      </p>
                     </div>
                   </div>
                 )}
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-200 to-gray-100 dark:from-indigo-500/10 
-                                     dark:to-purple-500/10 hover:bg-indigo-500/20 transition-colors" />
-
-            {/* Terminal Panel */}
-            <ResizablePanel defaultSize={15} minSize={10}>
-              <div className="h-full flex flex-col bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl">
-                <div className="px-4 py-2 bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl 
-                              border-b border-gray-200 dark:border-indigo-500/10 flex items-center space-x-2">
-                  <Terminal className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
-                  <span className="text-xs font-medium text-gray-900 dark:text-indigo-100">Terminal</span>
-                </div>
-                <ScrollArea className="flex-1">
-                  <div className="p-4 font-mono text-xs space-y-1.5">
-                    {terminalOutput.map((line, index) => (
-                      <div key={index} className="text-gray-900 dark:text-indigo-100/90">
-                        {line}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle className="w-[2px] bg-gradient-to-b from-gray-200 to-gray-100 dark:from-indigo-500/10 
-                                     dark:to-purple-500/10 hover:bg-indigo-500/20 transition-colors" />
-
-            {/* Project Information Panel */}
-            <ResizablePanel defaultSize={15} minSize={10}>
-              <div className="h-full flex flex-col bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl">
-                <div className="px-4 py-2 bg-gray-50/80 dark:bg-[#1E293B]/80 backdrop-blur-xl 
-                              border-b border-gray-200 dark:border-indigo-500/10 flex items-center space-x-2">
-                  <Coffee className="h-4 w-4 text-gray-600 dark:text-indigo-300" />
-                  <span className="text-xs font-medium text-gray-900 dark:text-indigo-100">Project</span>
-                </div>
-                <div className="flex-1 overflow-auto p-4 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-indigo-200">Description</label>
-                    <textarea
-                      className="w-full resize-none rounded-xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-indigo-500/20 
-                               p-3 text-sm text-gray-900 dark:text-indigo-100 focus:border-indigo-500/50 focus:ring-2 
-                               focus:ring-indigo-500/20 transition-all duration-200"
-                      placeholder="Describe your project..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      onClick={handlePromptSubmit}
-                      disabled={isProcessing}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 
-                               dark:hover:from-indigo-400 dark:hover:to-purple-400 text-white shadow-sm dark:shadow-lg 
-                               transition-all duration-300 hover:shadow-indigo-500/40"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="mr-2 h-4 w-4" />
-                          Generate
-                        </>
-                      )}
-                    </Button>
-                    {currentProject && (
-                      <Button
-                        onClick={() => createDownloadableProject(currentProject)}
-                        variant="outline"
-                        className="w-full border-gray-200 dark:border-indigo-500/20 text-gray-700 dark:text-indigo-200 
-                                 hover:bg-gray-50 dark:hover:bg-indigo-500/10 hover:border-gray-300 
-                                 dark:hover:border-indigo-500/30 transition-all duration-200"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Project
-                      </Button>
-                    )}
-                  </div>
-                  {currentProject && (
-                    <div className="rounded-xl bg-white dark:bg-[#0F172A] border border-gray-200 dark:border-indigo-500/20 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900 dark:text-indigo-200">{currentProject.name}</span>
-                        <span className="text-xs text-gray-600 dark:text-indigo-300/70 bg-gray-100 dark:bg-indigo-500/10 
-                                      px-2 py-1 rounded-full">
-                          {currentProject.files.length} files
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-indigo-300/70 leading-relaxed">{currentProject.description}</p>
-                    </div>
-                  )}
-                </div>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -941,6 +1066,29 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <div className="fixed bottom-4 right-4">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadProject}
+            className="h-8 bg-white/5 border-gray-700/50 hover:bg-white/10 text-gray-300 hover:text-white"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Project
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+            className="h-8 bg-white/5 border-gray-700/50 hover:bg-white/10 text-gray-300 hover:text-white"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

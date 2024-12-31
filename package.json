@@ -17,8 +17,9 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@clerk/backend": "^1.21.4",
     "@clerk/clerk-sdk-node": "^5.1.4",
-    "@clerk/nextjs": "^4.29.3",
+    "@clerk/nextjs": "^4.31.6",
     "@hookform/resolvers": "^3.1.1",
     "@monaco-editor/react": "^4.6.0",
     "@neondatabase/serverless": "^0.10.4",
@@ -77,6 +78,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.45.2",
     "react-hot-toast": "^2.4.1",
+    "react-hotkeys-hook": "^4.6.1",
     "react-is": "^18.2.0",
     "react-markdown": "^8.0.7",
     "react-resizable-panels": "^1.0.9",

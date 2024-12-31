@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -12,8 +12,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { files } = body;
 
-    if (!files || !Array.isArray(files)) {
-      return new NextResponse("Missing or invalid files array", { status: 400 });
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return new NextResponse("Invalid files data", { status: 400 });
     }
 
     // Create a new zip file

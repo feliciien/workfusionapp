@@ -1,0 +1,14 @@
+.container {
+  padding: 0 2rem;
+}
+
+h1 {
+  margin: 0;
+  line-height: 1.15;
+  font-size: 4rem;
+  text-align: center;
+}
+
+p {
+  text-align: center;
+}

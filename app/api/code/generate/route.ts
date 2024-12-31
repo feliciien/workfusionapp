@@ -489,7 +489,7 @@ export async function POST(req: Request) {
   try {
     console.log('[CODE_GENERATE] Starting code generation...');
     
-    const { userId } = auth();
+    const { userId } = await auth();
     console.log('[CODE_GENERATE] User ID:', userId);
     
     const body = await req.json();
@@ -497,32 +497,23 @@ export async function POST(req: Request) {
     console.log('[CODE_GENERATE] Prompt:', prompt);
 
     if (!userId) {
-      console.log('[CODE_GENERATE] Error: Unauthorized');
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     if (!prompt) {
-      console.log('[CODE_GENERATE] Error: Missing prompt');
       return new NextResponse("Prompt is required", { status: 400 });
     }
 
-    // Check API limits
-    let isPro = false;
-    try {
-      const freeTrial = await checkApiLimit();
-      isPro = await checkSubscription();
-      console.log('[CODE_GENERATE] User status:', { freeTrial, isPro });
+    const freeTrial = await checkApiLimit();
+    const isPro = await checkSubscription();
 
-      if (!freeTrial && !isPro) {
-        console.log('[CODE_GENERATE] Error: Free trial expired');
-        return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
-      }
-    } catch (error) {
-      console.error('[CODE_GENERATE] API limit check error:', error);
-      return new NextResponse("Error checking API limits", { status: 500 });
+    console.log('[CODE_GENERATE] User status:', { freeTrial, isPro });
+
+    if (!freeTrial && !isPro) {
+      console.log('[CODE_GENERATE] Error: Free trial expired');
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    // Generate the code based on the prompt
     try {
       console.log('[CODE_GENERATE] Starting code generation with prompt:', prompt);
       const generatedProject = await generateCode(prompt, 'project structure');

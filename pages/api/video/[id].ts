@@ -1,5 +1,5 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
 const replicate = new Replicate({
@@ -8,32 +8,38 @@ const replicate = new Replicate({
   })(),
 });
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
 ) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
+    const { id } = req.query;
 
     if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    if (!params.id) {
-      return new NextResponse("Prediction ID required", { status: 400 });
+    if (!id) {
+      return res.status(400).json({ error: "Prediction ID required" });
     }
 
-    console.log("Checking status for prediction:", params.id);
-    const prediction = await replicate.predictions.get(params.id);
+    console.log("Checking status for prediction:", id);
+    const prediction = await replicate.predictions.get(id as string);
     console.log("Status response:", prediction);
 
     if (prediction.error) {
-      return new NextResponse(prediction.error, { status: 500 });
+      return res.status(500).json({ error: prediction.error });
     }
 
     // If the prediction is still processing, return the current status
     if (prediction.status === "starting" || prediction.status === "processing") {
-      return NextResponse.json({
+      return res.json({
         status: prediction.status,
         output: null
       });
@@ -41,7 +47,7 @@ export async function GET(
 
     // If the prediction has completed successfully
     if (prediction.status === "succeeded" && prediction.output) {
-      return NextResponse.json({
+      return res.json({
         status: "succeeded",
         output: prediction.output
       });
@@ -49,23 +55,19 @@ export async function GET(
 
     // If the prediction has failed
     if (prediction.status === "failed") {
-      return NextResponse.json({
+      return res.status(500).json({
         status: "failed",
         error: prediction.error || "Video generation failed"
       });
     }
 
-    // Default response for other statuses
-    return NextResponse.json({
+    // For any other status
+    return res.json({
       status: prediction.status,
       output: prediction.output
     });
-
   } catch (error) {
-    console.error('[VIDEO_STATUS_ERROR]', error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-    }
-    return new NextResponse("Error checking video status", { status: 500 });
+    console.error("[VIDEO_STATUS_ERROR]", error);
+    return res.status(500).json({ error: "Internal Error" });
   }
 }

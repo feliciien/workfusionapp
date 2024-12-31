@@ -1,18 +1,16 @@
 // Layout component that wraps around pages
 import React, { ReactNode } from 'react';
-import Header from '../Header';
-import Footer from '../Footer';
+import { Header } from '../Header';
+import { Footer } from '../Footer';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-const Layout = ({ children }: LayoutProps) => (
-  <>
+export const Layout = ({ children }: LayoutProps) => (
+  <div>
     <Header />
-    {children}
+    <main>{children}</main>
     <Footer />
-  </>
+  </div>
 );
-
-export default Layout;

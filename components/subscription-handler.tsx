@@ -10,6 +10,8 @@ export default function SubscriptionHandler() {
 
   useEffect(() => {
     const handleSubscriptionCallback = async () => {
+      if (!searchParams) return;
+      
       const subscriptionId = searchParams.get("subscription_id");
       if (!subscriptionId) return;
 

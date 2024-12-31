@@ -1,10 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { routes } from "@/lib/routes";
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
 import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 import { getFeatureUsage } from "@/lib/feature-limit";
-import { cn } from "@/lib/utils";
 import {
   BookOpen,
   ChevronDown,
@@ -25,13 +30,7 @@ import {
   Settings,
   VideoIcon
 } from "lucide-react";
-import { Montserrat } from 'next/font/google';
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-
-const montserrat = Montserrat({ weight: '600', subsets: ['latin'] });
 
 interface RouteCategory {
   name: string;
@@ -250,12 +249,12 @@ const Sidebar = ({
   isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [featureUsage, setFeatureUsage] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    setMounted(true);
+    setIsMounted(true);
     const loadFeatureUsage = async () => {
       const usage: Record<string, number> = {};
       for (const category of routeCategories) {
@@ -279,7 +278,7 @@ const Sidebar = ({
     );
   };
 
-  if (!mounted) {
+  if (!isMounted) {
     return null;
   }
 
@@ -290,7 +289,7 @@ const Sidebar = ({
           <div className="relative h-8 w-8 mr-4 position-relative">
             <Image fill alt="Logo" src="/logo.png" />
           </div>
-          <h1 className={cn("text-2xl font-bold", montserrat.className)}>
+          <h1 className="text-2xl font-bold">
             WorkFusion
           </h1>
         </Link>

@@ -9,7 +9,7 @@ const DAY_IN_MS = 86_400_000;
 export const checkSubscription = async (): Promise<boolean> => {
   const start = Date.now();
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     console.log("[SUBSCRIPTION_CHECK] Starting check:", {
       userId,
       timestamp: new Date().toISOString(),

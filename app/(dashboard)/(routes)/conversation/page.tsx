@@ -38,7 +38,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function ConversationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const conversationId = searchParams.get('id');
+  const conversationId = searchParams?.get('id');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

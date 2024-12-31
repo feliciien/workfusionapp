@@ -13,11 +13,11 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const apiLimitData = await getApiLimitCount();
+    const apiLimitCount = await getApiLimitCount();
 
-    return NextResponse.json(apiLimitData);
+    return new NextResponse(JSON.stringify(apiLimitCount));
   } catch (error) {
-    console.error("[API_LIMIT_ERROR]", error);
+    console.log("[API_LIMIT_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

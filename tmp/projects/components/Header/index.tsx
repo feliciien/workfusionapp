@@ -3,25 +3,23 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './Header.module.css';
 
-const Header = () => (
+export const Header = () => (
   <header className={styles.header}>
     <nav className={styles.navbar}>
-      <Link href='/'>
-        <a className={styles.logo}>Gourmet Place</a>
+      <Link href='/' className={styles.logo}>
+        Gourmet Place
       </Link>
       <div className={styles.menu}>
         <Link href='/menu'>
-          <a>Menu</a>
+          Menu
         </Link>
         <Link href='/reservation'>
-          <a>Reservation</a>
+          Reservation
         </Link>
         <Link href='/contact'>
-          <a>Contact</a>
+          Contact
         </Link>
       </div>
     </nav>
   </header>
 );
-
-export default Header;

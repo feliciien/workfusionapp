@@ -1,24 +1,32 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
 
-export async function POST(req: Request) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     const isPro = await checkSubscription();
 
     if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     if (!isPro) {
-      return new NextResponse("Pro subscription required", { status: 403 });
+      return res.status(403).json({ error: "Pro subscription required" });
     }
 
-    const { prompt } = await req.json();
+    const { prompt } = req.body;
 
     if (!prompt) {
-      return new NextResponse("Prompt is required", { status: 400 });
+      return res.status(400).json({ error: "Prompt is required" });
     }
 
     const response = await fetch(
@@ -39,13 +47,13 @@ export async function POST(req: Request) {
     );
 
     if (!response.ok) {
-      return new NextResponse("Video generation failed", { status: 500 });
+      return res.status(500).json({ error: "Video generation failed" });
     }
 
     const prediction = await response.json();
-    return NextResponse.json(prediction);
+    return res.json(prediction);
   } catch (error) {
     console.log("[VIDEO_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return res.status(500).json({ error: "Internal Error" });
   }
 }

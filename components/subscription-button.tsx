@@ -26,6 +26,8 @@ export const SubscriptionButton = ({
 
   useEffect(() => {
     const verifySubscription = async () => {
+      if (!searchParams) return;
+
       const subscriptionId = searchParams.get("subscription_id");
       const success = searchParams.get("success");
 
