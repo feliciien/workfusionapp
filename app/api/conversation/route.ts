@@ -19,8 +19,7 @@ interface ConversationMessage {
 
 export async function POST(req: Request) {
   try {
-    const authResult = await auth();
-    const userId = authResult?.userId;
+    const { userId } = await auth();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });

@@ -142,14 +142,15 @@ export default function ConversationPage() {
         setShowUpgrade(true);
       } else {
         toast.error("Something went wrong.");
-        // Mark the message as error
-        setMessages((current) =>
-          current.map((msg) =>
-            msg.id === messageId
+        // Mark the last message as error
+        setMessages((current) => {
+          const lastMessage = current[current.length - 1];
+          return current.map((msg) =>
+            msg.id === lastMessage?.id
               ? { ...msg, status: 'error' }
               : msg
-          )
-        );
+          );
+        });
       }
     } finally {
       setLoading(false);
