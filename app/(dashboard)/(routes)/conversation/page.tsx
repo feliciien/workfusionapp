@@ -3,18 +3,21 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Heading } from "@/components/heading";
-import { MessageSquare, Moon, Sun, Trash, Zap } from "lucide-react";
-import { Form } from "@/components/form";
-import { Loader } from "@/components/loader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
-import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/loader";
+import { UserButton } from "@clerk/nextjs";
 import { toast } from "react-hot-toast";
 import * as z from "zod";
-import { ClipboardCopy } from "lucide-react";
+import { MessageSquare, Moon, Sun, Trash, ClipboardCopy } from "lucide-react";
+import { Heading } from "@/components/heading";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,19 +33,28 @@ const formSchema = z.object({
   }),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function ConversationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationId = searchParams.get('id');
 
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      prompt: "",
+    },
+  });
+
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [title, setTitle] = useState<string>("New Conversation");
 
   // Only run client-side
@@ -87,16 +99,18 @@ export default function ConversationPage() {
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>, retryCount = 0) => {
+  const onSubmit = async (values: FormValues) => {
+    if (loading || isTyping) return;
+
     try {
       setLoading(true);
       setShowUpgrade(false);
       setIsTyping(true);
 
-      const messageId = Date.now().toString();
+      const messageId = `${Date.now()}-${Math.random()}`;
       const userMessage: Message = {
         role: 'user',
-        content: values.prompt,
+        content: values.prompt.trim(),
         timestamp: new Date(),
         status: 'sending',
         id: messageId,
@@ -104,8 +118,9 @@ export default function ConversationPage() {
 
       // Optimistically add user message
       setMessages((current) => [...current, userMessage]);
+      form.reset();
 
-      const response = await axios.post("/api/conversation", {
+      const response = await axios.post<{ conversationId: string; message: Message }>("/api/conversation", {
         messages: [...messages, userMessage].map(({ role, content }) => ({
           role,
           content,
@@ -113,45 +128,56 @@ export default function ConversationPage() {
         conversationId,
       });
 
-      setMessages((current) =>
-        current.map((msg) =>
-          msg.id === messageId
-            ? { ...msg, status: 'sent' }
-            : msg
+      // Update user message status to sent
+      setMessages((current) => 
+        current.map((msg) => 
+          msg.id === messageId ? { ...msg, status: 'sent' } : msg
         )
       );
 
       // Add assistant's response
-      setMessages((current) => [
-        ...current,
-        {
-          role: 'assistant',
-          content: response.data.content,
-          timestamp: new Date(),
-          status: 'sent',
-        },
-      ]);
+      if (response.data.message) {
+        setMessages((current) => [
+          ...current,
+          {
+            ...response.data.message,
+            timestamp: new Date(),
+            status: 'sent',
+            id: `${Date.now()}-${Math.random()}`,
+          },
+        ]);
+      }
 
-      // If this is a new conversation, update the URL with the conversation ID
+      // Update conversation ID in URL if this is a new conversation
       if (!conversationId && response.data.conversationId) {
         router.push(`/conversation?id=${response.data.conversationId}`);
       }
 
-    } catch (error: any) {
-      if (error?.response?.status === 403) {
-        setShowUpgrade(true);
+    } catch (error) {
+      console.error('Conversation error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 403) {
+          setShowUpgrade(true);
+        } else {
+          toast.error(error.response?.data?.message || "Failed to send message. Please try again.");
+        }
       } else {
-        toast.error("Something went wrong.");
-        // Mark the last message as error
-        setMessages((current) => {
-          const lastMessage = current[current.length - 1];
-          return current.map((msg) =>
-            msg.id === lastMessage?.id
-              ? { ...msg, status: 'error' }
-              : msg
-          );
-        });
+        toast.error("An unexpected error occurred. Please try again.");
       }
+
+      // Mark the last message as error
+      setMessages((current) => {
+        const lastMessage = current[current.length - 1];
+        return lastMessage
+          ? current.map((msg) =>
+              msg.id === lastMessage.id
+                ? { ...msg, status: 'error' }
+                : msg
+            )
+          : current;
+      });
+
     } finally {
       setLoading(false);
       setIsTyping(false);
@@ -294,10 +320,34 @@ export default function ConversationPage() {
 
       <div className="p-4 lg:p-8 border-t bg-background">
         <div className="max-w-4xl mx-auto">
-          <Form
-            isLoading={loading}
-            onSubmit={onSubmit}
-          />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="prompt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        placeholder="Type a message..."
+                        {...field}
+                        className="w-full"
+                      />
+                    </FormControl>
+                    {form.formState.errors.prompt && (
+                      <div className="text-xs text-red-500">
+                        {form.formState.errors.prompt.message}
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={loading}>
+                Send Message
+              </Button>
+            </form>
+          </Form>
         </div>
       </div>
 
