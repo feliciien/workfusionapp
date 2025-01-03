@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, ChangeEvent, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
@@ -13,50 +13,47 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Settings,
+  FileCode2,
+  Loader2,
+  Terminal,
+  Folder,
+  FolderOpen,
+  Download,
+  Search,
+  Copy,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  Wand2,
+  Save,
+  Play,
+  Plus,
+  Code,
+  MessageSquare,
+  Square,
+  Circle
+} from "lucide-react";
 import * as path from 'path';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useLocalStorage } from '../../../hooks/use-local-storage';
 import type { editor } from 'monaco-editor';
-import {
-  Code,
-  FileCode2,
-  Terminal,
-  Save,
-  Play,
-  Coffee,
-  MessageSquare,
-  Square,
-  Circle,
-  Loader2,
-  Wand2,
-  Plus,
-  Trash2,
-  ChevronRight,
-  ChevronDown,
-  FolderOpen,
-  Download,
-  Search,
-  Settings,
-  Copy,
-  ExternalLink
-} from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
-
-// Editor types
-type EditorSettings = {
+interface EditorSettings {
   fontSize: number;
   tabSize: number;
-  wordWrap: 'on' | 'off' | 'bounded';
+  theme: string;
   minimap: boolean;
+  wordWrap: 'on' | 'off' | 'bounded';
   lineNumbers: boolean;
-  formatOnSave: boolean;
-};
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -132,6 +129,22 @@ interface ProjectMetrics {
   testCoverage: number;
 }
 
+interface ProjectSettings {
+  buildCommand: string;
+  devCommand: string;
+  installCommand: string;
+  outputDirectory: string;
+  nodeVersion: string;
+  packageManager: string;
+}
+
+interface TreeItemProps {
+  item: FileStructure;
+  onSelect: (item: FileStructure) => void;
+  onToggle: (item: FileStructure) => void;
+  level: number;
+}
+
 const LANGUAGE_EXTENSIONS = {
   'typescript': ['ts', 'tsx'],
   'javascript': ['js', 'jsx'],
@@ -141,8 +154,8 @@ const LANGUAGE_EXTENSIONS = {
   'markdown': ['md']
 };
 
-const getFileLanguage = (fileName: string) => {
-  const extension = fileName.split('.').pop() || '';
+const getLanguageFromPath = (filePath: string) => {
+  const extension = filePath.split('.').pop() || '';
   for (const [language, extensions] of Object.entries(LANGUAGE_EXTENSIONS)) {
     if (extensions.includes(extension)) {
       return language;
@@ -151,8 +164,12 @@ const getFileLanguage = (fileName: string) => {
   return 'plaintext';
 };
 
-export default function CodePage() {
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+
+const CodePage: React.FC = () => {
   const router = useRouter();
+  
+  // Editor State
   const [prompt, setPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -163,6 +180,10 @@ export default function CodePage() {
   const [editorTheme, setEditorTheme] = useState('vs-dark');
   const [isTerminalVisible, setIsTerminalVisible] = useState(true);
   const [projectPath, setProjectPath] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
+
+  // Project State
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>({
     installing: false,
     running: false,
@@ -176,16 +197,37 @@ export default function CodePage() {
   });
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Persistent State
   const [recentFiles, setRecentFiles] = useLocalStorage<string[]>('recent-files', []);
   const [editorSettings, setEditorSettings] = useLocalStorage<EditorSettings>('editor-settings', {
     fontSize: 14,
     tabSize: 2,
-    wordWrap: 'on',
+    theme: 'vs-dark',
     minimap: true,
+    wordWrap: 'on',
     lineNumbers: true,
-    formatOnSave: true,
   });
-  const [showSettings, setShowSettings] = useState(false);
+  const [projectSettings, setProjectSettings] = useLocalStorage<ProjectSettings>('project-settings', {
+    buildCommand: 'npm run build',
+    devCommand: 'npm run dev',
+    installCommand: 'npm install',
+    outputDirectory: '.next',
+    nodeVersion: '18.x',
+    packageManager: 'npm',
+  });
+
+  // Refs
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+
+  // Terminal Functions
+  const addTerminalOutput = useCallback((message: string) => {
+    setTerminalOutput(prev => [...prev, message]);
+  }, []);
+
+  const toggleTerminal = useCallback(() => {
+    setIsTerminalVisible(prev => !prev);
+  }, []);
 
   // API functions
   const createProject = useCallback(async (project: Project): Promise<void> => {
@@ -370,47 +412,15 @@ export default function CodePage() {
     return root;
   }, []);
 
-  // Keyboard shortcuts
-  useHotkeys('ctrl+s, cmd+s', (e) => {
-    e.preventDefault();
-    handleSaveFile();
-  });
-
-  useHotkeys('ctrl+p, cmd+p', (e) => {
-    e.preventDefault();
-    document.getElementById('file-search')?.focus();
-  });
-
-  useHotkeys('ctrl+`, cmd+`', (e) => {
-    e.preventDefault();
-    toggleTerminal();
-  });
-
-  // Memoized filtered file structure
-  const filteredFileStructure = useMemo(() => {
-    if (!searchQuery) return fileStructure;
-    return filterFileStructure(fileStructure, searchQuery.toLowerCase());
-  }, [fileStructure, searchQuery]);
-
-  const handleSaveFile = useCallback(async () => {
-    if (!activeFile?.content) return;
-
+  const saveFile = useCallback(async (filePath: string, content: string) => {
     try {
-      await axios.post('/api/save-file', {
-        path: activeFile.path,
-        content: activeFile.content
-      });
-      toast.success('File saved successfully');
-      
-      // Update last modified
-      setProjectMetrics(prev => ({
-        ...prev,
-        lastModified: new Date()
-      }));
+      await axios.post('/api/save-file', { path: filePath, content });
+      toast.success(`Saved ${filePath}`);
     } catch (error) {
+      console.error('Error saving file:', error);
       toast.error('Failed to save file');
     }
-  }, [activeFile]);
+  }, []);
 
   const handleFileSelect = useCallback((file: FileStructure) => {
     setActiveFile(file);
@@ -420,25 +430,6 @@ export default function CodePage() {
       return newRecent;
     });
   }, [setRecentFiles]);
-
-  const toggleTerminal = useCallback(() => {
-    setIsTerminalVisible((prev: boolean) => !prev);
-  }, []);
-
-  // Auto-save on content change
-  useEffect(() => {
-    if (!activeFile?.content || !editorSettings.formatOnSave) return;
-    
-    const timeoutId = setTimeout(() => {
-      handleSaveFile();
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [activeFile?.content, editorSettings.formatOnSave, handleSaveFile]);
-
-  const addTerminalOutput = useCallback((message: string) => {
-    setTerminalOutput(prev => [...prev, message]);
-  }, []);
 
   const handlePromptSubmit = useCallback(async () => {
     if (!prompt.trim() || isProcessing) {
@@ -544,31 +535,29 @@ export default function CodePage() {
     }
   }, [activeFile]);
 
-  const toggleDirectory = useCallback((path: string) => {
-    setFileStructure(prev => {
-      const toggleNode = (items: FileStructure[]): FileStructure[] => {
-        return items.map(item => {
-          if (item.path === path) {
-            return { ...item, expanded: !item.expanded };
-          }
-          if (item.children) {
-            return {
-              ...item,
-              children: toggleNode(item.children)
-            };
-          }
-          return item;
-        });
-      };
-      return toggleNode(prev);
-    });
+  const toggleDirectory = useCallback((item: FileStructure) => {
+    if (item.type === 'directory') {
+      setFileStructure(prevStructure => {
+        const newStructure = [...prevStructure];
+        const foundItem = findItemInStructure(newStructure, item.path);
+        if (foundItem) {
+          foundItem.expanded = !foundItem.expanded;
+        }
+        return newStructure;
+      });
+    }
   }, []);
 
-  const saveFile = useCallback(() => {
-    if (activeFile) {
-      toast.success(`Saved ${activeFile.path}`);
+  const findItemInStructure = useCallback((structure: FileStructure[], path: string): FileStructure | null => {
+    for (const item of structure) {
+      if (item.path === path) return item;
+      if (item.children) {
+        const found = findItemInStructure(item.children, path);
+        if (found) return found;
+      }
     }
-  }, [activeFile]);
+    return null;
+  }, []);
 
   const runProject = useCallback(async () => {
     setIsProcessing(true);
@@ -616,67 +605,236 @@ export default function CodePage() {
     }
   };
 
-  // Helper function for rendering file tree
-  const renderFileTree = (
-    items: FileStructure[],
-    activeFile: FileStructure | null,
-    setActiveFile: (file: FileStructure) => void,
-    toggleDirectory: (path: string) => void
-  ): React.ReactNode => {
-    return items.map((item, index) => {
-      const isActive = activeFile?.path === item.path;
-      const isDirectory = item.type === 'directory';
-      const isExpanded = item.expanded;
-
-      return (
-        <div key={`${item.path}-${index}`} className="select-none">
-          <div
-            className={cn(
-              "flex items-center py-1 px-2 rounded-md cursor-pointer hover:bg-gray-800",
-              isActive && "bg-gray-800"
-            )}
-            onClick={() => {
-              if (isDirectory) {
-                toggleDirectory(item.path);
-              } else {
-                setActiveFile(item);
-              }
-            }}
-          >
-            <div className="flex items-center flex-1 overflow-hidden">
-              {isDirectory ? (
-                <div className="flex items-center">
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 mr-1" />
-                  )}
-                  <FolderOpen className="h-4 w-4 mr-2" />
-                </div>
-              ) : (
-                <FileCode2 className="h-4 w-4 mr-2" />
-              )}
-              <span className="text-sm truncate">{item.name}</span>
-            </div>
-          </div>
-          {isDirectory && isExpanded && item.children && (
-            <div className="pl-4">
-              {renderFileTree(item.children, activeFile, setActiveFile, toggleDirectory)}
-            </div>
-          )}
-        </div>
-      );
-    });
+  const handleProjectSettingsChange = (field: keyof ProjectSettings, value: string) => {
+    setProjectSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const FileTreeItem: React.FC<{
-    item: FileStructure;
-    onSelect: (file: FileStructure) => void;
-    onToggle: (path: string) => void;
-    level: number;
-  }> = ({ item, onSelect, onToggle, level }) => {
-    const isActive = item.path === item.path;
-    
+  const handleEditorSettingsChange = (field: keyof EditorSettings, value: boolean | number | string) => {
+    setEditorSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveContent = useCallback(() => {
+    if (activeFile && editorRef.current) {
+      const content = editorRef.current.getValue();
+      void saveFile(activeFile.path, content);
+    }
+  }, [activeFile, saveFile]);
+
+  const handleSaveClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    handleSaveContent();
+  }, [handleSaveContent]);
+
+  const saveHandler = useCallback(() => {
+    handleSaveContent();
+  }, [handleSaveContent]);
+
+  const terminalHandler = useCallback(() => {
+    toggleTerminal();
+  }, [toggleTerminal]);
+
+  const searchHandler = useCallback(() => {
+    const searchInput = document.getElementById('file-search');
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }, []);
+
+  useHotkeys('mod+s', saveHandler);
+  useHotkeys('mod+j', terminalHandler);
+  useHotkeys('mod+p', searchHandler);
+
+  // Memoized filtered file structure
+  const filteredFileStructure = useMemo(() => {
+    if (!searchQuery) return fileStructure;
+    return filterFileStructure(fileStructure, searchQuery.toLowerCase());
+  }, [fileStructure, searchQuery]);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({
+        fontSize: editorSettings.fontSize,
+        tabSize: editorSettings.tabSize,
+        wordWrap: editorSettings.wordWrap,
+        minimap: {
+          enabled: editorSettings.minimap
+        },
+        lineNumbers: editorSettings.lineNumbers ? 'on' : 'off',
+        theme: editorTheme,
+        formatOnPaste: true,
+        formatOnType: true,
+        automaticLayout: true,
+      });
+    }
+  }, [editorSettings, editorTheme]);
+
+  const renderSettingsDialog = () => (
+    <Dialog open={showSettings} onOpenChange={setShowSettings}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editor Settings</DialogTitle>
+          <DialogDescription>
+            Customize your editor preferences
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="fontSize" className="text-right">Font Size</Label>
+            <input
+              id="fontSize"
+              type="number"
+              value={editorSettings.fontSize}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEditorSettingsChange('fontSize', parseInt(e.target.value))}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="tabSize" className="text-right">Tab Size</Label>
+            <input
+              id="tabSize"
+              type="number"
+              value={editorSettings.tabSize}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEditorSettingsChange('tabSize', parseInt(e.target.value))}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Word Wrap</Label>
+            <Switch
+              checked={editorSettings.wordWrap === 'on'}
+              onCheckedChange={(checked) => handleEditorSettingsChange('wordWrap', checked ? 'on' : 'off')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Minimap</Label>
+            <Switch
+              checked={editorSettings.minimap}
+              onCheckedChange={(checked) => handleEditorSettingsChange('minimap', checked)}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Line Numbers</Label>
+            <Switch
+              checked={editorSettings.lineNumbers}
+              onCheckedChange={(checked) => handleEditorSettingsChange('lineNumbers', checked)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setShowSettings(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const renderProjectSettingsDialog = () => (
+    <Dialog open={showProjectSettings} onOpenChange={setShowProjectSettings}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Project Settings</DialogTitle>
+          <DialogDescription>
+            Configure your project settings
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="buildCommand" className="text-right">Build Command</Label>
+            <input
+              id="buildCommand"
+              type="text"
+              value={projectSettings.buildCommand}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleProjectSettingsChange('buildCommand', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="devCommand" className="text-right">Dev Command</Label>
+            <input
+              id="devCommand"
+              type="text"
+              value={projectSettings.devCommand}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleProjectSettingsChange('devCommand', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="installCommand" className="text-right">Install Command</Label>
+            <input
+              id="installCommand"
+              type="text"
+              value={projectSettings.installCommand}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleProjectSettingsChange('installCommand', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="outputDirectory" className="text-right">Output Directory</Label>
+            <input
+              id="outputDirectory"
+              type="text"
+              value={projectSettings.outputDirectory}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleProjectSettingsChange('outputDirectory', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="nodeVersion" className="text-right">Node Version</Label>
+            <Select
+              value={projectSettings.nodeVersion}
+              onValueChange={(value) => handleProjectSettingsChange('nodeVersion', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select Node.js version" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="16.x">16.x</SelectItem>
+                <SelectItem value="18.x">18.x</SelectItem>
+                <SelectItem value="20.x">20.x</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="packageManager" className="text-right">Package Manager</Label>
+            <Select
+              value={projectSettings.packageManager}
+              onValueChange={(value) => handleProjectSettingsChange('packageManager', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select package manager" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="npm">npm</SelectItem>
+                <SelectItem value="yarn">yarn</SelectItem>
+                <SelectItem value="pnpm">pnpm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setShowProjectSettings(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const TreeItem: React.FC<TreeItemProps> = ({ item, onSelect, onToggle, level }) => {
+    const handleSelect = useCallback((e: MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      onSelect(item);
+    }, [item, onSelect]);
+
+    const handleToggle = useCallback((e: MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      onToggle(item);
+    }, [item, onToggle]);
+
+    const isActive = item.path === activeFile?.path;
+
     return (
       <div style={{ marginLeft: `${level * 12}px` }}>
         <div
@@ -684,7 +842,7 @@ export default function CodePage() {
             "flex items-center space-x-2 rounded px-2 py-1 cursor-pointer text-sm group hover:bg-gray-800",
             isActive && "bg-blue-500/20"
           )}
-          onClick={() => item.type === 'file' ? onSelect(item) : onToggle(item.path)}
+          onClick={item.type === 'file' ? handleSelect : handleToggle}
         >
           <div className="flex items-center">
             {item.type === 'directory' && (
@@ -712,7 +870,7 @@ export default function CodePage() {
         {item.type === 'directory' && item.expanded && item.children && (
           <div className="mt-1">
             {item.children.map((child, index) => (
-              <FileTreeItem
+              <TreeItem
                 key={child.path + index}
                 item={child}
                 onSelect={onSelect}
@@ -726,20 +884,21 @@ export default function CodePage() {
     );
   };
 
-  const PanelGroup = dynamic(
-    () => import('react-resizable-panels').then(mod => mod.PanelGroup),
-    { ssr: false }
-  );
+  const FileTreeComponent: React.FC<{ files: FileStructure[] }> = ({ files }) => {
+    const renderTree = (items: FileStructure[], level: number = 0) => {
+      return items.map((item: FileStructure, index: number) => (
+        <TreeItem
+          key={`${item.path}-${index}`}
+          item={item}
+          onSelect={handleFileSelect}
+          onToggle={(item: FileStructure) => toggleDirectory(item)}
+          level={level}
+        />
+      ));
+    };
 
-  const Panel = dynamic(
-    () => import('react-resizable-panels').then(mod => mod.Panel),
-    { ssr: false }
-  );
-
-  const PanelResizeHandle = dynamic(
-    () => import('react-resizable-panels').then((mod) => mod.PanelResizeHandle),
-    { ssr: false }
-  );
+    return <div className="file-tree">{renderTree(files)}</div>;
+  };
 
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col bg-white dark:bg-[#0F172A]">
@@ -761,7 +920,7 @@ export default function CodePage() {
                 <Textarea
                   placeholder="Describe your project..."
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
                   className="h-9 min-h-[36px] w-full resize-none bg-transparent px-3 py-1.5"
                 />
                 <Button
@@ -788,7 +947,7 @@ export default function CodePage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={saveFile}
+            onClick={handleSaveClick}
             className="text-gray-600 hover:text-gray-900 dark:text-indigo-300 dark:hover:text-indigo-200 
                      hover:bg-gray-100 dark:hover:bg-indigo-500/10 border-0 transition-colors duration-200"
             disabled={!activeFile}
@@ -851,7 +1010,7 @@ export default function CodePage() {
                       type="text"
                       placeholder="Search files..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                       className="w-full px-2 py-1 text-sm bg-white/50 dark:bg-[#1E293B]/50 border border-gray-200 
                                dark:border-indigo-500/10 rounded-md focus:outline-none focus:ring-2 
                                focus:ring-indigo-500/40 dark:focus:ring-indigo-400/40"
@@ -885,10 +1044,7 @@ export default function CodePage() {
                   )}
                   <div className="p-2 border-t border-gray-200 dark:border-indigo-500/10">
                     {filteredFileStructure.length > 0 ? (
-                      <div className="space-y-1">
-                        <h3 className="text-xs font-medium text-gray-500 dark:text-indigo-400 mb-2">Files</h3>
-                        {renderFileTree(filteredFileStructure, activeFile, handleFileSelect, toggleDirectory)}
-                      </div>
+                      <FileTreeComponent files={filteredFileStructure} />
                     ) : (
                       <div className="flex flex-col items-center justify-center py-4">
                         <FileCode2 className="h-8 w-8 text-gray-400 dark:text-indigo-300/50 mb-2" />
@@ -935,7 +1091,7 @@ export default function CodePage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={handleSaveFile}
+                          onClick={handleSaveClick}
                           className="h-7 px-2 text-gray-600 hover:text-gray-900 dark:text-indigo-300 
                                    dark:hover:text-indigo-200"
                         >
@@ -980,27 +1136,30 @@ export default function CodePage() {
                       </div>
                     </div>
                     <div className="flex-1 relative">
-                      <Editor
+                      <MonacoEditor
                         height="100%"
-                        defaultLanguage={getFileLanguage(activeFile.name)}
-                        value={activeFile.content}
+                        defaultLanguage={getLanguageFromPath(activeFile.path)}
+                        defaultValue={activeFile.content}
                         theme={editorTheme}
-                        onChange={(value) => {
+                        onChange={(value: string | undefined) => {
                           setActiveFile(prev => prev ? { ...prev, content: value || '' } : null);
+                        }}
+                        onMount={(editor: editor.IStandaloneCodeEditor) => {
+                          editorRef.current = editor;
                         }}
                         options={{
                           fontSize: editorSettings.fontSize,
                           tabSize: editorSettings.tabSize,
                           wordWrap: editorSettings.wordWrap,
-                          minimap: { enabled: editorSettings.minimap },
+                          minimap: {
+                            enabled: editorSettings.minimap
+                          },
                           lineNumbers: editorSettings.lineNumbers ? 'on' : 'off',
-                          scrollBeyondLastLine: false,
-                          smoothScrolling: true,
-                          cursorSmoothCaretAnimation: 'on',
+                          theme: editorTheme,
                           formatOnPaste: true,
                           formatOnType: true,
                           automaticLayout: true,
-                        } satisfies editor.IStandaloneEditorConstructionOptions}
+                        }}
                       />
                     </div>
                   </>
@@ -1067,6 +1226,151 @@ export default function CodePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Project Settings Dialog */}
+      <Dialog open={showProjectSettings} onOpenChange={setShowProjectSettings}>
+        <DialogContent className="sm:max-w-[500px] bg-[#252526]/95 backdrop-blur-xl text-gray-200 border-gray-800/50 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent">
+              Project Settings
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Configure your project build and deployment settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Build Command */}
+            <div className="space-y-2">
+              <Label htmlFor="buildCommand" className="text-sm font-medium text-gray-300">
+                Build Command
+              </Label>
+              <input
+                id="buildCommand"
+                value={projectSettings.buildCommand}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectSettings(prev => ({
+                  ...prev,
+                  buildCommand: e.target.value
+                }))}
+                className="w-full bg-[#1E1E1E]/50 border border-gray-700/50 rounded-md px-3 py-2 text-sm text-gray-200 
+                         focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              />
+            </div>
+
+            {/* Dev Command */}
+            <div className="space-y-2">
+              <Label htmlFor="devCommand" className="text-sm font-medium text-gray-300">
+                Dev Command
+              </Label>
+              <input
+                id="devCommand"
+                value={projectSettings.devCommand}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectSettings(prev => ({
+                  ...prev,
+                  devCommand: e.target.value
+                }))}
+                className="w-full bg-[#1E1E1E]/50 border border-gray-700/50 rounded-md px-3 py-2 text-sm text-gray-200 
+                         focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              />
+            </div>
+
+            {/* Install Command */}
+            <div className="space-y-2">
+              <Label htmlFor="installCommand" className="text-sm font-medium text-gray-300">
+                Install Command
+              </Label>
+              <input
+                id="installCommand"
+                value={projectSettings.installCommand}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectSettings(prev => ({
+                  ...prev,
+                  installCommand: e.target.value
+                }))}
+                className="w-full bg-[#1E1E1E]/50 border border-gray-700/50 rounded-md px-3 py-2 text-sm text-gray-200 
+                         focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              />
+            </div>
+
+            {/* Output Directory */}
+            <div className="space-y-2">
+              <Label htmlFor="outputDirectory" className="text-sm font-medium text-gray-300">
+                Output Directory
+              </Label>
+              <input
+                id="outputDirectory"
+                value={projectSettings.outputDirectory}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectSettings(prev => ({
+                  ...prev,
+                  outputDirectory: e.target.value
+                }))}
+                className="w-full bg-[#1E1E1E]/50 border border-gray-700/50 rounded-md px-3 py-2 text-sm text-gray-200 
+                         focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              />
+            </div>
+
+            {/* Node Version */}
+            <div className="space-y-2">
+              <Label htmlFor="nodeVersion" className="text-sm font-medium text-gray-300">
+                Node Version
+              </Label>
+              <Select
+                value={projectSettings.nodeVersion}
+                onValueChange={(value) => {
+                  setProjectSettings(prev => ({
+                    ...prev,
+                    nodeVersion: value
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full bg-[#1E1E1E]/50 border-gray-700/50 focus:ring-1 focus:ring-indigo-500/25">
+                  <SelectValue placeholder="Select Node.js version" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#252526]/95 backdrop-blur-xl border-gray-700/50">
+                  <SelectItem value="16.x">Node.js 16 LTS</SelectItem>
+                  <SelectItem value="18.x">Node.js 18 LTS</SelectItem>
+                  <SelectItem value="20.x">Node.js 20 LTS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Package Manager */}
+            <div className="space-y-2">
+              <Label htmlFor="packageManager" className="text-sm font-medium text-gray-300">
+                Package Manager
+              </Label>
+              <Select
+                value={projectSettings.packageManager}
+                onValueChange={(value) => {
+                  setProjectSettings(prev => ({
+                    ...prev,
+                    packageManager: value
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full bg-[#1E1E1E]/50 border-gray-700/50 focus:ring-1 focus:ring-indigo-500/25">
+                  <SelectValue placeholder="Select package manager" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#252526]/95 backdrop-blur-xl border-gray-700/50">
+                  <SelectItem value="npm">npm</SelectItem>
+                  <SelectItem value="yarn">Yarn</SelectItem>
+                  <SelectItem value="pnpm">pnpm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setShowProjectSettings(false)}
+              className="text-gray-400 hover:text-white hover:bg-white/5 border-0"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      {renderSettingsDialog()}
+
       <div className="fixed bottom-4 right-4">
         <div className="flex items-center space-x-4">
           <Button
@@ -1081,14 +1385,25 @@ export default function CodePage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowProjectSettings(true)}
+            className="h-8 bg-white/5 border-gray-700/50 hover:bg-white/10 text-gray-300 hover:text-white"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Project Settings
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowSettings(true)}
             className="h-8 bg-white/5 border-gray-700/50 hover:bg-white/10 text-gray-300 hover:text-white"
           >
             <Settings className="h-4 w-4 mr-2" />
-            Settings
+            Editor Settings
           </Button>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default CodePage;

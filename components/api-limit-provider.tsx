@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import React from "react";
+import { useSession } from "next-auth/react";
 
 interface ApiLimitProviderProps {
   children: React.ReactNode;
@@ -11,11 +10,16 @@ interface ApiLimitProviderProps {
 export const ApiLimitProvider = ({ children }: ApiLimitProviderProps) => {
   const [apiLimitCount, setApiLimitCount] = useState(0);
   const [isPro, setIsPro] = useState(false);
-  const { isSignedIn } = useUser();
+  const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchLimits = async () => {
-      if (!isSignedIn) return;
+      if (!session) return;
       
       try {
         // Fetch API limit count
@@ -33,7 +37,11 @@ export const ApiLimitProvider = ({ children }: ApiLimitProviderProps) => {
     };
 
     fetchLimits();
-  }, [isSignedIn]);
+  }, [session]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div>

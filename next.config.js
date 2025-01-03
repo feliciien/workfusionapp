@@ -11,9 +11,7 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverActions: {
-      allowedOrigins: ["localhost:3000", "localhost:3001", "localhost:3002", "localhost:3003"],
-    },
+    serverActions: true
   },
   reactStrictMode: true,
   async headers() {

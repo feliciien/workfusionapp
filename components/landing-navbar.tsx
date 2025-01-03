@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Montserrat } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,14 +16,14 @@ const font = Montserrat({
 });
 
 export const LandingNavbar = () => {
-  const { isSignedIn } = useAuth();
+  const { data: session } = useSession();
   const router = useRouter();
 
   const onUpgradeClick = () => {
-    if (isSignedIn) {
+    if (session?.user) {
       router.push("/settings");
     } else {
-      router.push("/sign-up");
+      router.push("/auth/signin");
     }
   };
 
@@ -53,21 +53,21 @@ export const LandingNavbar = () => {
           <span className="sm:hidden">Pro</span>
           <Zap className="w-4 h-4 ml-2 fill-white" />
         </Button>
-        {!isSignedIn && (
+        {!session?.user && (
           <>
-            <Link href="/sign-in">
+            <Link href="/auth/signin">
               <Button variant="outline" className="rounded-full">
                 Sign in
               </Button>
             </Link>
-            <Link href="/sign-up">
+            <Link href="/auth/signin">
               <Button className="rounded-full">
                 Get Started
               </Button>
             </Link>
           </>
         )}
-        {isSignedIn && (
+        {session?.user && (
           <Link href="/dashboard">
             <Button variant="outline" className="rounded-full text-sm sm:text-base px-3 sm:px-4">
               Dashboard

@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Progress } from "./ui/progress";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import {
   Tooltip,
   TooltipContent,
@@ -42,7 +42,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     limits: apiLimits
   });
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -67,7 +67,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     }
   }, [mounted, isPro]);
 
-  if (!mounted || !isSignedIn) {
+  if (!mounted || !session) {
     return null;
   }
 

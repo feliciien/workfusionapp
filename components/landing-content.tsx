@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Analytics } from "@vercel/analytics/react";
 import Image from "next/image";
 
 const testimonials = [
@@ -169,7 +168,6 @@ export const LandingContent = () => {
           </div>
         </div>
       </section>
-      <Analytics />
     </div>
   );
 };

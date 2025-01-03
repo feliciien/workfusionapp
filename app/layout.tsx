@@ -1,5 +1,4 @@
 // app/layout.tsx
-import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import type { Metadata, Viewport } from "next";
@@ -7,6 +6,7 @@ import { ModalProvider } from "@/components/modal-provider";
 import { ToasterProvider } from "@/components/toaster-provider";
 import ErrorBoundary from "@/components/ErrorBoundary"; 
 import { OrganizationStructuredData } from "@/components/structured-data";
+import { SessionProvider } from "@/components/providers/session-provider";
 
 import "./globals.css";
 
@@ -31,28 +31,17 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "WorkFusion App Preview"
-      }
-    ]
+        alt: "WorkFusion App",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WorkFusion App - Advanced AI Platform",
-    description: "Transform your business with WorkFusion App's powerful AI tools.",
-    images: ["/twitter-image.jpg"],
-    creator: "@workfusion"
+    title: "WorkFusion App - Advanced AI Platform for Business Automation",
+    description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity.",
+    images: ["/og-image.jpg"],
+    creator: "@workfusionapp",
   },
-  alternates: {
-    canonical: "https://workfusionapp.com"
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true
-    }
-  }
 };
 
 export const viewport: Viewport = {
@@ -64,16 +53,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: undefined,
-        variables: { colorPrimary: '#000000' },
-        elements: {
-          formButtonPrimary: 'hover:bg-black/80',
-          card: 'rounded-md',
-        },
-      }}
-    >
+    <SessionProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
           <OrganizationStructuredData />
@@ -115,6 +95,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ErrorBoundary>
         </body>
       </html>
-    </ClerkProvider>
+    </SessionProvider>
   );
 }
