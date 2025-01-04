@@ -1,6 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { prismaEdge } from "@/lib/prisma-edge";
+import { authOptions } from "@/auth";
 
 const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } = {};
 const CACHE_TTL = 60 * 1000; // 1 minute cache
@@ -9,7 +10,9 @@ const DAY_IN_MS = 86_400_000;
 export const checkSubscription = async (): Promise<boolean> => {
   const start = Date.now();
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     console.log("[SUBSCRIPTION_CHECK] Starting check:", {
       userId,
       timestamp: new Date().toISOString(),
@@ -49,30 +52,16 @@ export const checkSubscription = async (): Promise<boolean> => {
       where: {
         userId: userId,
       },
-      select: {
-        paypalSubscriptionId: true,
-        paypalCurrentPeriodEnd: true,
-        paypalCustomerId: true,
-        paypalPlanId: true,
-        paypalStatus: true,
-      },
     });
 
-    console.log("[SUBSCRIPTION_CHECK] Edge subscription:", {
+    console.log("[SUBSCRIPTION_CHECK] Subscription record:", {
       userId,
-      hasSubscription: !!userSubscription,
-      subscriptionDetails: userSubscription ? {
-        id: userSubscription.paypalSubscriptionId,
-        customerId: userSubscription.paypalCustomerId,
-        planId: userSubscription.paypalPlanId,
-        currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
-        status: userSubscription.paypalStatus,
-      } : null,
-      timeElapsed: Date.now() - start,
+      subscriptionExists: !!userSubscription,
       timestamp: new Date().toISOString()
     });
 
     if (!userSubscription) {
+      SUBSCRIPTION_CHECK_CACHE[userId] = { result: false, timestamp: Date.now() };
       return false;
     }
 
@@ -82,25 +71,18 @@ export const checkSubscription = async (): Promise<boolean> => {
 
     console.log("[SUBSCRIPTION_CHECK] Validation result:", {
       userId,
-      currentTime: new Date(Date.now()).toISOString(),
-      endTime: userSubscription.paypalCurrentPeriodEnd?.getTime() ? new Date(userSubscription.paypalCurrentPeriodEnd?.getTime()).toISOString() : null,
       isValid,
-      timeElapsed: Date.now() - start,
+      status: userSubscription.paypalStatus,
+      endDate: userSubscription.paypalCurrentPeriodEnd,
       timestamp: new Date().toISOString()
     });
 
-    // Cache the result
-    SUBSCRIPTION_CHECK_CACHE[userId] = {
-      result: isValid,
-      timestamp: Date.now()
-    };
-
+    SUBSCRIPTION_CHECK_CACHE[userId] = { result: isValid, timestamp: Date.now() };
     return isValid;
-  } catch (error: any) {
-    console.error("[SUBSCRIPTION_CHECK_ERROR] Failed to check subscription:", {
-      error: error?.message || String(error),
-      stack: error?.stack || new Error().stack,
-      timeElapsed: Date.now() - start,
+  } catch (error) {
+    console.error("[SUBSCRIPTION_CHECK] Error:", {
+      error,
+      duration: Date.now() - start,
       timestamp: new Date().toISOString()
     });
     return false;

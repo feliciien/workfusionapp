@@ -7,19 +7,19 @@ import { tools, routeCategories } from "./config";
 import { MAX_FREE_COUNTS } from "@/constants";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
-  const { isLoaded, userId } = useAuth();
+  const { data: session, status } = useSession();
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiLimitCount, setApiLimitCount] = useState(0);
 
   useEffect(() => {
     const checkStatus = async () => {
-      if (!isLoaded || !userId) return;
+      if (status !== "authenticated" || !session?.user?.id) return;
 
       try {
         setIsLoading(true);
@@ -49,7 +49,7 @@ const DashboardPage = () => {
     };
 
     checkStatus();
-  }, [isLoaded, userId]);
+  }, [session?.user?.id, status]);
 
   const getFreeProgress = () => {
     return Math.min((apiLimitCount / MAX_FREE_COUNTS) * 100, 100);

@@ -1,14 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { MAX_FREE_COUNTS, FREE_LIMITS, FEATURE_TYPES } from "@/constants";
+import { authOptions } from "@/auth";
 
 const FREE_CREDITS = MAX_FREE_COUNTS;
 
 export const increaseFeatureUsage = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return;
@@ -41,8 +42,8 @@ export const increaseFeatureUsage = async (featureType: string) => {
 
 export const checkFeatureLimit = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return false;
@@ -76,8 +77,8 @@ export const checkFeatureLimit = async (featureType: string) => {
 
 export const getFeatureUsage = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return {
@@ -123,8 +124,8 @@ export const getApiLimitCount = async () => {
   const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
   
   // Get all feature usage
-  const session = await auth();
-  const userId = session?.userId;
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
   
   let limits: { [key: string]: number } = {};
   

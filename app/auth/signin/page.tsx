@@ -20,7 +20,8 @@ export default function SignInPage() {
     try {
       setIsLoading(prev => ({ ...prev, [provider]: true }))
       await signIn(provider, {
-        callbackUrl: searchParams?.get("from") || "/",
+        callbackUrl: searchParams?.get("from") || "/dashboard",
+        redirect: true,
       })
     } catch (error) {
       console.error("Authentication error:", error)
