@@ -293,11 +293,17 @@ const Sidebar = ({
     <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <div className="relative w-32 h-32 mx-auto">
-            <Image fill alt="Logo" src="/logo.png" sizes="(max-width: 128px) 100vw, 128px" />
+          <div className="relative w-12 h-12 mr-4">
+            <Image 
+              fill 
+              alt="WorkFusion Logo" 
+              src="/workfusion-logo.svg" 
+              className="object-contain"
+              sizes="(max-width: 48px) 100vw, 48px" 
+            />
           </div>
-          <h1 className="text-2xl font-bold">
-            SynthAI
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 text-transparent bg-clip-text">
+            WorkFusion
           </h1>
         </Link>
         <div className="space-y-1">
