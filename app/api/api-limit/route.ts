@@ -1,23 +1,26 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { getApiLimitCount } from "@/lib/api-limit";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { increaseFeatureUsage, getFeatureUsage } from "@/lib/api-limit";
+import { FEATURE_TYPES } from "@/constants";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const apiLimitCount = await getApiLimitCount();
+    const usage = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
 
-    return new NextResponse(JSON.stringify(apiLimitCount));
+    return NextResponse.json(usage);
   } catch (error) {
-    console.log("[API_LIMIT_ERROR]", error);
+    console.error("[API_LIMIT_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

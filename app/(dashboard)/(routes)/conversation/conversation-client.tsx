@@ -11,11 +11,15 @@ import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
+import { toast } from "react-hot-toast";
 import * as z from "zod";
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: Date;
+  status?: 'sending' | 'sent' | 'error';
+  id?: string;
 }
 
 const formSchema = z.object({
@@ -38,6 +42,7 @@ export function ConversationClient({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -56,36 +61,111 @@ export function ConversationClient({
     }
   }, [darkMode, mounted]);
 
+  const generateMessageId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
+      setError(null);
 
       const userMessage: Message = {
         role: 'user',
         content: values.prompt,
+        timestamp: new Date(),
+        status: 'sending',
+        id: generateMessageId(),
       };
 
+      console.log('Sending message:', { userMessage });
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
 
       const response = await axios.post('/api/conversation', {
-        messages: newMessages,
+        messages: newMessages.map(({ role, content }) => ({
+          role,
+          content,
+        })),
         conversationId,
+      }, {
+        timeout: 60000, // 1 minute timeout
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (response.data.error) {
-        throw new Error(response.data.error);
+      console.log('Received response:', response.data);
+
+      // Update user message status to sent
+      setMessages(current => 
+        current.map(msg => 
+          msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
+        )
+      );
+
+      if (response.data.messages) {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: response.data.messages[response.data.messages.length - 1].content,
+          timestamp: new Date(),
+          status: 'sent',
+          id: generateMessageId(),
+        };
+
+        setMessages(current => [...current, assistantMessage]);
+
+        // Update URL if new conversation
+        if (!conversationId && response.data.id) {
+          router.push(`/conversation?id=${response.data.id}`);
+        }
+      } else if (response.data.message) {
+        // Handle single message response
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: response.data.message.content,
+          timestamp: new Date(),
+          status: 'sent',
+          id: generateMessageId(),
+        };
+
+        setMessages(current => [...current, assistantMessage]);
+      } else {
+        console.error('Invalid response format:', response.data);
+        throw new Error('Invalid response from server');
       }
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: response.data.content
-      };
-
-      setMessages(current => [...current, assistantMessage]);
 
     } catch (error: any) {
       console.error('[CONVERSATION_ERROR]', error);
+      
+      // Update user message status to error
+      setMessages(current => 
+        current.map(msg => 
+          msg.status === 'sending' ? { ...msg, status: 'error' } : msg
+        )
+      );
+
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || error.message;
+        console.error('Axios error:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: errorMessage
+        });
+
+        if (error.response?.status === 403) {
+          toast.error("Free trial limit reached. Please upgrade to continue.");
+        } else if (error.code === 'ECONNABORTED') {
+          toast.error("Request timed out. Please try again.");
+        } else {
+          toast.error(errorMessage || "Failed to send message");
+        }
+      } else {
+        console.error('Non-Axios error:', error);
+        toast.error("An unexpected error occurred");
+      }
+      
+      setError("Failed to send message. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +181,7 @@ export function ConversationClient({
   }
 
   return (
-    <div className="h-full relative">
+    <div>
       <Heading
         title="Conversation"
         description="Our most advanced conversation model."
@@ -109,59 +189,70 @@ export function ConversationClient({
         iconColor="text-violet-500"
         bgColor="bg-violet-500/10"
       />
-      <div className="absolute top-4 right-4 flex items-center space-x-2">
+      <div className="px-4 lg:px-8">
+        <div>
+          <Form
+            schema={formSchema}
+            onSubmit={onSubmit}
+          />
+          <div className="space-y-4 mt-4">
+            {messages.length === 0 && !loading && (
+              <Empty label="No conversation started." />
+            )}
+            <div className="flex flex-col-reverse gap-y-4">
+              {messages.map((message) => (
+                <div 
+                  key={message.id || message.content}
+                  className={cn(
+                    "p-8 w-full flex items-start gap-x-8 rounded-lg",
+                    message.role === "user" ? "bg-white border border-black/10" : "bg-muted",
+                  )}
+                >
+                  {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm",
+                      message.status === 'error' && "text-red-500"
+                    )}>
+                      {message.content}
+                    </p>
+                    {message.status === 'error' && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Failed to send. Please try again.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {loading && (
+              <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
+                <Loader />
+              </div>
+            )}
+            {error && (
+              <div className="p-4 text-sm text-red-500 bg-red-50 rounded-lg">
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="fixed bottom-4 right-4 flex gap-2">
         <button
           onClick={() => setDarkMode(!darkMode)}
-          className={cn(
-            "p-2 rounded-lg transition-colors",
-            darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
-          )}
-          title="Toggle Dark Mode"
+          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800"
         >
           {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
-        <button
-          onClick={clearConversation}
-          className={cn(
-            "p-2 rounded-lg transition-colors",
-            darkMode ? "hover:bg-gray-800" : "hover:bg-gray-200"
-          )}
-          title="Clear Conversation"
-        >
-          <Trash className="w-5 h-5" />
-        </button>
-      </div>
-      <div className="px-4 lg:px-8">
-        <div>
-          <Form 
-            isLoading={loading} 
-            onSubmit={onSubmit}
-          />
-        </div>
-        {loading && messages.length === 0 && (
-          <div className="p-20">
-            <Loader />
-          </div>
+        {messages.length > 0 && (
+          <button
+            onClick={clearConversation}
+            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800"
+          >
+            <Trash className="w-5 h-5" />
+          </button>
         )}
-        {messages.length === 0 && !loading && (
-          <Empty label="No conversation started." />
-        )}
-        <div className="space-y-4 mt-4">
-          {messages.map((message, index) => (
-            <div 
-              key={index}
-              className={cn(
-                "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                message.role === 'user' 
-                  ? 'bg-white border border-black/10' 
-                  : darkMode ? 'bg-gray-800' : 'bg-gray-100'
-              )}
-            >
-              {message.role === 'user' ? <UserAvatar /> : <BotAvatar />}
-              <p className="text-sm">{message.content}</p>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

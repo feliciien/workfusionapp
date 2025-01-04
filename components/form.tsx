@@ -15,21 +15,27 @@ const formSchema = z.object({
 });
 
 interface FormProps {
-  isLoading: boolean;
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  schema: z.ZodObject<any>;
+  onSubmit: (values: any) => void;
 }
 
-export const Form = ({ isLoading, onSubmit }: FormProps) => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+export const Form = ({ schema = formSchema, onSubmit }: FormProps) => {
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
     defaultValues: {
       prompt: "",
     },
   });
 
-  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-    await onSubmit(values);
-    form.reset();
+  const isLoading = form.formState.isSubmitting;
+
+  const handleSubmit = async (values: z.infer<typeof schema>) => {
+    try {
+      await onSubmit(values);
+      form.reset();
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
   };
 
   return (
@@ -47,7 +53,6 @@ export const Form = ({ isLoading, onSubmit }: FormProps) => {
                   className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                   disabled={isLoading}
                   placeholder="Message SynthAI..."
-                  onSubmit={form.handleSubmit(handleSubmit)}
                   {...field}
                 />
               </FormControl>
@@ -55,13 +60,11 @@ export const Form = ({ isLoading, onSubmit }: FormProps) => {
           )}
         />
         <Button 
-          className="col-span-12 lg:col-span-2 w-full gap-2" 
-          type="submit" 
+          className="col-span-12 lg:col-span-2 w-full" 
           disabled={isLoading}
-          size="lg"
+          type="submit"
         >
-          <Send className="w-4 h-4" />
-          Send
+          Send <Send className="w-4 h-4 ml-2" />
         </Button>
       </form>
     </FormProvider>

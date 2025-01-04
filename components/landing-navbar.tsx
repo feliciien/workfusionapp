@@ -30,13 +30,12 @@ export const LandingNavbar = () => {
   return (
     <nav className="p-4 bg-transparent flex items-center justify-between max-w-screen overflow-hidden">
       <Link href="/" className="flex items-center">
-        <div className="relative h-8 w-8 mr-2 sm:mr-4 rounded-lg overflow-hidden bg-white/10 p-1 backdrop-blur-sm">
+        <div className="relative h-8 w-8 mr-4">
           <Image 
             fill 
             src="/logo.png" 
             alt="Logo"
             sizes="(max-width: 32px) 100vw, 32px"
-            className="object-contain"
           />
         </div>
         <h1 className={cn("hidden sm:block text-2xl font-bold text-white", font.className)}>

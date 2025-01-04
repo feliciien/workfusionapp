@@ -49,8 +49,8 @@ interface Route {
   core?: boolean;
   proOnly?: boolean;
   limitedFree?: boolean;
-  freeLimit?: number;
   featureType?: FeatureType;
+  freeLimit?: number;
 }
 
 interface FeatureUsage {
@@ -78,7 +78,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate high-quality articles and blog posts.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.CONTENT_WORD_LIMIT
+        featureType: FEATURE_TYPES.CONTENT_WRITER,
+        freeLimit: FREE_LIMITS.content
       },
       {
         label: 'Translation',
@@ -102,7 +103,8 @@ const routeCategories: RouteCategory[] = [
         description: "Create stunning images from text descriptions.",
         free: false,
         limitedFree: true,
-        freeLimit: 5
+        featureType: FEATURE_TYPES.IMAGE_GENERATION,
+        freeLimit: FREE_LIMITS.image
       },
       {
         label: 'Music Creation',
@@ -144,7 +146,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate code snippets and entire functions.",
         free: false,
         limitedFree: true,
-        freeLimit: 10
+        featureType: FEATURE_TYPES.CODE_GENERATION,
+        freeLimit: FREE_LIMITS.code
       },
       {
         label: 'Code Analysis',
@@ -177,7 +180,8 @@ const routeCategories: RouteCategory[] = [
         description: "Create professional presentations instantly.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.PRESENTATION_SLIDES
+        featureType: FEATURE_TYPES.PRESENTATION,
+        freeLimit: FREE_LIMITS.presentation
       },
       {
         label: 'Network Analysis',
@@ -210,7 +214,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate creative ideas for any project.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.IDEA_LIMIT
+        featureType: FEATURE_TYPES.IDEA_GENERATOR,
+        freeLimit: FREE_LIMITS.idea
       }
     ]
   },
@@ -223,7 +228,8 @@ const routeCategories: RouteCategory[] = [
         href: '/settings',
         color: "text-gray-500",
         description: "Manage your account and preferences.",
-        free: true
+        free: true,
+        core: true
       },
       {
         label: 'History',
@@ -231,7 +237,8 @@ const routeCategories: RouteCategory[] = [
         href: '/history',
         color: "text-gray-500",
         description: "View your conversation history.",
-        free: true
+        free: true,
+        core: true
       }
     ]
   }
@@ -261,7 +268,7 @@ const Sidebar = ({
         for (const route of category.routes) {
           if (route.featureType) {
             const count = await getFeatureUsage(route.featureType);
-            usage[route.href] = count;
+            usage[route.featureType] = count;
           }
         }
       }
@@ -286,11 +293,11 @@ const Sidebar = ({
     <div className="space-y-4 py-4 flex flex-col h-full bg-[#111827] text-white">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <div className="relative h-8 w-8 mr-4 position-relative">
-            <Image fill alt="Logo" src="/logo.png" />
+          <div className="relative w-32 h-32 mx-auto">
+            <Image fill alt="Logo" src="/logo.png" sizes="(max-width: 128px) 100vw, 128px" />
           </div>
           <h1 className="text-2xl font-bold">
-            WorkFusion
+            SynthAI
           </h1>
         </Link>
         <div className="space-y-1">
@@ -330,9 +337,9 @@ const Sidebar = ({
                             </div>
                           </ProLink>
                         )}
-                        {route.limitedFree && !route.proOnly && !isPro && (
+                        {route.limitedFree && !route.proOnly && !isPro && route.featureType && (
                           <div className="ml-auto text-xs">
-                            {featureUsage[route.href] || 0}/{apiLimits[route.href] || route.freeLimit}
+                            {featureUsage[route.featureType] || 0}/{route.freeLimit}
                           </div>
                         )}
                       </div>
@@ -346,17 +353,13 @@ const Sidebar = ({
       </div>
       <div className="px-3">
         {!isPro && (
-          <Link 
-            href="/settings" 
-            className="w-full px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md text-sm font-semibold hover:opacity-90 transition flex items-center justify-center"
-          >
-            Upgrade to Pro
-          </Link>
+          <div className="px-4">
+            <FreeCounter
+              apiLimits={apiLimits}
+              isPro={isPro}
+            />
+          </div>
         )}
-        <FreeCounter 
-          apiLimits={apiLimits} 
-          isPro={isPro}
-        />
       </div>
     </div>
   );

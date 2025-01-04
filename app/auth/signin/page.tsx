@@ -32,13 +32,14 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Image
-          src="/logo.png"
-          alt="WorkFusion"
-          width={48}
-          height={48}
-          className="mx-auto h-12 w-auto"
-        />
+        <div className="relative h-12 w-12 mx-auto">
+          <Image
+            fill
+            alt="Logo"
+            src="/logo.png"
+            sizes="(max-width: 48px) 100vw, 48px"
+          />
+        </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Sign in to WorkFusion
         </h2>

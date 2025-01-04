@@ -12,13 +12,7 @@ export const checkSubscription = async (): Promise<boolean> => {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
-    
-    console.log("[SUBSCRIPTION_CHECK] Starting check:", {
-      userId,
-      timestamp: new Date().toISOString(),
-      stack: new Error().stack
-    });
-    
+
     if (!userId) {
       console.log("[SUBSCRIPTION_CHECK] No user ID found");
       return false;
@@ -35,29 +29,35 @@ export const checkSubscription = async (): Promise<boolean> => {
       return cached.result;
     }
 
-    // First ensure user exists
-    const user = await db.user.upsert({
+    // Verify user exists
+    const user = await db.user.findUnique({
       where: { id: userId },
-      create: { id: userId },
-      update: {},
+      select: { id: true }
     });
 
-    console.log("[SUBSCRIPTION_CHECK] User record:", {
-      userId,
-      userExists: !!user,
-      timestamp: new Date().toISOString()
-    });
+    if (!user) {
+      console.log("[SUBSCRIPTION_CHECK] User not found:", {
+        userId,
+        timestamp: new Date().toISOString()
+      });
+      SUBSCRIPTION_CHECK_CACHE[userId] = { result: false, timestamp: Date.now() };
+      return false;
+    }
 
-    const userSubscription = await prismaEdge.userSubscription.findUnique({
-      where: {
-        userId: userId,
-      },
+    // Check subscription status
+    const userSubscription = await db.userSubscription.findUnique({
+      where: { userId },
+      select: {
+        paypalStatus: true,
+        paypalCurrentPeriodEnd: true
+      }
     });
 
     console.log("[SUBSCRIPTION_CHECK] Subscription record:", {
       userId,
       subscriptionExists: !!userSubscription,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      details: userSubscription
     });
 
     if (!userSubscription) {
@@ -65,25 +65,34 @@ export const checkSubscription = async (): Promise<boolean> => {
       return false;
     }
 
-    const isValid =
-      userSubscription.paypalStatus === "ACTIVE" &&
-      userSubscription.paypalCurrentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now();
+    // Validate subscription status and expiration
+    const now = Date.now();
+    const isActive = userSubscription.paypalStatus === "ACTIVE";
+    const isExpired = userSubscription.paypalCurrentPeriodEnd 
+      ? userSubscription.paypalCurrentPeriodEnd.getTime() + DAY_IN_MS < now
+      : true;
+
+    const isValid = isActive && !isExpired;
 
     console.log("[SUBSCRIPTION_CHECK] Validation result:", {
       userId,
       isValid,
+      isActive,
+      isExpired,
       status: userSubscription.paypalStatus,
       endDate: userSubscription.paypalCurrentPeriodEnd,
       timestamp: new Date().toISOString()
     });
 
-    SUBSCRIPTION_CHECK_CACHE[userId] = { result: isValid, timestamp: Date.now() };
+    SUBSCRIPTION_CHECK_CACHE[userId] = { result: isValid, timestamp: now };
     return isValid;
+
   } catch (error) {
     console.error("[SUBSCRIPTION_CHECK] Error:", {
       error,
       duration: Date.now() - start,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      stack: error instanceof Error ? error.stack : undefined
     });
     return false;
   }

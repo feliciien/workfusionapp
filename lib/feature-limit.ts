@@ -16,7 +16,9 @@ const handleError = (error: unknown, context: string) => {
   const dbError = error as DatabaseError;
   console.error(`[${context}] Error:`, {
     code: dbError.code || 'UNKNOWN',
-    message: dbError.message || 'An unknown error occurred'
+    message: dbError.message || 'An unknown error occurred',
+    timestamp: new Date().toISOString(),
+    stack: dbError.stack
   });
 };
 
@@ -26,6 +28,7 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
     const userId = session?.user?.id;
 
     if (!userId) {
+      console.log("[INCREMENT_FEATURE] No user ID found");
       return;
     }
 
@@ -60,6 +63,13 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
           },
         });
       }
+
+      console.log("[INCREMENT_FEATURE] Updated usage:", {
+        userId,
+        featureType,
+        newCount: userFeatureUsage ? userFeatureUsage.count + 1 : 1,
+        timestamp: new Date().toISOString()
+      });
     });
   } catch (error) {
     handleError(error, 'INCREMENT_FEATURE_USAGE');
@@ -72,18 +82,43 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
     const userId = session?.user?.id;
 
     if (!userId) {
+      console.log("[CHECK_FEATURE_LIMIT] No user ID found");
       return false;
     }
 
     const isPro = await checkSubscription();
     if (isPro) {
+      console.log("[CHECK_FEATURE_LIMIT] Pro user, no limits:", {
+        userId,
+        featureType,
+        timestamp: new Date().toISOString()
+      });
       return true;
     }
 
     const usage = await getFeatureUsage(featureType);
-    const limit = FREE_LIMITS[featureType] || 0;
+    const limit = FREE_LIMITS[featureType];
 
-    return usage < limit;
+    if (typeof limit === 'undefined') {
+      console.error("[CHECK_FEATURE_LIMIT] No limit defined for feature:", {
+        featureType,
+        availableLimits: Object.keys(FREE_LIMITS),
+        timestamp: new Date().toISOString()
+      });
+      return false;
+    }
+
+    const hasAvailableUsage = usage < limit;
+    console.log("[CHECK_FEATURE_LIMIT] Usage check:", {
+      userId,
+      featureType,
+      currentUsage: usage,
+      limit,
+      hasAvailableUsage,
+      timestamp: new Date().toISOString()
+    });
+
+    return hasAvailableUsage;
   } catch (error) {
     handleError(error, 'CHECK_FEATURE_LIMIT');
     return false;
@@ -96,6 +131,7 @@ export const getFeatureUsage = async (featureType: FeatureType): Promise<number>
     const userId = session?.user?.id;
 
     if (!userId) {
+      console.log("[GET_FEATURE_USAGE] No user ID found");
       return 0;
     }
 
@@ -106,6 +142,13 @@ export const getFeatureUsage = async (featureType: FeatureType): Promise<number>
           featureType
         }
       },
+    });
+
+    console.log("[GET_FEATURE_USAGE] Current usage:", {
+      userId,
+      featureType,
+      count: usage?.count || 0,
+      timestamp: new Date().toISOString()
     });
 
     return usage?.count || 0;

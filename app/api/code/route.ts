@@ -1,12 +1,13 @@
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
-import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { Analytics } from '@vercel/analytics/react';
+import OpenAI from 'openai';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { increaseFeatureUsage, checkFeatureLimit } from "@/lib/api-limit";
+import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
@@ -24,29 +25,22 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-    console.log("[CODE_API] Checking access for user:", userId);
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
-      console.log("[CODE_API] No user ID found");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const isPro = await checkSubscription();
-    console.log("[CODE_API] Pro status:", { userId, isPro });
-
-    if (!isPro) {
-      const hasApiLimit = await checkApiLimit();
-      console.log("[CODE_API] API limit check:", { userId, hasApiLimit });
-      
-      if (!hasApiLimit) {
-        return new NextResponse("Free tier limit reached", { status: 403 });
-      }
+    const canGenerate = await checkFeatureLimit(FEATURE_TYPES.CODE_GENERATION);
+    
+    if (!isPro && !canGenerate) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
     const body = await req.json();
     const { messages, language } = body;
-    console.log("[CODE_API] Received messages:", messages);
 
     if (!messages) {
       return new NextResponse("Messages are required", { status: 400 });
@@ -58,18 +52,16 @@ export async function POST(req: Request) {
       : instructionMessage;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",  // Using GPT-4 for better code generation
+      model: "gpt-4",
       messages: [systemMessage, ...messages],
-      temperature: 0.7,  // Slightly creative but still focused
-      max_tokens: 2000,  // Allow for longer code samples
-      top_p: 0.95,
+      temperature: 0.7,
+      top_p: 1,
       frequency_penalty: 0,
       presence_penalty: 0,
     });
 
-    // Only increase the API limit count for free users
     if (!isPro) {
-      await increaseApiLimit();
+      await increaseFeatureUsage(FEATURE_TYPES.CODE_GENERATION);
     }
 
     if (!response.choices[0].message) {
@@ -84,7 +76,7 @@ export async function POST(req: Request) {
       }
     });
   } catch (error: unknown) {
-    console.error("[CODE_API_ERROR]", error instanceof Error ? error.message : error);
+    console.error("[CODE_ERROR]", error instanceof Error ? error.message : error);
     
     // Return more specific error messages
     if (error instanceof OpenAI.APIError) {

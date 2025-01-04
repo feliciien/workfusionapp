@@ -1,49 +1,22 @@
-import { auth, currentUser } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { checkSubscription } from "@/lib/subscription";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { userId } = await auth();
-    const user = await currentUser();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
-    console.log("[SUBSCRIPTION_API] Check started:", {
-      userId,
-      userExists: !!user,
-      timestamp: new Date().toISOString(),
-    });
-
-    if (!userId || !user) {
-      console.log("[SUBSCRIPTION_API] Unauthorized - no user");
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const userSubscription = await prisma.userSubscription.findUnique({
-      where: {
-        userId: userId
-      }
-    });
+    const isPro = await checkSubscription();
 
-    console.log("[SUBSCRIPTION_API] Subscription found:", {
-      userId,
-      subscriptionExists: !!userSubscription,
-      status: userSubscription?.paypalStatus,
-      endDate: userSubscription?.paypalCurrentPeriodEnd,
-      timestamp: new Date().toISOString()
-    });
-
-    const isPro = userSubscription?.paypalStatus === "ACTIVE" && 
-                 userSubscription?.paypalCurrentPeriodEnd ? 
-                 userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() : 
-                 false;
-
-    return NextResponse.json({
-      ...userSubscription,
-      isPro
-    });
-
+    return NextResponse.json({ isPro });
   } catch (error) {
-    console.error("[SUBSCRIPTION_API] Error:", error);
+    console.error("[SUBSCRIPTION_API]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

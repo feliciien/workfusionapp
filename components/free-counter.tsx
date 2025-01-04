@@ -16,14 +16,6 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 
-interface ApiLimitData {
-  count: number;
-  limit: number;
-  limits: {
-    [key: string]: number;
-  };
-}
-
 interface FreeCounterProps {
   apiLimits: {
     [key: string]: number;
@@ -36,36 +28,12 @@ export const FreeCounter: FC<FreeCounterProps> = ({
   isPro = false 
 }) => {
   const [mounted, setMounted] = useState(false);
-  const [apiData, setApiData] = useState<ApiLimitData>({
-    count: 0,
-    limit: MAX_FREE_COUNTS,
-    limits: apiLimits
-  });
   const router = useRouter();
   const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const response = await fetch('/api/api-limit');
-        const data = await response.json();
-        setApiData(data);
-      } catch (error) {
-        console.error('Failed to fetch API limits:', error);
-      }
-    };
-
-    if (mounted && !isPro) {
-      fetchLimits();
-      // Refresh limits every 30 seconds
-      const interval = setInterval(fetchLimits, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [mounted, isPro]);
 
   if (!mounted || !session) {
     return null;
@@ -75,34 +43,42 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     return null;
   }
 
+  const totalUsage = Object.values(apiLimits).reduce((acc, curr) => acc + curr, 0);
+
   return (
     <div className="px-3">
       <Card className="bg-white/10 border-0">
         <CardContent className="py-6">
           <div className="text-sm text-center text-white mb-4 space-y-2">
             <p>
-              {apiData.count} / {apiData.limit} Free Credits Used
+              {totalUsage} / {MAX_FREE_COUNTS} Free Credits Used
             </p>
             <Progress
               className="h-3"
-              value={(apiData.count / apiData.limit) * 100}
+              value={(totalUsage / MAX_FREE_COUNTS) * 100}
             />
           </div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => router.push('/pro')} variant="premium" className="w-full">
+                <Button 
+                  onClick={() => router.push('/settings')} 
+                  variant="premium" 
+                  className="w-full"
+                  disabled={totalUsage < MAX_FREE_COUNTS}
+                >
                   Upgrade
                   <Zap className="w-4 h-4 ml-2 fill-white" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-sm">
-                  <p>Upgrade to WorkFusion Pro to:</p>
+                  <p>Upgrade to SynthAI Pro to:</p>
                   <ul className="list-disc list-inside mt-2">
                     <li>Remove all usage limits</li>
                     <li>Access premium features</li>
                     <li>Priority support</li>
+                    <li>Early access to new features</li>
                   </ul>
                 </div>
               </TooltipContent>
