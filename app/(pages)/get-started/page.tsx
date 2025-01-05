@@ -1,192 +1,159 @@
 'use client';
 
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { signIn } from 'next-auth/react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
-export default function GetStartedPage() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    company: "",
-    role: "",
-    employees: "",
-  });
+export default function GetStarted() {
+  const [isLoading, setIsLoading] = useState<{[key: string]: boolean}>({});
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(true); // Default to sign up mode
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') ?? '/dashboard';
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log("Form submitted:", formData);
+  const handleOAuthSignIn = async (provider: string) => {
+    setIsLoading({ ...isLoading, [provider]: true });
+    try {
+      await signIn(provider, { callbackUrl });
+    } catch (error) {
+      console.error(`Failed to sign in with ${provider}:`, error);
+    } finally {
+      setIsLoading({ ...isLoading, [provider]: false });
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading({ ...isLoading, email: true });
+    try {
+      await signIn('email', {
+        email,
+        callbackUrl,
+        redirect: true,
+      });
+    } catch (error) {
+      console.error('Failed to sign in with email:', error);
+    } finally {
+      setIsLoading({ ...isLoading, email: false });
+    }
   };
 
   return (
-    <div className="min-h-screen py-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Get Started with
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-              {" "}WorkFusion
-            </span>
-          </h1>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Start your journey with WorkFusion's AI-powered automation platform.
-            Fill out the form below to create your free account.
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+      <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <Image
+            src="/logo.png"
+            alt="SynthAI Logo"
+            width={150}
+            height={150}
+            className="mx-auto mb-4"
+          />
+          <h2 className="text-3xl font-bold text-white mb-2">
+            Get Started with SynthAI
+          </h2>
+          <p className="text-gray-400">
+            Join the AI revolution today
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="John"
-                />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-                  placeholder="Doe"
-                />
-              </div>
+        <div className="space-y-4">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleOAuthSignIn('google')}
+            disabled={isLoading.google}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 rounded-lg p-3 font-medium hover:bg-gray-100 transition-colors"
+          >
+            <Image
+              src="/google.svg"
+              alt="Google"
+              width={20}
+              height={20}
+            />
+            {isLoading.google ? 'Signing up...' : 'Continue with Google'}
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleOAuthSignIn('github')}
+            disabled={isLoading.github}
+            className="w-full flex items-center justify-center gap-3 bg-[#24292F] text-white rounded-lg p-3 font-medium hover:bg-[#2c3137] transition-colors"
+          >
+            <Image
+              src="/github.svg"
+              alt="GitHub"
+              width={20}
+              height={20}
+            />
+            {isLoading.github ? 'Signing up...' : 'Continue with GitHub'}
+          </motion.button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
             </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-800 text-gray-400">Or continue with</span>
+            </div>
+          </div>
 
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Work Email
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                Email address
               </label>
               <input
-                type="email"
                 id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                placeholder="you@example.com"
                 required
-                className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-                placeholder="john@company.com"
               />
             </div>
 
             <div>
-              <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-2">
-                Company Name
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                Password
               </label>
               <input
-                type="text"
-                id="company"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                placeholder="••••••••"
                 required
-                className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-                placeholder="Acme Inc."
               />
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-2">
-                Job Role
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-              >
-                <option value="">Select your role</option>
-                <option value="executive">Executive</option>
-                <option value="manager">Manager</option>
-                <option value="developer">Developer</option>
-                <option value="analyst">Analyst</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="employees" className="block text-sm font-medium text-gray-300 mb-2">
-                Number of Employees
-              </label>
-              <select
-                id="employees"
-                name="employees"
-                value={formData.employees}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:border-purple-500 transition-colors"
-              >
-                <option value="">Select company size</option>
-                <option value="1-10">1-10</option>
-                <option value="11-50">11-50</option>
-                <option value="51-200">51-200</option>
-                <option value="201-500">201-500</option>
-                <option value="501+">501+</option>
-              </select>
             </div>
 
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+              disabled={isLoading.email}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-3 font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
             >
-              Create Free Account
+              {isLoading.email ? 'Creating Account...' : 'Create Account'}
             </motion.button>
           </form>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mt-12 text-center"
-        >
-          <p className="text-gray-400">
-            Already have an account?{" "}
+          <p className="text-center text-gray-400 text-sm">
+            Already have an account?{' '}
             <a
-              href="https://app.workfusion.com/login"
-              className="text-purple-400 hover:text-purple-300 transition-colors"
+              href="/auth/signin"
+              className="text-purple-400 hover:text-purple-300 font-medium"
             >
-              Sign in here
+              Sign In
             </a>
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
