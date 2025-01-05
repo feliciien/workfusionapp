@@ -6,7 +6,9 @@ import { ValueProposition } from "@/components/value-proposition";
 import { IntegrationsSection } from "@/components/integrations-section";
 import { TestimonialsSection } from "@/components/testimonials-section";
 import { CTASection } from "@/components/cta-section";
+import { Footer } from "@/components/footer";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 const features = [
   {
@@ -67,15 +69,24 @@ const features = [
 
 export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between">
+    <main className="flex min-h-screen flex-col items-center justify-between bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950">
       {/* Hero Section */}
-      <section className="w-full min-h-screen bg-gradient-to-b from-[#111827] to-[#1F2937] flex items-center">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+      <section className="w-full min-h-screen flex items-center relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-indigo-500/10 animate-gradient-x"></div>
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        </div>
+        
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="animate-fade-in-left">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
                 Transform Your Business with{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 animate-gradient-text">
                   AI-Powered Automation
                 </span>
               </h1>
@@ -83,71 +94,112 @@ export default function LandingPage() {
                 Streamline operations, reduce costs, and accelerate growth with our enterprise-grade AI solutions.
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="px-8 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+                >
                   Get Started Free
-                </button>
-                <button className="px-8 py-4 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors">
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-700 transition-all duration-300 border border-gray-700 hover:border-gray-600"
+                >
                   Schedule Demo
-                </button>
+                </motion.button>
               </div>
-            </div>
-            <div className="relative animate-fade-in-right">
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="relative"
+            >
               <div className="relative w-full h-[400px] lg:h-[500px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 via-purple-800/50 to-indigo-900/50 group hover:scale-[1.02] transition-transform duration-500">
                 {/* Main Dashboard Image */}
                 <div className="relative h-full w-full rounded-lg overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
                   {/* Window Header */}
-                  <div className="h-8 bg-gray-800 flex items-center px-4 gap-2">
+                  <div className="h-8 bg-gray-800/80 backdrop-blur-sm flex items-center px-4 gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
                   
                   {/* Dashboard Content */}
-                  <div className="p-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                  <div className="p-6 animate-fade-in-up space-y-6">
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="bg-white/5 p-4 rounded-lg">
+                    <div className="grid grid-cols-3 gap-4">
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white/5 p-4 rounded-lg backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors duration-300"
+                      >
                         <div className="text-sm text-gray-400 mb-1">Total Projects</div>
                         <div className="text-2xl font-semibold text-white">128</div>
-                      </div>
-                      <div className="bg-white/5 p-4 rounded-lg">
+                      </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white/5 p-4 rounded-lg backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors duration-300"
+                      >
                         <div className="text-sm text-gray-400 mb-1">Active Tasks</div>
                         <div className="text-2xl font-semibold text-white">34</div>
-                      </div>
-                      <div className="bg-white/5 p-4 rounded-lg">
+                      </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white/5 p-4 rounded-lg backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors duration-300"
+                      >
                         <div className="text-sm text-gray-400 mb-1">Efficiency</div>
                         <div className="text-2xl font-semibold text-white">92%</div>
-                      </div>
+                      </motion.div>
                     </div>
                     
                     {/* Chart Section */}
-                    <div className="bg-white/5 rounded-lg p-4 mb-6">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors duration-300"
+                    >
                       <div className="text-sm text-gray-400 mb-4">Performance Analytics</div>
                       <div className="h-40 flex items-end justify-between gap-2">
                         {[65, 45, 75, 55, 85, 35, 95, 65, 75, 45, 65, 55].map((height, i) => (
-                          <div
+                          <motion.div
                             key={i}
-                            className="w-full bg-purple-500/30 rounded-t transition-all duration-500 group-hover:bg-purple-500/50"
-                            style={{ height: `${height}%` }}
-                          ></div>
+                            initial={{ height: 0 }}
+                            animate={{ height: `${height}%` }}
+                            transition={{ duration: 1, delay: i * 0.1 }}
+                            className="w-full bg-gradient-to-t from-purple-500/30 to-purple-500/50 rounded-t group-hover:from-purple-500/40 group-hover:to-purple-500/60 transition-colors duration-300"
+                          />
                         ))}
                       </div>
-                    </div>
+                    </motion.div>
                     
                     {/* Recent Activity */}
-                    <div className="bg-white/5 p-4 rounded-lg">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-white/5 p-4 rounded-lg backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors duration-300"
+                    >
                       <div className="text-sm text-gray-400 mb-4">Recent Activity</div>
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3">
+                        <motion.div
+                          initial={{ x: -20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: 0.5 }}
+                          className="flex items-center gap-3"
+                        >
                           <div className="w-2 h-2 rounded-full bg-green-500"></div>
                           <div className="text-sm text-gray-300">New project created</div>
-                        </div>
-                        <div className="flex items-center gap-3">
+                        </motion.div>
+                        <motion.div
+                          initial={{ x: -20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: 0.7 }}
+                          className="flex items-center gap-3"
+                        >
                           <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                           <div className="text-sm text-gray-300">Task completed</div>
-                        </div>
+                        </motion.div>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
                 </div>
                 
@@ -156,12 +208,9 @@ export default function LandingPage() {
                 <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-indigo-500/30 rounded-full blur-xl animate-float-delayed"></div>
                 
                 {/* Glass Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 to-transparent backdrop-blur-[2px]"></div>
               </div>
-              
-              {/* Background Glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-indigo-500/10 blur-3xl -z-10 group-hover:opacity-75 transition-opacity duration-500"></div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -179,34 +228,43 @@ export default function LandingPage() {
       <TestimonialsSection />
 
       {/* Features Section */}
-      <section className="w-full py-20 bg-gray-50">
+      <section className="w-full py-20 bg-gray-900">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 animate-fade-in">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Powerful Features for Enterprise Success
             </h2>
-            <p className="text-xl text-gray-600 animate-fade-in">
+            <p className="text-xl text-gray-400">
               Everything you need to automate and optimize your operations
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div
+              <motion.div
                 key={feature.title}
-                className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.05 }}
+                className="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 backdrop-blur-sm"
               >
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-white mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   {feature.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -214,6 +272,9 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <CTASection />
+
+      {/* Footer */}
+      <Footer />
 
       <Analytics />
     </main>
