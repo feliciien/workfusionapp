@@ -154,23 +154,14 @@ export async function POST(req: Request) {
       });
 
       // Update subscription in database
-      await db.userSubscription.upsert({
+      await db.subscription.update({
         where: {
           userId: userId
         },
-        create: {
-          userId: userId,
-          paypalSubscriptionId: subscriptionId,
-          paypalPlanId: subscriptionDetails.plan_id,
-          paypalStatus: status,
-          paypalCurrentPeriodEnd: currentPeriodEnd,
-        },
-        update: {
-          paypalSubscriptionId: subscriptionId,
-          paypalPlanId: subscriptionDetails.plan_id,
-          paypalStatus: status,
-          paypalCurrentPeriodEnd: currentPeriodEnd,
-        },
+        data: {
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        }
       });
 
       console.log('[WEBHOOK] Subscription updated:', {

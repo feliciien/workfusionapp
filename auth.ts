@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import prisma from "@/lib/prisma"
 import GithubProvider from "next-auth/providers/github"
 import GoogleProvider from "next-auth/providers/google"
+import JiraProvider from "@/lib/jira-provider"
 import { NextAuthOptions } from "next-auth"
 
 declare module "next-auth" {
@@ -44,6 +45,10 @@ export const authOptions: NextAuthOptions = {
           emailVerified: profile.email_verified
         };
       },
+    }),
+    JiraProvider({
+      clientId: process.env.JIRA_CLIENT_ID ?? "",
+      clientSecret: process.env.JIRA_CLIENT_SECRET ?? "",
     }),
   ],
   callbacks: {

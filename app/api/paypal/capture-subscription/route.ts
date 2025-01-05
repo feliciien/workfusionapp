@@ -8,18 +8,18 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
 
 async function associateSubscriptionWithUser(userId: string, subscriptionId: string): Promise<void> {
-  await prismadb.userSubscription.upsert({
+  await prismadb.subscription.upsert({
     where: { userId },
     create: {
       userId,
       paypalSubscriptionId: subscriptionId,
-      paypalStatus: "ACTIVE",
-      paypalCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      status: "active",
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     },
     update: {
       paypalSubscriptionId: subscriptionId,
-      paypalStatus: "ACTIVE",
-      paypalCurrentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      status: "active",
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
 }

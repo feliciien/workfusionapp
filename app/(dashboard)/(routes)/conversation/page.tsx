@@ -13,11 +13,11 @@ import { UserAvatar } from "@/components/user-avatar";
 import { BotAvatar } from "@/components/bot-avatar";
 import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
-import { UserButton } from "@clerk/nextjs";
 import { toast } from "react-hot-toast";
 import * as z from "zod";
 import { MessageSquare, Moon, Sun, Trash, ClipboardCopy } from "lucide-react";
 import { Heading } from "@/components/heading";
+import { useSession } from "next-auth/react";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -39,6 +39,7 @@ export default function ConversationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationId = searchParams?.get('id');
+  const session = useSession();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

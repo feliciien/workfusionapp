@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="512" height="512" fill="#2C2D30"/>
+    
+    <!-- Main logo shape -->
+    <path d="M256 96C167.635 96 96 167.635 96 256C96 344.365 167.635 416 256 416C344.365 416 416 344.365 416 256C416 167.635 344.365 96 256 96ZM256 376C189.766 376 136 322.234 136 256C136 189.766 189.766 136 256 136C322.234 136 376 189.766 376 256C376 322.234 322.234 376 256 376Z" fill="#4A90E2"/>
+    
+    <!-- Inner circles representing AI/automation -->
+    <circle cx="256" cy="256" r="60" fill="#4A90E2" opacity="0.8"/>
+    <circle cx="256" cy="256" r="30" fill="#4A90E2"/>
+    
+    <!-- Connection lines -->
+    <path d="M256 196L316 256L256 316" stroke="#4A90E2" stroke-width="8" fill="none"/>
+    <path d="M196 256L256 196L316 256" stroke="#4A90E2" stroke-width="8" fill="none"/>
+</svg>

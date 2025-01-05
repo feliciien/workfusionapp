@@ -1,12 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
