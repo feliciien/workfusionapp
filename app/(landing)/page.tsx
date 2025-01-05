@@ -94,20 +94,22 @@ export default function LandingPage() {
                 Streamline operations, reduce costs, and accelerate growth with our enterprise-grade AI solutions.
               </p>
               <div className="flex flex-wrap gap-4">
-                <motion.button
+                <motion.a
+                  href="/get-started"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
                 >
                   Get Started Free
-                </motion.button>
-                <motion.button
+                </motion.a>
+                <motion.a
+                  href="/schedule-demo"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-700 transition-all duration-300 border border-gray-700 hover:border-gray-600"
                 >
                   Schedule Demo
-                </motion.button>
+                </motion.a>
               </div>
             </motion.div>
 
