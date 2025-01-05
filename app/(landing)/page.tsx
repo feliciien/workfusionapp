@@ -3,7 +3,7 @@
 import { Analytics } from '@vercel/analytics/react';
 import { TrustedCompanies } from "@/components/trusted-companies";
 import { ValueProposition } from "@/components/value-proposition";
-import { IntegrationShowcase } from "@/components/integration-showcase";
+import { IntegrationsSection } from "@/components/integrations-section";
 import { TestimonialsSection } from "@/components/testimonials-section";
 import { CTASection } from "@/components/cta-section";
 import Image from "next/image";
@@ -92,29 +92,75 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative animate-fade-in-right">
-              <div className="relative w-full h-[400px] lg:h-[500px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-8">
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
-                <div className="relative z-10 h-full flex flex-col items-center justify-center">
-                  <div className="w-full max-w-2xl bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-2xl">
-                    <div className="h-8 bg-purple-200/20 rounded-md mb-4"></div>
-                    <div className="space-y-3">
-                      <div className="h-4 bg-purple-200/20 rounded-md w-3/4"></div>
-                      <div className="h-4 bg-purple-200/20 rounded-md w-1/2"></div>
-                      <div className="h-4 bg-purple-200/20 rounded-md w-5/6"></div>
-                    </div>
-                    <div className="mt-6 grid grid-cols-2 gap-4">
-                      <div className="h-20 bg-purple-200/20 rounded-md"></div>
-                      <div className="h-20 bg-purple-200/20 rounded-md"></div>
-                    </div>
+              <div className="relative w-full h-[400px] lg:h-[500px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 via-purple-800/50 to-indigo-900/50 group hover:scale-[1.02] transition-transform duration-500">
+                {/* Main Dashboard Image */}
+                <div className="relative h-full w-full rounded-lg overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
+                  {/* Window Header */}
+                  <div className="h-8 bg-gray-800 flex items-center px-4 gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
-                  <div className="absolute bottom-4 right-4 flex space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
-                    <div className="w-2 h-2 rounded-full bg-purple-300"></div>
-                    <div className="w-2 h-2 rounded-full bg-purple-200"></div>
+                  
+                  {/* Dashboard Content */}
+                  <div className="p-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-white/5 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400 mb-1">Total Projects</div>
+                        <div className="text-2xl font-semibold text-white">128</div>
+                      </div>
+                      <div className="bg-white/5 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400 mb-1">Active Tasks</div>
+                        <div className="text-2xl font-semibold text-white">34</div>
+                      </div>
+                      <div className="bg-white/5 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400 mb-1">Efficiency</div>
+                        <div className="text-2xl font-semibold text-white">92%</div>
+                      </div>
+                    </div>
+                    
+                    {/* Chart Section */}
+                    <div className="bg-white/5 rounded-lg p-4 mb-6">
+                      <div className="text-sm text-gray-400 mb-4">Performance Analytics</div>
+                      <div className="h-40 flex items-end justify-between gap-2">
+                        {[65, 45, 75, 55, 85, 35, 95, 65, 75, 45, 65, 55].map((height, i) => (
+                          <div
+                            key={i}
+                            className="w-full bg-purple-500/30 rounded-t transition-all duration-500 group-hover:bg-purple-500/50"
+                            style={{ height: `${height}%` }}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Recent Activity */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <div className="text-sm text-gray-400 mb-4">Recent Activity</div>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <div className="text-sm text-gray-300">New project created</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="text-sm text-gray-300">Task completed</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                
+                {/* Floating Elements */}
+                <div className="absolute top-12 -right-6 w-24 h-24 bg-purple-500/30 rounded-full blur-xl animate-float"></div>
+                <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-indigo-500/30 rounded-full blur-xl animate-float-delayed"></div>
+                
+                {/* Glass Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/50 to-transparent"></div>
               </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-pink-500/30 blur-3xl -z-10"></div>
+              
+              {/* Background Glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-indigo-500/10 blur-3xl -z-10 group-hover:opacity-75 transition-opacity duration-500"></div>
             </div>
           </div>
         </div>
@@ -126,8 +172,8 @@ export default function LandingPage() {
       {/* Trusted Companies */}
       <TrustedCompanies />
 
-      {/* Integration Showcase */}
-      <IntegrationShowcase />
+      {/* Integrations */}
+      <IntegrationsSection />
 
       {/* Testimonials */}
       <TestimonialsSection />

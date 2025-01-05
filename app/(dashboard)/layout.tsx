@@ -22,23 +22,35 @@ const DashboardLayout = async ({
     }
 
     // Fetch user's subscription and API limits
-    const [subscription, apiLimit] = await Promise.all([
-      prisma.userSubscription.findUnique({
-        where: {
-          userId: session.user.id
-        }
-      }),
-      prisma.userApiLimit.findUnique({
-        where: {
-          userId: session.user.id
-        },
-        select: {
-          count: true
-        }
-      })
-    ]);
+    let subscription: any = null;
+    let apiLimit: any = null;
+    
+    if (prisma) {
+      try {
+        const results = await Promise.all([
+          prisma.userSubscription.findUnique({
+            where: {
+              userId: session.user.id
+            }
+          }),
+          prisma.userApiLimit.findUnique({
+            where: {
+              userId: session.user.id
+            },
+            select: {
+              count: true
+            }
+          })
+        ]);
+        
+        subscription = results[0];
+        apiLimit = results[1];
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    }
 
-    const isPro = subscription?.paypalStatus === "ACTIVE";
+    const isPro = subscription?.paypalStatus === "ACTIVE" || false;
     const apiLimits = { count: apiLimit?.count || 0 };
 
     return (

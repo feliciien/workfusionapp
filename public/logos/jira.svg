@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="98px" height="98px" viewBox="0 0 98 98" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M97.1 45.6L52.8 1.3c-1.7-1.7-4.5-1.7-6.2 0L1.3 46.6c-1.7 1.7-1.7 4.5 0 6.2l44.3 44.3c1.7 1.7 4.5 1.7 6.2 0l45.3-45.3c1.7-1.7 1.7-4.5 0-6.2zM49.7 69.6L29.1 49l20.6-20.6L70.3 49l-20.6 20.6z" fill="#2684FF"/>
+        <path d="M49.7 28.4c-5.7-5.7-5.7-14.9 0-20.6l23.9 23.9-23.9-3.3z" fill="url(#jira_linear1)"/>
+        <path d="M70.3 49L49.7 69.6c5.7 5.7 14.9 5.7 20.6 0 5.7-5.7 5.7-14.9 0-20.6z" fill="url(#jira_linear2)"/>
+        <defs>
+            <linearGradient id="jira_linear1" x1="36.8" y1="18.1" x2="73.6" y2="18.1" gradientUnits="userSpaceOnUse">
+                <stop offset="0.18" stop-color="#0052CC"/>
+                <stop offset="1" stop-color="#2684FF"/>
+            </linearGradient>
+            <linearGradient id="jira_linear2" x1="36.8" y1="59.3" x2="73.6" y2="59.3" gradientUnits="userSpaceOnUse">
+                <stop offset="0.18" stop-color="#0052CC"/>
+                <stop offset="1" stop-color="#2684FF"/>
+            </linearGradient>
+        </defs>
+    </g>
+</svg>
