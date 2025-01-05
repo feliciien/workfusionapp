@@ -1,7 +1,8 @@
 // /app/api/user/api-usage/route.ts
 
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 
@@ -13,16 +14,16 @@ const FREE_CREDITS = 5;
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
 
-    if (!userId) {
+    if (!session) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Fetch user data from the database using regular Prisma client
     const userApiLimit = await prisma.userApiLimit.findUnique({
       where: {
-        userId: userId
+        userId: session.user.id
       }
     });
 

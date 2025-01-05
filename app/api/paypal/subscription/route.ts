@@ -1,15 +1,18 @@
-import { auth } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
-    const { searchParams } = new URL(req.url);
-    const planId = searchParams.get("planId");
+    const session = await getServerSession(authOptions);
 
-    if (!userId) {
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const planId = searchParams.get("planId");
 
     if (!planId) {
       return new NextResponse("Plan ID is required", { status: 400 });
@@ -40,7 +43,7 @@ export async function GET(req: Request) {
       },
       body: JSON.stringify({
         plan_id: planId,
-        custom_id: userId,
+        custom_id: session.user.email,
         application_context: {
           user_action: "SUBSCRIBE_NOW",
           return_url: `${baseUrl}/settings?success=true`,

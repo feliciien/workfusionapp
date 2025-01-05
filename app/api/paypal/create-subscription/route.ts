@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs";
-import { clerkClient } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
@@ -90,8 +90,8 @@ async function createSubscription(plan: PlanType, userId: string) {
 
 export async function GET(req: Request) {
   try {
-    const user = await currentUser();
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return new NextResponse(
         JSON.stringify({ error: "Unauthorized" }),
         { 
@@ -118,7 +118,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const subscription = await createSubscription(plan, user.id);
+    const subscription = await createSubscription(plan, session.user.id);
 
     return new NextResponse(
       JSON.stringify(subscription),

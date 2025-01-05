@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["interactiveTransactions", "driverAdapters"]
 }
 
@@ -10,23 +10,23 @@ datasource db {
 }
 
 model User {
-  id            String           @id @default(cuid())
-  name          String?
-  email         String?          @unique
-  emailVerified DateTime?
-  image         String?
-  conversations Conversation[]
-  settings      UserSettings?
-  apiLimit      UserApiLimit?
-  subscription  UserSubscription?
-  analytics     Analytics[]
+  id             String             @id @default(cuid())
+  name           String?
+  email          String?            @unique
+  emailVerified  DateTime?
+  image          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  subscription   Subscription?
+  conversations  Conversation[]
+  settings       UserSettings?
+  apiLimit       UserApiLimit?
+  analytics      Analytics[]
   networkMetrics NetworkMetrics[]
-  featureUsage  UserFeatureUsage[]
-  customModels  CustomModel[]
-  accounts      Account[]
-  sessions      Session[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  featureUsage   UserFeatureUsage[]
+  customModels   CustomModel[]
 }
 
 model UserApiLimit {
@@ -38,31 +38,29 @@ model UserApiLimit {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model UserSubscription {
-  id                     String    @id @default(cuid())
-  userId                 String    @unique
-  paypalSubscriptionId   String?   @unique @map("paypal_subscription_id")
-  paypalCustomerId      String?   @map("paypal_customer_id")
-  paypalPlanId          String?   @map("paypal_plan_id")
-  paypalPayerId         String?   @map("paypal_payer_id")
-  paypalStatus          String    @default("INACTIVE") @map("paypal_status")
-  paypalCurrentPeriodEnd DateTime? @map("paypal_current_period_end")
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([paypalSubscriptionId])
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  paypalSubscriptionId String?   @unique
+  planId               String?
+  status               String // active, canceled, suspended, past_due
+  currentPeriodStart   DateTime  @default(now())
+  currentPeriodEnd     DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Conversation {
-  id          String    @id @default(cuid())
-  userId      String
-  title       String
-  preview     String    @default("No messages yet")
-  messages    Message[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  preview   String    @default("No messages yet")
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -71,7 +69,7 @@ model Message {
   id             String       @id @default(cuid())
   conversationId String
   content        String       @db.Text
-  role          String
+  role           String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -80,13 +78,13 @@ model Message {
 }
 
 model UserSettings {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  theme           String   @default("light")
-  notifications   Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  theme         String   @default("light")
+  notifications Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Analytics {
@@ -129,16 +127,16 @@ model UserFeatureUsage {
 }
 
 model CustomModel {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   name        String
   description String?
-  status      String    @default("pending")
+  status      String   @default("pending")
   modelId     String?
   error       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

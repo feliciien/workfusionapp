@@ -2,12 +2,85 @@ import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { prismaEdge } from "@/lib/prisma-edge";
 import { authOptions } from "@/auth";
+import prisma from "@/lib/prisma";
 
 const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } = {};
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 const DAY_IN_MS = 86_400_000;
 
-export const checkSubscription = async (): Promise<boolean> => {
+export async function getUserSubscriptionId() {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
+
+    if (!user?.email) {
+      return null;
+    }
+
+    const userWithSubscription = await prisma.user.findUnique({
+      where: {
+        email: user.email,
+      },
+      select: {
+        subscription: {
+          select: {
+            paypalSubscriptionId: true,
+          },
+        },
+      },
+    });
+
+    if (!userWithSubscription?.subscription) {
+      return null;
+    }
+
+    return userWithSubscription.subscription.paypalSubscriptionId;
+  } catch (error) {
+    console.error("[GET_USER_SUBSCRIPTION_ID]", error);
+    return null;
+  }
+}
+
+export async function checkSubscription() {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
+
+    if (!user?.email) {
+      return false;
+    }
+
+    const userWithSubscription = await prisma.user.findUnique({
+      where: {
+        email: user.email,
+      },
+      select: {
+        subscription: {
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+          },
+        },
+      },
+    });
+
+    if (!userWithSubscription?.subscription) {
+      return false;
+    }
+
+    const subscription = userWithSubscription.subscription;
+
+    return (
+      subscription.status === "active" &&
+      subscription.currentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now()
+    );
+  } catch (error) {
+    console.error("[CHECK_SUBSCRIPTION]", error);
+    return false;
+  }
+}
+
+export const checkSubscriptionStatus = async (): Promise<boolean> => {
   const start = Date.now();
   try {
     const session = await getServerSession(authOptions);
@@ -45,31 +118,31 @@ export const checkSubscription = async (): Promise<boolean> => {
     }
 
     // Check subscription status
-    const userSubscription = await db.userSubscription.findUnique({
+    const subscription = await prisma.subscription.findUnique({
       where: { userId },
       select: {
-        paypalStatus: true,
-        paypalCurrentPeriodEnd: true
+        status: true,
+        currentPeriodEnd: true
       }
     });
 
     console.log("[SUBSCRIPTION_CHECK] Subscription record:", {
       userId,
-      subscriptionExists: !!userSubscription,
+      subscriptionExists: !!subscription,
       timestamp: new Date().toISOString(),
-      details: userSubscription
+      details: subscription
     });
 
-    if (!userSubscription) {
+    if (!subscription) {
       SUBSCRIPTION_CHECK_CACHE[userId] = { result: false, timestamp: Date.now() };
       return false;
     }
 
     // Validate subscription status and expiration
     const now = Date.now();
-    const isActive = userSubscription.paypalStatus === "ACTIVE";
-    const isExpired = userSubscription.paypalCurrentPeriodEnd 
-      ? userSubscription.paypalCurrentPeriodEnd.getTime() + DAY_IN_MS < now
+    const isActive = subscription.status === "active";
+    const isExpired = subscription.currentPeriodEnd 
+      ? subscription.currentPeriodEnd.getTime() + DAY_IN_MS < now
       : true;
 
     const isValid = isActive && !isExpired;
@@ -79,8 +152,8 @@ export const checkSubscription = async (): Promise<boolean> => {
       isValid,
       isActive,
       isExpired,
-      status: userSubscription.paypalStatus,
-      endDate: userSubscription.paypalCurrentPeriodEnd,
+      status: subscription.status,
+      endDate: subscription.currentPeriodEnd,
       timestamp: new Date().toISOString()
     });
 

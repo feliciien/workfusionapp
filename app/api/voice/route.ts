@@ -1,28 +1,54 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 import { checkSubscription } from "@/lib/subscription";
+import { incrementFeatureUsage, checkFeatureLimit } from "@/lib/feature-limit";
+import { FEATURE_TYPES } from "@/constants";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-    const isPro = await checkSubscription();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!isPro) {
-      return new NextResponse("Pro subscription required", { status: 403 });
-    }
+    const body = await req.json();
+    const { prompt, voice, emotion, speed, pitch } = body;
 
-    const { text, voice } = await req.json();
-
-    if (!text) {
+    if (!prompt) {
       return new NextResponse("Text is required", { status: 400 });
     }
 
+    // Check subscription and limits
+    const isPro = await checkSubscription();
+    if (!isPro) {
+      const count = await checkFeatureLimit(FEATURE_TYPES.VOICE_SYNTHESIS);
+      if (count >= 5) {
+        return new NextResponse("Free tier limit reached", { status: 403 });
+      }
+    }
+
+    // Map voice and emotion to ElevenLabs voice IDs
+    const voiceMap: Record<string, string> = {
+      'male': '21m00Tcm4TlvDq8ikWAM',    // Josh
+      'female': 'EXAVITQu4vr4xnSDxMaL',  // Elli
+      'child': 'pNInz6obpgDQGcFmaJgB'    // Sam
+    };
+
+    const stabilityMap: Record<string, number> = {
+      'neutral': 0.5,
+      'happy': 0.75,
+      'sad': 0.25,
+      'angry': 0.9
+    };
+
+    const voiceId = voiceMap[voice] || '21m00Tcm4TlvDq8ikWAM';
+    const stability = stabilityMap[emotion] || 0.5;
+
     const response = await fetch(
-      "https://api.elevenlabs.io/v1/text-to-speech/" + (voice || "21m00Tcm4TlvDq8ikWAM"),
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         method: "POST",
         headers: {
@@ -31,25 +57,44 @@ export async function POST(req: Request) {
           "xi-api-key": process.env.ELEVEN_LABS_API_KEY!,
         },
         body: JSON.stringify({
-          text,
-          model_id: "eleven_monolingual_v1",
+          text: prompt,
+          model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.5,
+            stability,
             similarity_boost: 0.75,
+            style: 1.0,
+            use_speaker_boost: true,
+            speaking_rate: speed,
+            pitch_scale: pitch
           },
         }),
       }
     );
 
     if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      console.error("ElevenLabs API error:", error);
       return new NextResponse("Voice generation failed", { status: 500 });
+    }
+
+    // Increment usage for free users
+    if (!isPro) {
+      await incrementFeatureUsage(FEATURE_TYPES.VOICE_SYNTHESIS);
     }
 
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString("base64");
-    return NextResponse.json({ audio: `data:audio/mpeg;base64,${base64Audio}` });
+
+    // Get updated count
+    const remaining = isPro ? -1 : 5 - (await checkFeatureLimit(FEATURE_TYPES.VOICE_SYNTHESIS));
+
+    return NextResponse.json({ 
+      audio: `data:audio/mpeg;base64,${base64Audio}`,
+      remaining,
+      isPro
+    });
   } catch (error) {
-    console.log("[VOICE_ERROR]", error);
+    console.error("[VOICE_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

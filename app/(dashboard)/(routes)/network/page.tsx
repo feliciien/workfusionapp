@@ -4,12 +4,13 @@ import { NetworkDashboard } from "@/components/network/network-dashboard";
 import { checkSubscription } from "@/lib/subscription";
 import { getNetworkMetrics } from "@/lib/network-metrics";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 
 export default async function NetworkPage() {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
   
-  if (!session?.userId) {
+  if (!session?.user?.id) {
     redirect("/sign-in");
   }
 
@@ -17,9 +18,9 @@ export default async function NetworkPage() {
 
   // Fetch network metrics for different timeframes
   const [dailyMetrics, weeklyMetrics, monthlyMetrics] = await Promise.all([
-    getNetworkMetrics(session.userId, "day"),
-    getNetworkMetrics(session.userId, "week"),
-    getNetworkMetrics(session.userId, "month"),
+    getNetworkMetrics(session.user.id, "day"),
+    getNetworkMetrics(session.user.id, "week"),
+    getNetworkMetrics(session.user.id, "month"),
   ]);
 
   return (

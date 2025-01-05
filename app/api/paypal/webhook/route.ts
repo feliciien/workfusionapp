@@ -1,113 +1,103 @@
 import { NextResponse } from "next/server";
-import { prismaEdge } from "@/lib/prisma-edge";
-import { headers } from "next/headers";
+import prisma from "@/lib/prisma";
 
 export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const headersList = await headers();
-    const webhookId = headersList.get("paypal-transmission-id");
-    const eventType = headersList.get("paypal-event-type");
-
-    console.log("[WEBHOOK] Received PayPal webhook:", {
-      webhookId,
-      eventType,
-      timestamp: new Date().toISOString()
-    });
-
     const body = await req.json();
+    const { event_type, resource } = body;
 
-    const {
-      resource: {
-        id: subscriptionId,
-        status,
-        subscriber: { payer_id },
-        billing_info: { next_billing_time, cycle_executions },
-        custom_id: userId // We pass userId as custom_id when creating subscription
-      },
-    } = body;
+    // Extract the subscription ID from the resource
+    const subscriptionId = resource.id;
+    const status = resource.status?.toUpperCase();
+    const customerId = resource.subscriber?.payer_id;
+    const planId = resource.plan_id;
 
-    // Find the user with this PayPal subscription
-    let existingSubscription = await prismaEdge.userSubscription.findUnique({
+    if (!subscriptionId || !status) {
+      return new NextResponse("Missing required fields", { status: 400 });
+    }
+
+    // Find the subscription in our database
+    const existingSubscription = await prisma.subscription.findUnique({
       where: {
         paypalSubscriptionId: subscriptionId,
       },
     });
-
-    // If not found by subscription ID, try finding by userId
-    if (!existingSubscription && userId) {
-      existingSubscription = await prismaEdge.userSubscription.findUnique({
-        where: {
-          userId: userId,
-        },
-      });
-    }
-
-    // If still not found and we have a userId, create a new subscription
-    if (!existingSubscription && userId) {
-      existingSubscription = await prismaEdge.userSubscription.create({
-        data: {
-          userId: userId,
-          paypalSubscriptionId: subscriptionId,
-          paypalStatus: status,
-          paypalCurrentPeriodEnd: next_billing_time ? new Date(next_billing_time) : null,
-          paypalPayerId: payer_id,
-        },
-      });
-
-      console.log("[WEBHOOK] Created new subscription:", {
-        subscriptionId,
-        userId,
-        status,
-        timestamp: new Date().toISOString()
-      });
-
-      return new NextResponse(null, { status: 200 });
-    }
 
     if (!existingSubscription) {
-      console.log("[WEBHOOK] No subscription found for:", {
-        subscriptionId,
-        userId,
-        status,
-        timestamp: new Date().toISOString()
-      });
-      return new NextResponse(null, { status: 200 });
+      console.log(`No subscription found for PayPal subscription ID: ${subscriptionId}`);
+      return new NextResponse("Subscription not found", { status: 404 });
     }
 
-    console.log("[WEBHOOK] Processing subscription update:", {
-      subscriptionId,
-      userId: existingSubscription.userId,
-      oldStatus: existingSubscription.paypalStatus,
-      newStatus: status,
-      timestamp: new Date().toISOString()
-    });
+    switch (event_type) {
+      case "BILLING.SUBSCRIPTION.ACTIVATED":
+        await prisma.subscription.update({
+          where: {
+            paypalSubscriptionId: subscriptionId,
+          },
+          data: {
+            status: "active",
+            planId: planId,
+            currentPeriodEnd: new Date(resource.billing_info.next_billing_time),
+          },
+        });
+        break;
 
-    // Update the subscription status
-    await prismaEdge.userSubscription.update({
-      where: {
-        id: existingSubscription.id,
-      },
-      data: {
-        paypalStatus: status,
-        paypalCurrentPeriodEnd: next_billing_time ? new Date(next_billing_time) : null,
-        paypalPayerId: payer_id,
-        paypalSubscriptionId: subscriptionId,
-      },
-    });
+      case "BILLING.SUBSCRIPTION.CANCELLED":
+        await prisma.subscription.update({
+          where: {
+            paypalSubscriptionId: subscriptionId,
+          },
+          data: {
+            status: "canceled",
+            currentPeriodEnd: null,
+          },
+        });
+        break;
 
-    console.log("[WEBHOOK] Successfully updated subscription:", {
-      subscriptionId,
-      userId: existingSubscription.userId,
-      status,
-      timestamp: new Date().toISOString()
-    });
+      case "BILLING.SUBSCRIPTION.SUSPENDED":
+        await prisma.subscription.update({
+          where: {
+            paypalSubscriptionId: subscriptionId,
+          },
+          data: {
+            status: "suspended",
+          },
+        });
+        break;
+
+      case "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
+        await prisma.subscription.update({
+          where: {
+            paypalSubscriptionId: subscriptionId,
+          },
+          data: {
+            status: "past_due",
+          },
+        });
+        break;
+
+      case "BILLING.SUBSCRIPTION.RENEWED":
+        await prisma.subscription.update({
+          where: {
+            paypalSubscriptionId: subscriptionId,
+          },
+          data: {
+            status: "active",
+            currentPeriodEnd: new Date(resource.billing_info.next_billing_time),
+          },
+        });
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event_type}`);
+    }
 
     return new NextResponse(null, { status: 200 });
   } catch (error) {
-    console.error("[WEBHOOK_ERROR]", error);
-    return new NextResponse("Webhook Error", { status: 500 });
+    console.error("[PAYPAL_WEBHOOK_ERROR]", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
 
