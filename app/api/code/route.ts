@@ -32,8 +32,8 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
-    const canGenerate = await checkFeatureLimit(FEATURE_TYPES.CODE_GENERATION);
+    const isPro = await checkSubscription(userId);
+    const canGenerate = await checkFeatureLimit(userId, FEATURE_TYPES.CODE_GENERATION);
     
     if (!isPro && !canGenerate) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     });
 
     if (!isPro) {
-      await increaseFeatureUsage(FEATURE_TYPES.CODE_GENERATION);
+      await increaseFeatureUsage(userId, FEATURE_TYPES.CODE_GENERATION);
     }
 
     if (!response.choices[0].message) {

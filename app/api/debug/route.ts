@@ -1,32 +1,47 @@
-import { auth, currentUser } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prismadb from "@/lib/prismadb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const { userId } = auth();
-    const user = await currentUser();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
-    if (!userId || !user) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get subscription info
-    const subscription = await prismadb.userSubscription.findUnique({
-      where: {
-        userId: userId,
-      }
+    // Get user's subscription status
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId }
     });
 
-    // Get all subscriptions for comparison
-    const allSubscriptions = await prismadb.userSubscription.findMany();
+    // Get user's API usage
+    const apiLimit = await prisma.userApiLimit.findUnique({
+      where: { userId }
+    });
+
+    // Get user's feature usage
+    const featureUsage = await prisma.userFeatureUsage.findMany({
+      where: { userId }
+    });
 
     return NextResponse.json({
-      clerkUserId: userId,
-      userEmail: user.emailAddresses[0]?.emailAddress,
-      subscription: subscription,
-      allSubscriptions: allSubscriptions,
-      now: new Date(),
+      user: {
+        id: userId,
+        email: session.user.email
+      },
+      subscription: subscription ? {
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        paypalSubscriptionId: subscription.paypalSubscriptionId
+      } : null,
+      apiLimit: apiLimit?.count || 0,
+      featureUsage: featureUsage.map(usage => ({
+        featureType: usage.featureType,
+        count: usage.count
+      }))
     });
   } catch (error) {
     console.error("[DEBUG_ERROR]", error);

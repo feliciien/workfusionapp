@@ -1,75 +1,74 @@
-import Navbar from "@/components/navbar-server";
-import Sidebar from "@/components/sidebar";
-import { getServerSession } from "next-auth";
+import { Navbar } from "@/components/navbar";
+import { Sidebar } from "@/components/sidebar";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
+import type { Subscription } from "@prisma/client";
 
 // Disable caching for this layout
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const DashboardLayout = async ({
-  children,
+  children
 }: {
   children: React.ReactNode;
 }) => {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return redirect('/auth/signin');
-    }
+  const headersList = headers();
+  const session = await getSessionFromRequest(new Request("http://localhost", {
+    headers: headersList,
+  }));
 
-    // Fetch user's subscription and API limits
-    let subscription: any = null;
-    let apiLimit: any = null;
-    
-    if (prisma) {
-      try {
-        const results = await Promise.all([
-          prisma.userSubscription.findUnique({
-            where: {
-              userId: session.user.id
-            }
-          }),
-          prisma.userApiLimit.findUnique({
-            where: {
-              userId: session.user.id
-            },
-            select: {
-              count: true
-            }
-          })
-        ]);
-        
-        subscription = results[0];
-        apiLimit = results[1];
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    }
-
-    const isPro = subscription?.paypalStatus === "ACTIVE" || false;
-    const apiLimits = { count: apiLimit?.count || 0 };
-
-    return (
-      <div className="h-full relative dark:bg-gray-900">
-        <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-gray-900">
-          <div className="flex h-full flex-col">
-            <Sidebar apiLimits={apiLimits} isPro={isPro} />
-          </div>
-        </div>
-        <main className="md:pl-72 dark:bg-gray-900">
-          <Navbar />
-          {children}
-        </main>
-      </div>
-    );
-  } catch (error) {
-    console.error("[DASHBOARD_LAYOUT]", error);
-    return redirect('/auth/signin');
+  if (!session) {
+    redirect('/auth/signin');
   }
+
+  // Get user subscription and API limit count
+  let subscription: Subscription | null = null;
+  let apiLimitCount = 0;
+
+  if (session?.id) {
+    try {
+      const [subscriptionData, featureUsage] = await Promise.all([
+        db.subscription.findUnique({
+          where: {
+            userId: session.id
+          }
+        }),
+        db.userFeatureUsage.findUnique({
+          where: {
+            userId_featureType: {
+              userId: session.id,
+              featureType: 'API_USAGE'
+            }
+          }
+        })
+      ]);
+
+      subscription = subscriptionData;
+      apiLimitCount = featureUsage?.count || 0;
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  }
+
+  return (
+    <div className="h-full relative dark:bg-gray-900">
+      <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80 bg-gray-900">
+        <div className="flex h-full flex-col">
+          <Sidebar 
+            apiLimitCount={apiLimitCount} 
+            isPro={subscription?.status === "active"} 
+          />
+        </div>
+      </div>
+      <main className="md:pl-72 pb-10 dark:bg-gray-900">
+        <Navbar />
+        {children}
+      </main>
+    </div>
+  );
 };
 
 export default DashboardLayout;

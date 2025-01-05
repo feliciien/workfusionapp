@@ -8,9 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { tools } from "../dashboard/config";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const SettingsPage = async () => {
-  const isPro = await checkSubscription();
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return {
+      redirect: {
+        destination: "/sign-in",
+        permanent: false,
+      },
+    };
+  }
+
+  const isPro = await checkSubscription(userId);
   const proTools = tools.filter(tool => tool.proOnly);
   const limitedTools = tools.filter(tool => tool.limitedFree);
 

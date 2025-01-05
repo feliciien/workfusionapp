@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 
 const stylePrompts = {
   "realistic": "ultra realistic, photorealistic, highly detailed, 8k resolution",
@@ -42,11 +43,13 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const isPro = await checkSubscription();
+    const userId = session?.user?.id;
 
-    if (!session) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
+    const isPro = await checkSubscription(userId);
 
     if (!isPro) {
       return new NextResponse("Pro subscription required", { status: 403 });
@@ -70,6 +73,11 @@ export async function POST(req: Request) {
 
     // Process and enhance the prompt
     const enhancedPrompt = processPrompt(prompt, style);
+
+    const freeTrial = await checkApiLimit(userId);
+    if (!freeTrial && !isPro) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    }
 
     const response = await fetch(
       "https://api.replicate.com/v1/predictions",
@@ -95,6 +103,9 @@ export async function POST(req: Request) {
     }
 
     const prediction = await response.json();
+    if (!isPro) {
+      await increaseApiLimit(userId);
+    }
     return NextResponse.json(prediction);
   } catch (error) {
     console.log("[ART_ERROR]", error);

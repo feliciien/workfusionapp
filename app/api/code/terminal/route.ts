@@ -1,65 +1,64 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { exec } from 'child_process';
 import path from 'path';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+interface TerminalRequest {
+  command: string;
+  cwd?: string;
+}
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json() as TerminalRequest;
     const { command, cwd } = body;
 
-    if (!command || !cwd) {
-      return new NextResponse("Missing required fields", { status: 400 });
+    if (!command) {
+      return new NextResponse("Command is required", { status: 400 });
     }
 
-    // Validate working directory
-    const normalizedPath = path.normalize(cwd);
-    if (!normalizedPath.startsWith('/Users/MacBookPro/Desktop/generated-projects/')) {
-      return new NextResponse("Invalid working directory", { status: 400 });
-    }
+    // Ensure the working directory is within the user's workspace
+    const workspaceDir = path.join(process.cwd(), 'workspaces', userId);
+    const workingDir = cwd ? path.join(workspaceDir, cwd) : workspaceDir;
 
-    // Execute command
-    const executeCommand = () => {
-      return new Promise((resolve, reject) => {
-        const process = exec(command, { cwd: normalizedPath });
-
-        let output = '';
-        let error = '';
-
-        process.stdout?.on('data', (data) => {
-          output += data;
-        });
-
-        process.stderr?.on('data', (data) => {
-          error += data;
-        });
-
-        process.on('close', (code) => {
-          if (code === 0) {
-            resolve({ output, error });
-          } else {
-            reject(new Error(error || `Command failed with code ${code}`));
-          }
-        });
-
-        process.on('error', (err) => {
-          reject(err);
-        });
+    // Execute the command
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: workingDir,
+        env: {
+          ...process.env,
+          PATH: process.env.PATH
+        },
+        timeout: 30000 // 30 seconds timeout
       });
-    };
 
-    const result = await executeCommand();
-    return NextResponse.json(result);
+      return NextResponse.json({
+        success: true,
+        stdout,
+        stderr
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return NextResponse.json({
+          success: false,
+          error: error.message
+        }, { status: 500 });
+      }
+      throw error;
+    }
   } catch (error) {
-    console.error('Terminal command error:', error);
-    return new NextResponse(
-      error instanceof Error ? error.message : 'Internal server error',
-      { status: 500 }
-    );
+    console.error("[TERMINAL_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

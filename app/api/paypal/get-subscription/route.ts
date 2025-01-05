@@ -1,47 +1,61 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { getUserSubscriptionId, checkSubscription } from "@/lib/subscription";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { db } from "@/lib/db";
+import { paypalApi } from "@/lib/paypal";
 
-const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
-
-export const dynamic = "force-dynamic";
-export const runtime = "edge";
+export const runtime = 'edge';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
-    if (!session?.user) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const subscriptionId = await getUserSubscriptionId();
-    const isSubscribed = await checkSubscription();
-
-    const user = await prisma.user.findUnique({
+    const subscription = await db.subscription.findUnique({
       where: {
-        email: session.user.email!,
-      },
-      include: {
-        subscription: true,
-      },
+        userId: userId
+      }
     });
 
-    if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+    if (!subscription) {
+      return new NextResponse("No subscription found", { status: 404 });
+    }
+
+    // If we have a PayPal subscription ID, verify it with PayPal
+    if (subscription.paypalSubscriptionId) {
+      const result = await paypalApi.verifySubscription(subscription.paypalSubscriptionId);
+
+      if (!result.isValid) {
+        // Update subscription status in database
+        await db.subscription.update({
+          where: {
+            id: subscription.id
+          },
+          data: {
+            status: "EXPIRED"
+          }
+        });
+
+        return NextResponse.json({
+          ...subscription,
+          status: "EXPIRED",
+          isValid: false
+        });
+      }
     }
 
     return NextResponse.json({
-      subscriptionId,
-      isSubscribed,
-      subscription: user.subscription,
+      ...subscription,
+      isValid: subscription.status === "ACTIVE"
     });
   } catch (error) {
-    console.error("[PAYPAL_GET_SUBSCRIPTION]", error);
+    console.error("[GET_SUBSCRIPTION_ERROR]", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

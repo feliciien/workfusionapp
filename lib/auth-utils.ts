@@ -1,20 +1,23 @@
-import { auth } from "@/auth"
-import { getServerSession } from "next-auth"
+import { getSessionFromRequest } from "@/lib/jwt"
+import { headers } from "next/headers"
 
 export async function getCurrentUser() {
-  const session = await getServerSession(auth)
-  return session?.user
+  const headersList = headers();
+  const session = await getSessionFromRequest(new Request("http://localhost", {
+    headers: headersList,
+  }));
+  return session;
 }
 
 export async function requireAuth() {
-  const session = await getServerSession(auth)
-  if (!session?.user) {
-    throw new Error("Unauthorized")
+  const session = await getCurrentUser();
+  if (!session) {
+    throw new Error("Unauthorized");
   }
-  return session.user
+  return session;
 }
 
 export async function getUserId() {
-  const session = await getServerSession(auth)
-  return session?.user?.id
+  const session = await getCurrentUser();
+  return session?.id;
 }

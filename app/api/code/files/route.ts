@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getAuthSession } from '@/lib/auth-helper';
 import fs from 'fs-extra';
 import path from 'path';
 import { join, dirname } from 'path';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession();
     const body = await req.json();
     let { path: filePath, content, isDirectory } = body;
 

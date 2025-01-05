@@ -1,25 +1,20 @@
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
-import { prismaEdge } from "@/lib/prisma-edge";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 
 const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } = {};
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 const DAY_IN_MS = 86_400_000;
 
-export async function getUserSubscriptionId() {
+export async function getUserSubscriptionId(userId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
-
-    if (!user?.email) {
+    if (!userId) {
       return null;
     }
 
-    const userWithSubscription = await prisma.user.findUnique({
+    const userWithSubscription = await db.user.findUnique({
       where: {
-        email: user.email,
+        id: userId,
       },
       select: {
         subscription: {
@@ -41,96 +36,26 @@ export async function getUserSubscriptionId() {
   }
 }
 
-export async function checkSubscription() {
+export async function checkSubscription(userId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
-
-    if (!user?.email) {
-      return false;
-    }
-
-    const userWithSubscription = await prisma.user.findUnique({
-      where: {
-        email: user.email,
-      },
-      select: {
-        subscription: {
-          select: {
-            status: true,
-            currentPeriodEnd: true,
-          },
-        },
-      },
-    });
-
-    if (!userWithSubscription?.subscription) {
-      return false;
-    }
-
-    const subscription = userWithSubscription.subscription;
-
-    return (
-      subscription.status === "active" &&
-      subscription.currentPeriodEnd?.getTime()! + DAY_IN_MS > Date.now()
-    );
-  } catch (error) {
-    console.error("[CHECK_SUBSCRIPTION]", error);
-    return false;
-  }
-}
-
-export const checkSubscriptionStatus = async (): Promise<boolean> => {
-  const start = Date.now();
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
-      console.log("[SUBSCRIPTION_CHECK] No user ID found");
       return false;
     }
 
     // Check cache first
-    const cached = SUBSCRIPTION_CHECK_CACHE[userId];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log("[SUBSCRIPTION_CHECK] Returning cached result:", {
-        userId,
-        result: cached.result,
-        timestamp: new Date().toISOString()
-      });
-      return cached.result;
+    const cachedResult = SUBSCRIPTION_CHECK_CACHE[userId];
+    if (cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL) {
+      return cachedResult.result;
     }
 
-    // Verify user exists
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { id: true }
-    });
-
-    if (!user) {
-      console.log("[SUBSCRIPTION_CHECK] User not found:", {
+    const subscription = await db.subscription.findUnique({
+      where: {
         userId,
-        timestamp: new Date().toISOString()
-      });
-      SUBSCRIPTION_CHECK_CACHE[userId] = { result: false, timestamp: Date.now() };
-      return false;
-    }
-
-    // Check subscription status
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId },
+      },
       select: {
         status: true,
-        currentPeriodEnd: true
+        currentPeriodEnd: true,
       }
-    });
-
-    console.log("[SUBSCRIPTION_CHECK] Subscription record:", {
-      userId,
-      subscriptionExists: !!subscription,
-      timestamp: new Date().toISOString(),
-      details: subscription
     });
 
     if (!subscription) {
@@ -138,35 +63,52 @@ export const checkSubscriptionStatus = async (): Promise<boolean> => {
       return false;
     }
 
-    // Validate subscription status and expiration
-    const now = Date.now();
-    const isActive = subscription.status === "active";
-    const isExpired = subscription.currentPeriodEnd 
-      ? subscription.currentPeriodEnd.getTime() + DAY_IN_MS < now
-      : true;
+    if (!subscription.currentPeriodEnd) {
+      SUBSCRIPTION_CHECK_CACHE[userId] = { result: false, timestamp: Date.now() };
+      return false;
+    }
 
-    const isValid = isActive && !isExpired;
+    const isValid = 
+      subscription.status === "active" &&
+      subscription.currentPeriodEnd.getTime() + DAY_IN_MS > Date.now();
 
-    console.log("[SUBSCRIPTION_CHECK] Validation result:", {
-      userId,
-      isValid,
-      isActive,
-      isExpired,
-      status: subscription.status,
-      endDate: subscription.currentPeriodEnd,
-      timestamp: new Date().toISOString()
-    });
-
-    SUBSCRIPTION_CHECK_CACHE[userId] = { result: isValid, timestamp: now };
+    SUBSCRIPTION_CHECK_CACHE[userId] = { result: isValid, timestamp: Date.now() };
     return isValid;
-
   } catch (error) {
-    console.error("[SUBSCRIPTION_CHECK] Error:", {
-      error,
-      duration: Date.now() - start,
-      timestamp: new Date().toISOString(),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    console.error("[CHECK_SUBSCRIPTION_ERROR]", error);
     return false;
   }
-};
+}
+
+export async function checkSubscriptionStatus(userId: string): Promise<boolean> {
+  try {
+    if (!userId) {
+      return false;
+    }
+
+    const subscription = await db.subscription.findUnique({
+      where: {
+        userId,
+      },
+      select: {
+        status: true,
+        currentPeriodEnd: true,
+        paypalSubscriptionId: true,
+      }
+    });
+
+    if (!subscription || !subscription.currentPeriodEnd) {
+      return false;
+    }
+
+    // If subscription has a currentPeriodEnd date and it's in the future (plus a grace period)
+    const isValid = 
+      subscription.status === "active" &&
+      subscription.currentPeriodEnd.getTime() + DAY_IN_MS > Date.now();
+
+    return isValid;
+  } catch (error) {
+    console.error("[CHECK_SUBSCRIPTION_STATUS_ERROR]", error);
+    return false;
+  }
+}

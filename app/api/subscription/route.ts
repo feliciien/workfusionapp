@@ -1,22 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getSessionFromRequest } from "@/lib/jwt";
 import { checkSubscription } from "@/lib/subscription";
+
+export const runtime = 'edge';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
+    const isPro = await checkSubscription(userId);
 
     return NextResponse.json({ isPro });
   } catch (error) {
-    console.error("[SUBSCRIPTION_API]", error);
+    console.error("[SUBSCRIPTION_ERROR]", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -1,42 +1,57 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { db } from "@/lib/db";
+import { paypalApi } from "@/lib/paypal";
+
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { subscriptionId } = await req.json();
+    const body = await req.json();
+    const { subscriptionId } = body;
 
     if (!subscriptionId) {
       return new NextResponse("Subscription ID is required", { status: 400 });
     }
 
-    // Get subscription from database
-    const subscription = await prisma.userSubscription.findUnique({
+    const subscription = await db.subscription.findFirst({
       where: {
-        userId,
-      },
+        userId: userId,
+        paypalSubscriptionId: subscriptionId
+      }
     });
 
     if (!subscription) {
       return new NextResponse("Subscription not found", { status: 404 });
     }
 
-    // Verify subscription status
-    const isValid = ['ACTIVE', 'APPROVED'].includes(subscription.paypalStatus || '');
+    const result = await paypalApi.verifySubscription(subscriptionId);
 
-    return NextResponse.json({ 
-      success: true, 
-      isValid,
-      subscription 
-    });
+    if (!result.isValid) {
+      // Update subscription status in database
+      await db.subscription.update({
+        where: {
+          id: subscription.id
+        },
+        data: {
+          status: "EXPIRED"
+        }
+      });
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("[VERIFY_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[VERIFY_SUBSCRIPTION_ERROR]", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

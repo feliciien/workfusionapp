@@ -1,10 +1,10 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 import JSZip from 'jszip';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession();
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }

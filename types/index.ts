@@ -106,3 +106,33 @@ export interface TreeItemProps {
   onToggle: (item: FileStructure) => void;
   level: number;
 }
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  paypalSubscriptionId: string | null;
+  planId: string | null;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date | null;
+  canceledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserApiLimit {
+  id: string;
+  userId: string;
+  count: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserFeatureUsage {
+  id: string;
+  userId: string;
+  featureType: string;
+  count: number;
+  createdAt: Date;
+  updatedAt: Date;
+}

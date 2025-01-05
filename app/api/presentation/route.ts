@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from 'openai';
+import { getSessionFromRequest } from "@/lib/jwt";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 
@@ -71,10 +72,17 @@ const formatSlides = (content: string): Slide[] => {
 
 export async function POST(req: Request) {
   try {
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
     const { topic, template = 'business' } = await req.json();
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
 
     if (!freeTrial && !isPro) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
@@ -138,7 +146,7 @@ export async function POST(req: Request) {
     }
 
     if (!isPro) {
-      await increaseApiLimit();
+      await increaseApiLimit(userId);
     }
 
     // Return slides directly in the expected format

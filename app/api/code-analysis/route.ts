@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from 'openai';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -21,8 +23,11 @@ interface CodeAnalysisResponse {
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return new NextResponse("OpenAI API key not configured", { status: 500 });
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const { code } = await req.json();
@@ -35,12 +40,12 @@ export async function POST(req: Request) {
       return new NextResponse("Code is too long. Maximum length is 10000 characters", { status: 400 });
     }
 
-    let freeTrial = true;
+    let freeTrial = false;
     let isPro = false;
 
     try {
-      freeTrial = await checkApiLimit();
-      isPro = await checkSubscription();
+      freeTrial = await checkApiLimit(userId);
+      isPro = await checkSubscription(userId);
     } catch (error) {
       console.error("Error checking API limits:", error);
       // Continue with free trial if there's an error checking limits
@@ -114,7 +119,7 @@ export async function POST(req: Request) {
     // Only try to increase API limit if we successfully checked it
     if (!isPro) {
       try {
-        await increaseApiLimit();
+        await increaseApiLimit(userId);
       } catch (error) {
         console.error("Error increasing API limit:", error);
         // Continue anyway since we've already generated the content

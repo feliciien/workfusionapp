@@ -84,12 +84,23 @@ const unlimitedTools = [
   },
 ];
 
+interface PricePlan {
+  amount: number;
+  period: string;
+  savings?: string;
+}
+
+interface Prices {
+  monthly: PricePlan;
+  yearly: PricePlan;
+}
+
 export default function PricingPage() {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
   const [isYearly, setIsYearly] = useState(false);
 
-  const prices = {
+  const prices: Prices = {
     monthly: {
       amount: 10,
       period: "month",
@@ -145,73 +156,75 @@ export default function PricingPage() {
                 <span className="text-4xl font-bold">${currentPlan.amount}</span>
                 <span className="text-gray-600">/{currentPlan.period}</span>
               </div>
-              {isYearly && (
+              {isYearly && currentPlan.savings && (
                 <p className="text-green-600 font-medium mt-2">
                   {currentPlan.savings}
                 </p>
               )}
               <p className="text-purple-600 font-medium mt-4">
-                14-DAY FREE TRIAL
+                Everything you need to create amazing AI content
               </p>
             </div>
 
             <div className="space-y-4 mb-8">
-              {proFeatures.map((feature) => (
-                <div key={feature} className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>{feature}</span>
-                </div>
-              ))}
+              <h4 className="font-semibold">Pro Features:</h4>
+              <ul className="space-y-3">
+                {proFeatures.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-500" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <Link
-              href={isAuthenticated ? "/dashboard" : "/sign-up"}
-              className="block"
-            >
-              <Button
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                size="lg"
-              >
-                {isYearly ? "Upgrade to Pro" : "Start 14-Day Free Trial"}
-              </Button>
-            </Link>
-          </Card>
-        </div>
-
-        <div className="space-y-16">
-          <section>
-            <h2 className="text-2xl font-bold mb-8">Pro-Only Tools</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {proOnlyTools.map((tool) => (
-                <Card key={tool.name} className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Badge className="bg-purple-600">PRO</Badge>
+            <div className="space-y-4 mb-8">
+              <h4 className="font-semibold">Pro-Only Tools:</h4>
+              <ul className="space-y-3">
+                {proOnlyTools.map((tool) => (
+                  <li key={tool.name} className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
                     <div>
-                      <h3 className="font-semibold mb-2">{tool.name}</h3>
-                      <p className="text-gray-600 text-sm">{tool.description}</p>
+                      <span className="font-medium">{tool.name}</span>
+                      <p className="text-sm text-gray-600">{tool.description}</p>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </section>
 
-          <section>
-            <h2 className="text-2xl font-bold mb-8">Unlimited Usage</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {unlimitedTools.map((tool) => (
-                <Card key={tool.name} className="p-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{tool.name}</h3>
-                      <span className="text-sm text-gray-600">{tool.limit}</span>
+            <div className="space-y-4">
+              <h4 className="font-semibold">Unlimited Access:</h4>
+              <ul className="space-y-3">
+                {unlimitedTools.map((tool) => (
+                  <li key={tool.name} className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium">{tool.name}</span>
+                      <p className="text-sm text-gray-600">{tool.description}</p>
+                      <p className="text-xs text-purple-600 mt-1">{tool.limit}</p>
                     </div>
-                    <p className="text-gray-600 text-sm">{tool.description}</p>
-                  </div>
-                </Card>
-              ))}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </section>
+
+            <div className="mt-8">
+              {isAuthenticated ? (
+                <Link href="/settings">
+                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                    Upgrade to Pro
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/auth/signin">
+                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                    Get Started
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
     </div>

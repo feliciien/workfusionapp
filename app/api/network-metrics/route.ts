@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import prismadb from "@/lib/prismadb";
-import { checkApiLimit } from "@/lib/api-limit";
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkSubscription } from "@/lib/subscription";
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     // Optional: Check if user has available API calls
-    const hasApiLimit = await checkApiLimit();
+    const hasApiLimit = await checkApiLimit(userId);
     if (!hasApiLimit) {
       return new NextResponse("Free tier limit reached", { status: 403 });
     }
@@ -55,6 +56,13 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
+
+    if (!freeTrial && !isPro) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    }
+
     const startDate = new Date();
     switch (timeframe) {
       case "week":
@@ -78,6 +86,10 @@ export async function GET(req: Request) {
         createdAt: "asc",
       },
     });
+
+    if (!isPro) {
+      await increaseApiLimit(userId);
+    }
 
     return NextResponse.json(metrics);
   } catch (error) {

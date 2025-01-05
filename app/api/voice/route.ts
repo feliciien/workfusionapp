@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
+import { getSessionFromRequest } from "@/lib/jwt";
 import { checkSubscription } from "@/lib/subscription";
 import { incrementFeatureUsage, checkFeatureLimit } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -22,12 +23,11 @@ export async function POST(req: Request) {
     }
 
     // Check subscription and limits
-    const isPro = await checkSubscription();
-    if (!isPro) {
-      const count = await checkFeatureLimit(FEATURE_TYPES.VOICE_SYNTHESIS);
-      if (count >= 5) {
-        return new NextResponse("Free tier limit reached", { status: 403 });
-      }
+    const isPro = await checkSubscription(userId);
+    const usage = await checkFeatureLimit(userId, FEATURE_TYPES.VOICE_SYNTHESIS);
+
+    if (!isPro && usage >= 5) {
+      return new NextResponse("Free tier limit reached", { status: 403 });
     }
 
     // Map voice and emotion to ElevenLabs voice IDs
@@ -79,14 +79,14 @@ export async function POST(req: Request) {
 
     // Increment usage for free users
     if (!isPro) {
-      await incrementFeatureUsage(FEATURE_TYPES.VOICE_SYNTHESIS);
+      await incrementFeatureUsage(userId, FEATURE_TYPES.VOICE_SYNTHESIS);
     }
 
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString("base64");
 
     // Get updated count
-    const remaining = isPro ? -1 : 5 - (await checkFeatureLimit(FEATURE_TYPES.VOICE_SYNTHESIS));
+    const remaining = isPro ? -1 : 5 - (await checkFeatureLimit(userId, FEATURE_TYPES.VOICE_SYNTHESIS));
 
     return NextResponse.json({ 
       audio: `data:audio/mpeg;base64,${base64Audio}`,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import { increaseFeatureUsage, getFeatureUsage } from "@/lib/api-limit";
+import { authOptions } from "@/lib/auth";
+import { getFeatureUsage } from "@/lib/api-limit";
 import { FEATURE_TYPES } from "@/constants";
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const usage = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
+    const usage = await getFeatureUsage(userId, FEATURE_TYPES.API_USAGE);
 
     return NextResponse.json(usage);
   } catch (error) {

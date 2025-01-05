@@ -2,32 +2,28 @@
 
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import Sidebar from "@/components/sidebar";
+import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 
 interface MobileSidebarProps {
-  apiLimits: {
-    [key: string]: number;
-  };
+  apiLimitCount: number;
   isPro: boolean;
 }
 
-const MobileSidebar = ({
-  apiLimits = {},
+export const MobileSidebar = ({
+  apiLimitCount,
   isPro = false
 }: MobileSidebarProps) => {
   return (
     <Sheet>
-      <SheetTrigger asChild className="md:hidden pr-4">
-        <Button variant="ghost" size="icon">
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
           <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 bg-gray-900">
-        <Sidebar apiLimits={apiLimits} isPro={isPro} />
+      <SheetContent side="left" className="p-0">
+        <Sidebar apiLimitCount={apiLimitCount} isPro={isPro} />
       </SheetContent>
     </Sheet>
   );
 };
-
-export default MobileSidebar;

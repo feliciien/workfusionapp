@@ -33,14 +33,8 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
-    const canGenerate = await checkFeatureLimit(FEATURE_TYPES.IMAGE_GENERATION);
-    
-    if (!isPro && !canGenerate) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
-    }
-
-    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = await req.json();
+    const body = await req.json();
+    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
 
     if (!prompt) {
       return new NextResponse("Prompt is required", { status: 400 });
@@ -54,6 +48,13 @@ export async function POST(req: Request) {
       return new NextResponse("Resolution is required", { status: 400 });
     }
 
+    const isPro = await checkSubscription(userId);
+    const canGenerate = await checkFeatureLimit(userId, FEATURE_TYPES.IMAGE_GENERATION);
+    
+    if (!isPro && !canGenerate) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    }
+
     const enhancedPrompt = processPrompt(prompt, style);
     const response = await openai.images.generate({
       prompt: enhancedPrompt,
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
     });
 
     if (!isPro) {
-      await increaseFeatureUsage(FEATURE_TYPES.IMAGE_GENERATION);
+      await increaseFeatureUsage(userId, FEATURE_TYPES.IMAGE_GENERATION);
     }
 
     return NextResponse.json(response.data);

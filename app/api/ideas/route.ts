@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import OpenAI from 'openai';
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@/lib/auth"; // Import the auth function
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { headers } from "next/headers";
 
 const openai = new OpenAI({
@@ -32,8 +33,9 @@ export async function POST(req: Request) {
   try {
     // Initialize headers first
     headers();
-    const { userId } = await auth();
-    
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -42,8 +44,8 @@ export async function POST(req: Request) {
       return new NextResponse("OpenAI API key not configured", { status: 500 });
     }
 
-    const { topic } = await req.json();
-    console.log("Received topic:", topic);
+    const body = await req.json();
+    const { topic } = body;
 
     if (!topic || typeof topic !== "string") {
       return new NextResponse("Topic is required and must be a string", { status: 400 });
@@ -53,8 +55,8 @@ export async function POST(req: Request) {
       return new NextResponse("Topic is too long. Maximum length is 1000 characters", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
 
     if (!freeTrial && !isPro) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
@@ -98,7 +100,7 @@ export async function POST(req: Request) {
     console.log("Formatted ideas:", ideas);
 
     if (!isPro) {
-      await increaseApiLimit();
+      await increaseApiLimit(userId);
     }
 
     return NextResponse.json({

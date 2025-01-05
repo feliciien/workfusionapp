@@ -1,69 +1,69 @@
-import { auth as clerkAuth } from "@clerk/nextjs";
+import { getSessionFromRequest } from "@/lib/jwt";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { PrismaClient } from '@prisma/client';
+import { Pool } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import { paypalApi } from "@/lib/paypal";
 
-export async function GET(req: Request) {
+const connectionString = process.env.POSTGRES_PRISMA_URL!;
+const pool = new Pool({ connectionString });
+const client = pool;
+
+const prisma = new PrismaClient({
+  adapter: new PrismaNeon(client)
+});
+
+export const runtime = 'edge';
+
+export async function POST(req: Request) {
   try {
-    const { userId } = clerkAuth();
-    const { searchParams } = new URL(req.url);
-    const subscriptionId = searchParams.get("subscription_id");
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    const body = await req.json();
+    const { subscriptionId } = body;
+
     if (!subscriptionId) {
-      return new NextResponse("Subscription ID required", { status: 400 });
+      return new NextResponse("Subscription ID is required", { status: 400 });
     }
 
-    // Basic auth token
-    const basicAuth = Buffer.from(
-      `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-    ).toString("base64");
-
-    // Get subscription details from PayPal
-    const response = await fetch(
-      `${process.env.PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
-      {
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-        },
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        userId: userId,
+        paypalSubscriptionId: subscriptionId
       }
-    );
-
-    if (!response.ok) {
-      console.error("PayPal API Error:", await response.text());
-      return new NextResponse("PayPal API Error", { status: 500 });
-    }
-
-    const subscription = await response.json();
-
-    // Update subscription in database using regular Prisma client
-    const userSubscription = await prisma.userSubscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        paypalSubscriptionId: subscription.id,
-        paypalStatus: subscription.status,
-        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
-          ? new Date(subscription.billing_info.next_billing_time)
-          : null,
-        paypalCustomerId: subscription.subscriber.payer_id,
-        paypalPlanId: subscription.plan_id
-      },
-      update: {
-        paypalStatus: subscription.status,
-        paypalCurrentPeriodEnd: subscription.billing_info.next_billing_time
-          ? new Date(subscription.billing_info.next_billing_time)
-          : null,
-        paypalCustomerId: subscription.subscriber.payer_id,
-        paypalPlanId: subscription.plan_id
-      },
     });
 
-    return NextResponse.json(userSubscription);
+    if (!subscription) {
+      return new NextResponse("Subscription not found", { status: 404 });
+    }
+
+    const result = await paypalApi.verifySubscription(subscriptionId);
+
+    if (!result.isValid) {
+      // Update subscription status in database
+      await prisma.subscription.update({
+        where: {
+          id: subscription.id
+        },
+        data: {
+          status: "EXPIRED"
+        }
+      });
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("[PAYPAL_VERIFY_ERROR]", error);
+    console.error("[VERIFY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
+  } finally {
+    await pool.end();
   }
 }
+
+// Route segment config
+export const dynamic = 'force-dynamic';

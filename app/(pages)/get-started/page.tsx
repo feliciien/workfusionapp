@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function GetStarted() {
+function GetStartedContent() {
   const [isLoading, setIsLoading] = useState<{[key: string]: boolean}>({});
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -156,5 +157,13 @@ export default function GetStarted() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GetStartedPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <GetStartedContent />
+    </Suspense>
   );
 }

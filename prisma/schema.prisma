@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions", "driverAdapters"]
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -52,6 +52,16 @@ model Subscription {
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model UserSettings {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  theme         String   @default("light")
+  notifications Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Conversation {
   id        String    @id @default(cuid())
   userId    String
@@ -75,16 +85,6 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
-}
-
-model UserSettings {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  theme         String   @default("light")
-  notifications Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Analytics {

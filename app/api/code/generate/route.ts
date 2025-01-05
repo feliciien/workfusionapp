@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
@@ -489,7 +489,7 @@ export async function POST(req: Request) {
   try {
     console.log('[CODE_GENERATE] Starting code generation...');
     
-    const { userId } = await auth();
+    const { userId } = await getAuthSession();
     console.log('[CODE_GENERATE] User ID:', userId);
     
     const body = await req.json();
@@ -504,8 +504,8 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt is required", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
 
     console.log('[CODE_GENERATE] User status:', { freeTrial, isPro });
 
@@ -520,7 +520,7 @@ export async function POST(req: Request) {
       console.log('[CODE_GENERATE] Project generated successfully');
 
       if (!isPro) {
-        await increaseApiLimit();
+        await increaseApiLimit(userId);
       }
 
       return NextResponse.json(generatedProject);

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth-helper";
 import { db } from "@/lib/db";
 
 export default async function handler(
@@ -12,7 +12,7 @@ export default async function handler(
   }
 
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession();
     const { modelId } = req.query;
 
     if (!userId) {

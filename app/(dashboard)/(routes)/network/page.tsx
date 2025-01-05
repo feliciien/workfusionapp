@@ -14,13 +14,14 @@ export default async function NetworkPage() {
     redirect("/sign-in");
   }
 
-  const isPro = await checkSubscription();
+  const userId = session.user.id;
+  const isPro = await checkSubscription(userId);
 
   // Fetch network metrics for different timeframes
   const [dailyMetrics, weeklyMetrics, monthlyMetrics] = await Promise.all([
-    getNetworkMetrics(session.user.id, "day"),
-    getNetworkMetrics(session.user.id, "week"),
-    getNetworkMetrics(session.user.id, "month"),
+    getNetworkMetrics(userId, "day"),
+    getNetworkMetrics(userId, "week"),
+    getNetworkMetrics(userId, "month"),
   ]);
 
   return (

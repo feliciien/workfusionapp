@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth-helper";
 import { checkSubscription } from "@/lib/subscription";
 
 export default async function handler(
@@ -12,12 +12,13 @@ export default async function handler(
   }
 
   try {
-    const { userId } = await auth();
-    const isPro = await checkSubscription();
+    const { userId } = await getAuthSession();
 
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
+
+    const isPro = await checkSubscription(userId);
 
     if (!isPro) {
       return res.status(403).json({ error: "Pro subscription required" });
@@ -51,9 +52,9 @@ export default async function handler(
     }
 
     const prediction = await response.json();
-    return res.json(prediction);
+    return res.status(200).json(prediction);
   } catch (error) {
-    console.log("[VIDEO_ERROR]", error);
-    return res.status(500).json({ error: "Internal Error" });
+    console.error("[VIDEO_ERROR]", error);
+    return res.status(500).json({ error: "Internal error" });
   }
 }

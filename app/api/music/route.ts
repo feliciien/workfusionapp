@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import Replicate from "replicate";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import { increaseFeatureUsage, checkFeatureLimit } from "@/lib/api-limit";
+import { authOptions } from "@/lib/auth";
+import { checkFeatureLimit, increaseFeatureUsage } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { FEATURE_TYPES } from "@/constants";
+import Replicate from "replicate";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
@@ -19,17 +19,18 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
-    const canGenerate = await checkFeatureLimit(FEATURE_TYPES.MUSIC_CREATION);
-    
-    if (!isPro && !canGenerate) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
-    }
-
-    const { prompt } = await req.json();
+    const body = await req.json();
+    const { prompt } = body;
 
     if (!prompt) {
       return new NextResponse("Prompt is required", { status: 400 });
+    }
+
+    const isPro = await checkSubscription(userId);
+    const canGenerate = await checkFeatureLimit(userId, FEATURE_TYPES.MUSIC_CREATION);
+    
+    if (!isPro && !canGenerate) {
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
     const response = await replicate.run(
@@ -37,12 +38,12 @@ export async function POST(req: Request) {
       {
         input: {
           prompt_a: prompt,
-        }
+        },
       }
     );
 
     if (!isPro) {
-      await increaseFeatureUsage(FEATURE_TYPES.MUSIC_CREATION);
+      await increaseFeatureUsage(userId, FEATURE_TYPES.MUSIC_CREATION);
     }
 
     return NextResponse.json(response);

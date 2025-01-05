@@ -1,52 +1,54 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { verifySubscription } from "@/lib/paypal";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { paypalApi } from "@/lib/paypal";
+import { db } from "@/lib/db";
+
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { subscriptionId } = await req.json();
+    const body = await req.json();
+    const { subscriptionId } = body;
 
     if (!subscriptionId) {
       return new NextResponse("Subscription ID is required", { status: 400 });
     }
 
-    // Verify subscription with PayPal
-    const { isValid, status, planId, nextBillingTime } = await verifySubscription(subscriptionId);
-
-    if (!isValid) {
-      return new NextResponse("Invalid subscription", { status: 400 });
-    }
-
-    // Update subscription in database
-    const subscription = await prisma.userSubscription.upsert({
+    const subscription = await db.subscription.findFirst({
       where: {
-        userId,
-      },
-      update: {
-        paypalSubscriptionId: subscriptionId,
-        paypalStatus: status,
-        paypalPlanId: planId,
-        paypalCurrentPeriodEnd: nextBillingTime ? new Date(nextBillingTime) : null,
-      },
-      create: {
-        userId,
-        paypalSubscriptionId: subscriptionId,
-        paypalStatus: status,
-        paypalPlanId: planId,
-        paypalCurrentPeriodEnd: nextBillingTime ? new Date(nextBillingTime) : null,
-      },
+        userId: userId,
+        paypalSubscriptionId: subscriptionId
+      }
     });
 
-    return NextResponse.json({ success: true, subscription });
+    if (!subscription) {
+      return new NextResponse("Subscription not found", { status: 404 });
+    }
+
+    const result = await paypalApi.verifySubscription(subscriptionId);
+
+    if (!result.isValid) {
+      // Update subscription status in database
+      await db.subscription.update({
+        where: {
+          id: subscription.id
+        },
+        data: {
+          status: "EXPIRED"
+        }
+      });
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("[PAYPAL_VERIFY_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[VERIFY_SUBSCRIPTION_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

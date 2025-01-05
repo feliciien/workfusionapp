@@ -43,7 +43,7 @@ async function checkSubscription(subscriptionId: string, accessToken: string) {
 async function main() {
   try {
     // Get all subscriptions
-    const subscriptions = await prisma.userSubscription.findMany();
+    const subscriptions = await prisma.subscription.findMany();
     
     if (subscriptions.length === 0) {
       console.log('No subscriptions found in database');
@@ -55,8 +55,8 @@ async function main() {
     for (const sub of subscriptions) {
       console.log('\nChecking subscription for user:', sub.userId);
       console.log('Database status:', {
-        status: sub.paypalStatus,
-        currentPeriodEnd: sub.paypalCurrentPeriodEnd,
+        status: sub.status,
+        currentPeriodEnd: sub.currentPeriodEnd,
         subscriptionId: sub.paypalSubscriptionId
       });
 
@@ -69,12 +69,12 @@ async function main() {
           });
 
           // Update database if status doesn't match
-          if (paypalSub.status !== sub.paypalStatus) {
-            await prisma.userSubscription.update({
+          if (paypalSub.status !== sub.status) {
+            await prisma.subscription.update({
               where: { id: sub.id },
               data: {
-                paypalStatus: paypalSub.status,
-                paypalCurrentPeriodEnd: new Date(paypalSub.billing_info.next_billing_time)
+                status: paypalSub.status,
+                currentPeriodEnd: new Date(paypalSub.billing_info.next_billing_time)
               }
             });
             console.log('Updated subscription status in database');

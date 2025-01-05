@@ -1,31 +1,26 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { paypalApi } from "@/lib/paypal";
 
-export const dynamic = "force-dynamic";
+export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { userId } = await auth();
+    const session = await getSessionFromRequest(req);
+    const userId = session?.id;
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const clientId = process.env.PAYPAL_CLIENT_ID;
-    
-    if (!clientId) {
-      console.error("PayPal client ID missing");
-      return new NextResponse(
-        JSON.stringify({ error: "PayPal configuration error" }), 
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    const accessToken = await paypalApi.getPayPalAccessToken();
 
-    return NextResponse.json({ clientId });
+    return NextResponse.json({ accessToken });
   } catch (error) {
-    console.error("[PAYPAL_TOKEN_ERROR]", error);
-    return new NextResponse(
-      JSON.stringify({ error: "Internal server error" }), 
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    console.error("[PAYPAL_TOKEN]", error);
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -1,9 +1,7 @@
-import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 import { checkSubscription } from "@/lib/subscription";
 import type { PrismaClient } from '@prisma/client/edge';
-import { authOptions } from "@/auth";
 
 type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
@@ -22,11 +20,8 @@ const handleError = (error: unknown, context: string) => {
   });
 };
 
-export const incrementFeatureUsage = async (featureType: FeatureType): Promise<void> => {
+export const incrementFeatureUsage = async (userId: string, featureType: FeatureType): Promise<void> => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       console.log("[INCREMENT_FEATURE] No user ID found");
       return;
@@ -76,27 +71,24 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
   }
 };
 
-export const checkFeatureLimit = async (featureType: FeatureType): Promise<boolean> => {
+export const checkFeatureLimit = async (userId: string, featureType: FeatureType): Promise<number> => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       console.log("[CHECK_FEATURE_LIMIT] No user ID found");
-      return false;
+      return 0;
     }
 
-    const isPro = await checkSubscription();
+    const isPro = await checkSubscription(userId);
     if (isPro) {
       console.log("[CHECK_FEATURE_LIMIT] Pro user, no limits:", {
         userId,
         featureType,
         timestamp: new Date().toISOString()
       });
-      return true;
+      return -1;
     }
 
-    const usage = await getFeatureUsage(featureType);
+    const usage = await getFeatureUsage(userId, featureType);
     const limit = FREE_LIMITS[featureType];
 
     if (typeof limit === 'undefined') {
@@ -105,31 +97,27 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
         availableLimits: Object.keys(FREE_LIMITS),
         timestamp: new Date().toISOString()
       });
-      return false;
+      return 0;
     }
 
-    const hasAvailableUsage = usage < limit;
     console.log("[CHECK_FEATURE_LIMIT] Usage check:", {
       userId,
       featureType,
       currentUsage: usage,
       limit,
-      hasAvailableUsage,
+      hasAvailableUsage: usage < limit,
       timestamp: new Date().toISOString()
     });
 
-    return hasAvailableUsage;
+    return usage;
   } catch (error) {
     handleError(error, 'CHECK_FEATURE_LIMIT');
-    return false;
+    return 0;
   }
 };
 
-export const getFeatureUsage = async (featureType: FeatureType): Promise<number> => {
+export const getFeatureUsage = async (userId: string, featureType: FeatureType): Promise<number> => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       console.log("[GET_FEATURE_USAGE] No user ID found");
       return 0;

@@ -1,4 +1,5 @@
-import { auth } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { exec } from 'child_process';
 import fs from 'fs/promises';
@@ -21,7 +22,9 @@ try {
 export async function POST(req: Request) {
   console.log('Received preview request');
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     if (!userId) {
       console.log('Unauthorized request - no userId');
       return new NextResponse("Unauthorized", { status: 401 });

@@ -17,14 +17,12 @@ import {
 } from "./ui/tooltip";
 
 interface FreeCounterProps {
-  apiLimits: {
-    [key: string]: number;
-  };
+  apiLimitCount: number;
   isPro: boolean;
 }
 
 export const FreeCounter: FC<FreeCounterProps> = ({ 
-  apiLimits = {},
+  apiLimitCount = 0,
   isPro = false 
 }) => {
   const [mounted, setMounted] = useState(false);
@@ -43,19 +41,17 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     return null;
   }
 
-  const totalUsage = Object.values(apiLimits).reduce((acc, curr) => acc + curr, 0);
-
   return (
     <div className="px-3">
       <Card className="bg-white/10 border-0">
         <CardContent className="py-6">
           <div className="text-sm text-center text-white mb-4 space-y-2">
             <p>
-              {totalUsage} / {MAX_FREE_COUNTS} Free Credits Used
+              {apiLimitCount} / {MAX_FREE_COUNTS} Free Credits Used
             </p>
             <Progress
               className="h-3"
-              value={(totalUsage / MAX_FREE_COUNTS) * 100}
+              value={(apiLimitCount / MAX_FREE_COUNTS) * 100}
             />
           </div>
           <TooltipProvider>
@@ -65,7 +61,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
                   onClick={() => router.push('/settings')} 
                   variant="premium" 
                   className="w-full"
-                  disabled={totalUsage < MAX_FREE_COUNTS}
+                  disabled={apiLimitCount < MAX_FREE_COUNTS}
                 >
                   Upgrade
                   <Zap className="w-4 h-4 ml-2 fill-white" />

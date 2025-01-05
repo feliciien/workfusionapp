@@ -76,9 +76,37 @@ async function verifySubscription(subscriptionId: string): Promise<{
   }
 }
 
-export { 
-  PAYPAL_API_BASE, 
-  getPayPalAccessToken, 
+// Function to cancel subscription
+async function cancelSubscription(subscriptionId: string): Promise<Response> {
+  try {
+    const accessToken = await getPayPalAccessToken();
+    
+    const response = await fetch(
+      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return response;
+  } catch (error) {
+    console.error("[PAYPAL_CANCEL_ERROR]", error);
+    throw new Error("Failed to cancel subscription with PayPal");
+  }
+}
+
+const paypalApi = {
+  getPayPalAccessToken,
   getSubscriptionDetails,
-  verifySubscription 
+  verifySubscription,
+  cancelSubscription,
+};
+
+export { 
+  PAYPAL_API_BASE,
+  paypalApi
 };

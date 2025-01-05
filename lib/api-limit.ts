@@ -1,16 +1,11 @@
-import { getServerSession } from "next-auth";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { MAX_FREE_COUNTS, FREE_LIMITS, FEATURE_TYPES } from "@/constants";
-import { authOptions } from "@/auth";
 
 const FREE_CREDITS = MAX_FREE_COUNTS;
 
-export const increaseFeatureUsage = async (featureType: string) => {
+export const increaseFeatureUsage = async (userId: string, featureType: string) => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       return;
     }
@@ -40,16 +35,13 @@ export const increaseFeatureUsage = async (featureType: string) => {
   }
 };
 
-export const checkFeatureLimit = async (featureType: string) => {
+export const checkFeatureLimit = async (userId: string, featureType: string) => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       return false;
     }
 
-    const isPro = await checkSubscription();
+    const isPro = await checkSubscription(userId);
     if (isPro) {
       return true;
     }
@@ -63,23 +55,18 @@ export const checkFeatureLimit = async (featureType: string) => {
       }
     });
 
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
-    if (!usage || usage.count < limit) {
-      return true;
-    }
+    const count = usage?.count || 0;
+    const limit = FREE_LIMITS[featureType] || FREE_CREDITS;
 
-    return false;
+    return count < limit;
   } catch (error) {
     console.error("[CHECK_FEATURE_LIMIT_ERROR]", error);
     return false;
   }
 };
 
-export const getFeatureUsage = async (featureType: string) => {
+export const getFeatureUsage = async (userId: string, featureType: string) => {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
     if (!userId) {
       return {
         count: 0,
@@ -96,10 +83,11 @@ export const getFeatureUsage = async (featureType: string) => {
       }
     });
 
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
+    const count = usage?.count || 0;
+    const limit = FREE_LIMITS[featureType] || FREE_CREDITS;
 
     return {
-      count: usage?.count || 0,
+      count,
       limit
     };
   } catch (error) {
@@ -112,36 +100,15 @@ export const getFeatureUsage = async (featureType: string) => {
 };
 
 // Keep existing functions for backward compatibility
-export const increaseApiLimit = async () => {
-  return increaseFeatureUsage(FEATURE_TYPES.API_USAGE);
+export const increaseApiLimit = async (userId: string) => {
+  return increaseFeatureUsage(userId, FEATURE_TYPES.API_USAGE);
 };
 
-export const checkApiLimit = async () => {
-  return checkFeatureLimit(FEATURE_TYPES.API_USAGE);
+export const checkApiLimit = async (userId: string) => {
+  return checkFeatureLimit(userId, FEATURE_TYPES.API_USAGE);
 };
 
-export const getApiLimitCount = async () => {
-  const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
-  
-  // Get all feature usage
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  
-  let limits: { [key: string]: number } = {};
-  
-  if (userId) {
-    const usages = await db.userFeatureUsage.findMany({
-      where: { userId }
-    });
-    
-    for (const usage of usages) {
-      limits[usage.featureType] = usage.count;
-    }
-  }
-  
-  return {
-    count,
-    limit,
-    limits
-  };
+export const getApiLimitCount = async (userId: string): Promise<number> => {
+  const { count } = await getFeatureUsage(userId, FEATURE_TYPES.API_USAGE);
+  return count;
 };

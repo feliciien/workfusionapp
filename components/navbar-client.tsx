@@ -1,24 +1,23 @@
 "use client";
 
-import MobileSidebar from "./mobile-sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 import { UserButton } from "./user-button";
 
 interface NavbarClientProps {
-  apiLimits: {
-    [key: string]: number;
-  };
+  apiLimitCount: number;
   isPro: boolean;
 }
 
-const NavbarClient = ({ apiLimits, isPro }: NavbarClientProps) => {
+export const NavbarClient = ({
+  apiLimitCount,
+  isPro = false
+}: NavbarClientProps) => {
   return (
-    <div className="flex items-center p-4 relative z-50">
-      <MobileSidebar apiLimits={apiLimits} isPro={isPro} />
+    <div className="flex items-center gap-x-4">
+      <MobileSidebar apiLimitCount={apiLimitCount} isPro={isPro} />
       <div className="flex w-full justify-end">
         <UserButton />
       </div>
     </div>
   );
 };
-
-export default NavbarClient;

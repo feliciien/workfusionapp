@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from 'openai';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -44,6 +46,13 @@ export async function POST(req: Request) {
   let requestData: { prompt?: string; type?: string; tone?: string } = {};
 
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({
         success: false,
@@ -69,8 +78,8 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
 
     if (!freeTrial && !isPro) {
       return NextResponse.json({
@@ -118,7 +127,7 @@ Format your response in proper markdown for optimal readability.`;
     }
 
     if (!isPro) {
-      await increaseApiLimit();
+      await increaseApiLimit(userId);
     }
 
     return NextResponse.json({

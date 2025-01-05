@@ -4,6 +4,7 @@ import { authOptions } from "@/auth";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { trackEvent, AnalyticsEventType } from "@/lib/analytics";
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -52,8 +53,14 @@ export async function POST(req: Request) {
       return new NextResponse("Invalid message format", { status: 400 });
     }
 
-    // Check subscription
-    const isPro = await checkSubscription();
+    // Check subscription and API limit
+    const freeTrial = await checkApiLimit(userId);
+    const isPro = await checkSubscription(userId);
+
+    if (!freeTrial && !isPro) {
+      console.log("[CONVERSATION_CREATE] Free trial has expired. Please upgrade to pro.");
+      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    }
 
     // Generate AI response
     console.log("[CONVERSATION_CREATE] Generating AI response");
@@ -173,6 +180,11 @@ export async function POST(req: Request) {
         userId
       });
       return new NextResponse("Failed to process conversation", { status: 500 });
+    }
+
+    // Increase API limit if not pro
+    if (!isPro) {
+      await increaseApiLimit(userId);
     }
 
     // Track analytics

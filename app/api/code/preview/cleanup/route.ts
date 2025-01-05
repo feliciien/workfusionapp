@@ -1,40 +1,42 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import fs from 'fs/promises';
 import path from 'path';
 
-const PREVIEW_DIR = path.join(process.cwd(), 'preview-projects');
-
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const body = await req.json();
-    const { previewId } = body;
+    const { directory } = body;
 
-    if (!previewId) {
-      return new NextResponse("Missing previewId", { status: 400 });
+    if (!directory) {
+      return new NextResponse("Directory is required", { status: 400 });
     }
 
-    // Clean up the preview directory
-    const projectDir = path.join(PREVIEW_DIR, previewId);
+    // Ensure the directory exists and is within the user's preview directory
+    const previewDir = path.join(process.cwd(), 'public', 'previews', userId);
+    const targetDir = path.join(previewDir, directory);
+
     try {
-      await fs.rm(projectDir, { recursive: true, force: true });
-      console.log('Cleaned up preview directory:', projectDir);
+      await fs.access(targetDir);
+      await fs.rm(targetDir, { recursive: true });
+      return new NextResponse("Directory cleaned up", { status: 200 });
     } catch (error) {
-      console.error('Error cleaning up preview directory:', error);
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return new NextResponse("Directory not found", { status: 404 });
+      }
+      throw error;
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Cleanup error:', error);
-    return new NextResponse(
-      error instanceof Error ? error.message : 'Internal server error',
-      { status: 500 }
-    );
+    console.error("[CLEANUP_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
 

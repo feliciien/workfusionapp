@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -8,7 +8,7 @@ import { Loader } from "@/components/loader";
 import { Heading } from "@/components/heading";
 import { CheckCircle, XCircle } from "lucide-react";
 
-const PayPalSuccessPage = () => {
+function PayPalSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -96,6 +96,12 @@ const PayPalSuccessPage = () => {
       )}
     </div>
   );
-};
+}
 
-export default PayPalSuccessPage;
+export default function PayPalSuccessPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PayPalSuccessContent />
+    </Suspense>
+  );
+}
