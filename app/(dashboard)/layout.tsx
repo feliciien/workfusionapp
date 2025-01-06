@@ -32,24 +32,21 @@ const DashboardLayout = async ({
       },
     });
 
-    apiLimitCount = await db.apiLimit.count({
+    const apiLimit = await db.userApiLimit.findUnique({
       where: {
         userId: session.user.id,
-        createdAt: {
-          gte: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // Last 24 hours
-        },
       },
     });
+
+    apiLimitCount = apiLimit?.count || 0;
   }
 
   return (
-    <div className="h-full relative dark:bg-gray-900">
+    <div className="h-full relative">
       <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80 bg-gray-900">
-        <div className="flex h-full flex-col">
-          <Sidebar isPro={!!subscription?.isPro} apiLimitCount={apiLimitCount} />
-        </div>
+        <Sidebar isPro={subscription?.status === "active"} apiLimitCount={apiLimitCount} />
       </div>
-      <main className="md:pl-72 pb-10 dark:bg-gray-900">
+      <main className="md:pl-72 pb-10">
         <Navbar />
         {children}
       </main>
