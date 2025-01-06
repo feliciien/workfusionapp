@@ -8,7 +8,7 @@ import Link from "next/link";
 import { routes } from "@/lib/routes";
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
-import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
+import { FREE_LIMITS } from "@/constants";
 import Image from "next/image";
 
 interface SidebarProps {
@@ -21,6 +21,7 @@ export const Sidebar = ({
   isPro = false
 }: SidebarProps) => {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-gray-900">
@@ -29,18 +30,18 @@ export const Sidebar = ({
           <div className="relative h-8 w-8 mr-4">
             <Image fill alt="Logo" src="/app-icon.svg" />
           </div>
-          <h1 className="text-2xl font-bold">
-            SynthAI
+          <h1 className="text-2xl font-bold text-white">
+            WorkFusion
           </h1>
         </Link>
         <div className="space-y-1">
           {routes.map((route) => (
             <Link
-              key={route.label}
+              key={route.href}
               href={route.href}
               className={cn(
                 "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400"
+                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
               )}
             >
               <div className="flex items-center flex-1">
@@ -51,12 +52,10 @@ export const Sidebar = ({
           ))}
         </div>
       </div>
-      <div className="mt-auto px-3">
-        <FreeCounter 
-          apiLimitCount={apiLimitCount} 
-          isPro={isPro}
-        />
-      </div>
+      <FreeCounter 
+        apiLimitCount={apiLimitCount} 
+        isPro={isPro}
+      />
     </div>
   );
 };
