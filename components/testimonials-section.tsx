@@ -6,21 +6,21 @@ import Image from "next/image";
 export const TestimonialsSection = () => {
   const testimonials = [
     {
-      quote: "WorkFusion has transformed how we handle our business processes. The AI capabilities are truly revolutionary.",
-      author: "Sarah Johnson",
-      role: "CTO, TechCorp",
+      name: "Sarah",
+      role: "Software Developer",
+      testimonial: "This AI tool has revolutionized my workflow. The code suggestions are incredibly accurate and helpful.",
       image: "/testimonials/sarah.jpg"
     },
     {
-      quote: "The integration was seamless, and the results were immediate. Our productivity has increased by 300%.",
-      author: "Michael Chen",
-      role: "Director of Operations, InnovateX",
+      name: "Michael",
+      role: "Product Manager",
+      testimonial: "An indispensable tool for our team. It has significantly improved our development speed and code quality.",
       image: "/testimonials/michael.jpg"
     },
     {
-      quote: "WorkFusion's enterprise AI solutions have given us a competitive edge in our market.",
-      author: "Emily Rodriguez",
-      role: "CEO, FutureScale",
+      name: "Emily",
+      role: "Tech Lead",
+      testimonial: "The AI assistance is remarkable. It understands context and provides relevant suggestions consistently.",
       image: "/testimonials/emily.jpg"
     }
   ];
@@ -62,17 +62,17 @@ export const TestimonialsSection = () => {
               <div className="relative w-16 h-16 rounded-full overflow-hidden mr-4">
                 <Image
                   src={testimonial.image}
-                  alt={testimonial.author}
+                  alt={testimonial.name}
                   fill
                   className="object-cover"
                 />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">{testimonial.author}</h3>
+                <h3 className="text-lg font-semibold text-white">{testimonial.name}</h3>
                 <p className="text-gray-400">{testimonial.role}</p>
               </div>
             </div>
-            <blockquote className="text-gray-300 italic">"{testimonial.quote}"</blockquote>
+            <blockquote className="text-gray-300 italic">"{testimonial.testimonial}"</blockquote>
           </motion.div>
         ))}
       </div>

@@ -38,7 +38,18 @@ export const FreeCounter: FC<FreeCounterProps> = ({
   }
 
   if (isPro) {
-    return null;
+    return (
+      <div className="px-3">
+        <Card className="bg-gradient-to-r from-purple-600 to-pink-600 border-0">
+          <CardContent className="py-6">
+            <div className="text-sm text-center text-white mb-4 space-y-2">
+              <p className="font-semibold">Pro Plan Active</p>
+              <p className="text-xs opacity-80">Unlimited access to all features</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -46,12 +57,13 @@ export const FreeCounter: FC<FreeCounterProps> = ({
       <Card className="bg-white/10 border-0">
         <CardContent className="py-6">
           <div className="text-sm text-center text-white mb-4 space-y-2">
+            <p className="font-semibold">Free Plan</p>
             <p>
               {apiLimitCount} / {MAX_FREE_COUNTS} Free Credits Used
             </p>
-            <Progress
+            <Progress 
               className="h-3"
-              value={(apiLimitCount / MAX_FREE_COUNTS) * 100}
+              value={(apiLimitCount / MAX_FREE_COUNTS) * 100} 
             />
           </div>
           <TooltipProvider>
@@ -61,21 +73,15 @@ export const FreeCounter: FC<FreeCounterProps> = ({
                   onClick={() => router.push('/settings')} 
                   variant="premium" 
                   className="w-full"
-                  disabled={apiLimitCount < MAX_FREE_COUNTS}
                 >
-                  Upgrade
+                  Upgrade to Pro
                   <Zap className="w-4 h-4 ml-2 fill-white" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <div className="text-sm">
-                  <p>Upgrade to SynthAI Pro to:</p>
-                  <ul className="list-disc list-inside mt-2">
-                    <li>Remove all usage limits</li>
-                    <li>Access premium features</li>
-                    <li>Priority support</li>
-                    <li>Early access to new features</li>
-                  </ul>
+                <div className="text-sm p-2">
+                  <p className="font-semibold">Start 14-Day Free Trial</p>
+                  <p className="text-gray-400 mt-1">Get unlimited access to all features!</p>
                 </div>
               </TooltipContent>
             </Tooltip>

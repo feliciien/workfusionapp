@@ -34,28 +34,44 @@ export const Sidebar = ({
             WorkFusion
           </h1>
         </Link>
-        <div className="space-y-1">
-          {routes.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
-              )}
-            >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                {route.label}
+        <div className="space-y-6">
+          {routes.map((category) => (
+            <div key={category.category} className="space-y-2">
+              <h2 className="text-xs uppercase tracking-wider text-gray-400 font-semibold px-3">
+                {category.category}
+              </h2>
+              <div className="space-y-1">
+                {category.items.map((route) => (
+                  <Link
+                    key={route.href}
+                    href={route.href}
+                    className={cn(
+                      "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
+                      pathname === route.href ? "text-white bg-white/10" : "text-zinc-400",
+                    )}
+                  >
+                    <div className="flex items-center flex-1">
+                      <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
+                      <span>{route.label}</span>
+                    </div>
+                    {route.limit && !isPro && (
+                      <span className="text-xs text-gray-400">
+                        {route.limit} left
+                      </span>
+                    )}
+                  </Link>
+                ))}
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
       <FreeCounter 
         apiLimitCount={apiLimitCount} 
-        isPro={isPro}
+        isPro={isPro} 
       />
     </div>
   );
 };
+
+export default Sidebar;

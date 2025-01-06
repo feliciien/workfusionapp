@@ -5,41 +5,29 @@ import Image from "next/image";
 
 const testimonials = [
   {
-    name: "Franck Miller",
-    title: "Senior Software Engineer",
-    company: "TechCorp Solutions",
-    description: "WorkFusion has revolutionized our development process. The code quality and speed of delivery have improved dramatically. What used to take days now takes hours, and the AI's understanding of complex requirements is remarkable.",
-    rating: 4,
-    avatar: "/testimonials/franck.jpg",
+    name: "Sarah",
+    avatar: "/testimonials/sarah.jpg",
+    title: "Software Developer",
+    description: "This AI tool has revolutionized my workflow. The code suggestions are incredibly accurate and helpful.",
+    rating: 5,
+    companyLogo: "/companies/fpi.svg"
+  },
+  {
+    name: "Michael",
+    avatar: "/testimonials/michael.jpg",
+    title: "Product Manager",
+    description: "An indispensable tool for our team. It has significantly improved our development speed and code quality.",
+    rating: 5,
     companyLogo: "/companies/techcorp.svg"
   },
   {
-    name: "Marie Chen",
-    title: "Lead AI Researcher",
-    company: "InnovAI Labs",
-    description: "As someone deeply involved in AI research, I'm thoroughly impressed by WorkFusion's capabilities. The platform consistently delivers state-of-the-art results and has become an indispensable tool for our research team.",
+    name: "Emily",
+    avatar: "/testimonials/emily.jpg",
+    title: "Tech Lead",
+    description: "The AI assistance is remarkable. It understands context and provides relevant suggestions consistently.",
     rating: 5,
-    avatar: "/testimonials/marie.jpg",
     companyLogo: "/companies/innovai.svg"
-  },
-  {
-    name: "Andrew Thompson",
-    title: "Creative Director",
-    company: "Digital Creators Hub",
-    description: "The creative possibilities with WorkFusion are endless. From generating unique content ideas to helping with actual creation, it's like having a super-powered creative assistant. Our content engagement has increased by 300%.",
-    rating: 4,
-    avatar: "/testimonials/andrew.jpg",
-    companyLogo: "/companies/dch.svg"
-  },
-  {
-    name: "Sarah Rodriguez",
-    title: "Product Lead",
-    company: "Future Products Inc",
-    description: "WorkFusion has transformed our product development lifecycle. The AI-driven insights have helped us make better decisions faster, and the automation tools have significantly reduced our time-to-market.",
-    rating: 5,
-    avatar: "/testimonials/sarah.jpg",
-    companyLogo: "/companies/fpi.svg"
-  },
+  }
 ];
 
 const features = [
@@ -124,15 +112,17 @@ export const LandingContent = () => {
                 <CardHeader className="space-y-4">
                   <div className="flex items-center gap-x-4">
                     <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-pink-100">
-                      {/* Replace with next/image when images are added */}
-                      <div className="w-full h-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white text-xl font-medium">
-                        {item.name[0]}
-                      </div>
+                      <Image
+                        src={item.avatar}
+                        alt="Avatar"
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-gray-900">{item.name}</p>
                       <p className="text-sm text-gray-600">{item.title}</p>
-                      <p className="text-sm font-medium text-pink-600">{item.company}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -158,8 +148,13 @@ export const LandingContent = () => {
                   </p>
                   <div className="mt-6 pt-6 border-t border-gray-100">
                     <div className="h-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
-                      {/* Replace with next/image when company logos are added */}
-                      <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>
+                      <Image
+                        src={item.companyLogo}
+                        alt="Company Logo"
+                        width={96}
+                        height={32}
+                        className="w-full h-full"
+                      />
                     </div>
                   </div>
                 </CardContent>
