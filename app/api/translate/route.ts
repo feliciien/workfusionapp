@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getSessionFromRequest } from "@/lib/jwt";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-
-export const runtime = 'edge';
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -20,10 +18,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { content, targetLanguage = 'English' } = body;
+    const { text, targetLanguage } = body;
 
-    if (!content) {
-      return new NextResponse("Content is required", { status: 400 });
+    if (!text || !targetLanguage) {
+      return new NextResponse("Text and target language are required", { status: 400 });
     }
 
     const freeTrial = await checkApiLimit(userId);
@@ -33,30 +31,34 @@ export async function POST(req: Request) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
+    const messages = [
+      {
+        role: "system" as const,
+        content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style while ensuring the translation is natural and fluent in the target language.`
+      },
+      {
+        role: "user" as const,
+        content: text
+      }
+    ];
+
     const response = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `You are a professional translator. Translate the following text into ${targetLanguage}. Maintain the original meaning, tone, and style while ensuring natural and fluent translation.`
-        },
-        {
-          role: "user",
-          content
-        }
-      ]
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000,
     });
 
     if (!isPro) {
       await increaseApiLimit(userId);
     }
 
-    return NextResponse.json(response.choices[0].message);
+    return NextResponse.json({
+      translation: response.choices[0].message.content,
+      targetLanguage
+    });
   } catch (error) {
     console.error("[TRANSLATE_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/jwt";
-import { paypalApi } from "@/lib/paypal";
-import { db } from "@/lib/db";
-
-export const runtime = 'edge';
+import { createNeonClient } from "@/lib/db";
+import { verifySubscription } from "@/lib/paypal";
 
 export async function POST(req: Request) {
   try {
@@ -14,16 +12,17 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
-    const { subscriptionId } = body;
+    const { subscriptionId } = await req.json();
 
     if (!subscriptionId) {
       return new NextResponse("Subscription ID is required", { status: 400 });
     }
 
+    const db = createNeonClient();
+
     const subscription = await db.subscription.findFirst({
       where: {
-        userId: userId,
+        userId,
         paypalSubscriptionId: subscriptionId
       }
     });
@@ -32,23 +31,23 @@ export async function POST(req: Request) {
       return new NextResponse("Subscription not found", { status: 404 });
     }
 
-    const result = await paypalApi.verifySubscription(subscriptionId);
+    const { isValid, status } = await verifySubscription(subscriptionId);
 
-    if (!result.isValid) {
-      // Update subscription status in database
+    if (!isValid) {
       await db.subscription.update({
-        where: {
-          id: subscription.id
-        },
-        data: {
-          status: "EXPIRED"
-        }
+        where: { id: subscription.id },
+        data: { status: "CANCELLED" }
+      });
+    } else if (status && status !== subscription.status) {
+      await db.subscription.update({
+        where: { id: subscription.id },
+        data: { status }
       });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({ isValid, status });
   } catch (error) {
-    console.error("[VERIFY_SUBSCRIPTION_ERROR]", error);
+    console.error("[VERIFY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

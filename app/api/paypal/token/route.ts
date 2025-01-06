@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/jwt";
-import { paypalApi } from "@/lib/paypal";
-
-export const runtime = 'edge';
+import { getPayPalAccessToken } from "@/lib/paypal";
 
 export async function GET(req: Request) {
   try {
@@ -13,14 +11,10 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const accessToken = await paypalApi.getPayPalAccessToken();
-
+    const accessToken = await getPayPalAccessToken();
     return NextResponse.json({ accessToken });
   } catch (error) {
-    console.error("[PAYPAL_TOKEN]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    console.error("[TOKEN_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

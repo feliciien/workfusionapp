@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/jwt";
-import { db } from "@/lib/db";
-import { paypalApi } from "@/lib/paypal";
-
-export const runtime = 'edge';
+import { createNeonClient } from "@/lib/db";
+import { cancelSubscription } from "@/lib/paypal";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
@@ -18,19 +16,19 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get the subscription ID from the request body
-    const body = await req.json();
-    const { subscriptionId } = body;
+    const { subscriptionId } = await req.json();
 
     if (!subscriptionId) {
       return new NextResponse("Subscription ID is required", { status: 400 });
     }
 
-    // Find the subscription in our database
+    const db = createNeonClient();
+
     const subscription = await db.subscription.findFirst({
       where: {
-        userId: userId,
-        paypalSubscriptionId: subscriptionId
+        userId,
+        paypalSubscriptionId: subscriptionId,
+        status: "ACTIVE"
       }
     });
 
@@ -38,32 +36,20 @@ export async function POST(req: Request) {
       return new NextResponse("Subscription not found", { status: 404 });
     }
 
-    // Cancel the subscription with PayPal
-    const response = await paypalApi.cancelSubscription(subscriptionId);
+    const response = await cancelSubscription(subscriptionId);
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error("[PAYPAL_CANCEL_ERROR]", error);
       return new NextResponse("Failed to cancel subscription with PayPal", { status: 500 });
     }
 
-    // Update subscription in database
     await db.subscription.update({
-      where: {
-        id: subscription.id
-      },
-      data: {
-        status: "CANCELLED",
-        canceledAt: new Date()
-      }
+      where: { id: subscription.id },
+      data: { status: "CANCELLED" }
     });
 
-    return new NextResponse("Subscription cancelled successfully");
+    return new NextResponse("Subscription cancelled", { status: 200 });
   } catch (error) {
-    console.error("[CANCEL_SUBSCRIPTION_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    console.error("[CANCEL_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

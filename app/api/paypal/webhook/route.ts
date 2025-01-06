@@ -1,87 +1,53 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from '@prisma/client';
-import { Pool } from '@neondatabase/serverless';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { paypalApi } from "@/lib/paypal";
+import { headers } from "next/headers";
+import { verifySubscription } from "@/lib/paypal";
+import { createNeonClient } from "@/lib/db";
 
-const connectionString = process.env.POSTGRES_PRISMA_URL!;
-const pool = new Pool({ connectionString });
-const client = pool;
-
-const prisma = new PrismaClient({
-  adapter: new PrismaNeon(client)
-});
-
-export const runtime = 'edge';
+const WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID;
 
 export async function POST(req: Request) {
   try {
+    const headersList = headers();
+    const transmissionId = headersList.get("paypal-transmission-id");
+    const timestamp = headersList.get("paypal-transmission-time");
+    const webhookId = headersList.get("paypal-webhook-id");
+    const eventType = headersList.get("paypal-resource-type");
+
+    if (!transmissionId || !timestamp || !webhookId || webhookId !== WEBHOOK_ID) {
+      return new NextResponse("Invalid webhook signature", { status: 400 });
+    }
+
     const body = await req.json();
-    const { resource_type, event_type, resource } = body;
+    const { resource } = body;
+    const subscriptionId = resource?.id;
 
-    if (resource_type !== "subscription" || !resource) {
-      return new NextResponse("Invalid webhook event", { status: 400 });
-    }
-
-    const subscriptionId = resource.id;
     if (!subscriptionId) {
-      return new NextResponse("Subscription ID not found", { status: 400 });
+      return new NextResponse("No subscription ID found", { status: 400 });
     }
 
-    const subscription = await prisma.subscription.findUnique({
-      where: {
-        paypalSubscriptionId: subscriptionId
-      }
+    const db = createNeonClient();
+
+    // Verify subscription status with PayPal
+    const { isValid, status } = await verifySubscription(subscriptionId);
+
+    if (!isValid) {
+      await db.subscription.updateMany({
+        where: { paypalSubscriptionId: subscriptionId },
+        data: { status: "CANCELLED" }
+      });
+      return new NextResponse("Subscription is not valid", { status: 200 });
+    }
+
+    // Update subscription status in database
+    await db.subscription.updateMany({
+      where: { paypalSubscriptionId: subscriptionId },
+      data: { status: status || "ACTIVE" }
     });
 
-    if (!subscription) {
-      return new NextResponse("Subscription not found", { status: 404 });
-    }
-
-    let status = subscription.status;
-    let currentPeriodEnd = subscription.currentPeriodEnd;
-
-    switch (event_type) {
-      case "BILLING.SUBSCRIPTION.ACTIVATED":
-        status = "active";
-        break;
-      case "BILLING.SUBSCRIPTION.CANCELLED":
-        status = "canceled";
-        break;
-      case "BILLING.SUBSCRIPTION.SUSPENDED":
-        status = "suspended";
-        break;
-      case "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
-        status = "past_due";
-        break;
-      case "BILLING.SUBSCRIPTION.RENEWED":
-        status = "active";
-        // Update the subscription period end date
-        if (resource.billing_info?.next_billing_time) {
-          currentPeriodEnd = new Date(resource.billing_info.next_billing_time);
-        }
-        break;
-      default:
-        // Ignore other event types
-        return new NextResponse("OK", { status: 200 });
-    }
-
-    await prisma.subscription.update({
-      where: {
-        id: subscription.id
-      },
-      data: {
-        status,
-        currentPeriodEnd
-      }
-    });
-
-    return new NextResponse("OK", { status: 200 });
+    return new NextResponse("Webhook processed", { status: 200 });
   } catch (error) {
     console.error("[WEBHOOK_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
-  } finally {
-    await pool.end();
   }
 }
 

@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/jwt";
-import { db } from "@/lib/db";
-import { paypalApi } from "@/lib/paypal";
+import { createNeonClient } from "@/lib/db";
+import { verifySubscription } from "@/lib/paypal";
 
-export const runtime = 'edge';
-
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
     const session = await getSessionFromRequest(req);
     const userId = session?.id;
@@ -14,44 +12,39 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
-    const { subscriptionId } = body;
-
-    if (!subscriptionId) {
-      return new NextResponse("Subscription ID is required", { status: 400 });
-    }
+    const db = createNeonClient();
 
     const subscription = await db.subscription.findFirst({
       where: {
-        userId: userId,
-        paypalSubscriptionId: subscriptionId
+        userId,
+        status: "ACTIVE"
+      },
+      orderBy: {
+        createdAt: "desc"
       }
     });
 
-    if (!subscription) {
-      return new NextResponse("Subscription not found", { status: 404 });
+    if (!subscription?.paypalSubscriptionId) {
+      return NextResponse.json({ isSubscribed: false });
     }
 
-    const result = await paypalApi.verifySubscription(subscriptionId);
+    const { isValid, status } = await verifySubscription(subscription.paypalSubscriptionId);
 
-    if (!result.isValid) {
-      // Update subscription status in database
+    if (!isValid) {
       await db.subscription.update({
-        where: {
-          id: subscription.id
-        },
-        data: {
-          status: "EXPIRED"
-        }
+        where: { id: subscription.id },
+        data: { status: "CANCELLED" }
       });
+      return NextResponse.json({ isSubscribed: false });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      isSubscribed: true,
+      status,
+      subscriptionId: subscription.paypalSubscriptionId
+    });
   } catch (error) {
-    console.error("[VERIFY_SUBSCRIPTION_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    console.error("[VERIFY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

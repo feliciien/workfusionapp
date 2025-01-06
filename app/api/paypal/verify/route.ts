@@ -1,21 +1,9 @@
-import { getSessionFromRequest } from "@/lib/jwt";
 import { NextResponse } from "next/server";
-import { PrismaClient } from '@prisma/client';
-import { Pool } from '@neondatabase/serverless';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { paypalApi } from "@/lib/paypal";
+import { getSessionFromRequest } from "@/lib/jwt";
+import { verifySubscription } from "@/lib/paypal";
+import { createNeonClient } from "@/lib/db";
 
-const connectionString = process.env.POSTGRES_PRISMA_URL!;
-const pool = new Pool({ connectionString });
-const client = pool;
-
-const prisma = new PrismaClient({
-  adapter: new PrismaNeon(client)
-});
-
-export const runtime = 'edge';
-
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
     const session = await getSessionFromRequest(req);
     const userId = session?.id;
@@ -24,44 +12,31 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = await req.json();
-    const { subscriptionId } = body;
+    const db = createNeonClient();
 
-    if (!subscriptionId) {
-      return new NextResponse("Subscription ID is required", { status: 400 });
-    }
-
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: userId,
-        paypalSubscriptionId: subscriptionId
-      }
+    const subscription = await db.subscription.findFirst({
+      where: { userId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" }
     });
 
-    if (!subscription) {
-      return new NextResponse("Subscription not found", { status: 404 });
+    if (!subscription?.paypalSubscriptionId) {
+      return NextResponse.json({ isSubscribed: false });
     }
 
-    const result = await paypalApi.verifySubscription(subscriptionId);
+    const { isValid } = await verifySubscription(subscription.paypalSubscriptionId);
 
-    if (!result.isValid) {
-      // Update subscription status in database
-      await prisma.subscription.update({
-        where: {
-          id: subscription.id
-        },
-        data: {
-          status: "EXPIRED"
-        }
+    if (!isValid) {
+      // Update subscription status to cancelled
+      await db.subscription.update({
+        where: { id: subscription.id },
+        data: { status: "CANCELLED" }
       });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({ isSubscribed: isValid });
   } catch (error) {
     console.error("[VERIFY_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
-  } finally {
-    await pool.end();
   }
 }
 

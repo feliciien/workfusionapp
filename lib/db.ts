@@ -21,3 +21,13 @@ export const db = globalForPrisma.prisma ??
   })
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
+
+export function createNeonClient() {
+  const connectionString = process.env.POSTGRES_PRISMA_URL!;
+  const pool = new Pool({ connectionString });
+  const client = pool;
+
+  return new PrismaClient({
+    adapter: new PrismaNeon(client)
+  });
+}

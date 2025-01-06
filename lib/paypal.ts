@@ -7,7 +7,7 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID as string;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET as string;
 
 // Function to get PayPal access token
-async function getPayPalAccessToken(): Promise<string> {
+export async function getPayPalAccessToken(): Promise<string> {
   try {
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
 
@@ -49,7 +49,7 @@ async function getSubscriptionDetails(subscriptionId: string, accessToken: strin
 }
 
 // Function to verify subscription status
-async function verifySubscription(subscriptionId: string): Promise<{
+export async function verifySubscription(subscriptionId: string): Promise<{
   isValid: boolean;
   status?: string;
   planId?: string;
@@ -77,7 +77,7 @@ async function verifySubscription(subscriptionId: string): Promise<{
 }
 
 // Function to cancel subscription
-async function cancelSubscription(subscriptionId: string): Promise<Response> {
+export async function cancelSubscription(subscriptionId: string): Promise<Response> {
   try {
     const accessToken = await getPayPalAccessToken();
     
@@ -99,14 +99,6 @@ async function cancelSubscription(subscriptionId: string): Promise<Response> {
   }
 }
 
-const paypalApi = {
-  getPayPalAccessToken,
-  getSubscriptionDetails,
-  verifySubscription,
-  cancelSubscription,
-};
-
 export { 
-  PAYPAL_API_BASE,
-  paypalApi
+  PAYPAL_API_BASE
 };

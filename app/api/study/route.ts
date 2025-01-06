@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getSessionFromRequest } from "@/lib/jwt";
+import { createNeonClient } from "@/lib/db";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-
-export const runtime = 'edge';
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -28,13 +27,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { content, studyType = 'summary' } = body;
+    const { content, studyType = 'summary', messages } = body;
 
-    if (!content) {
-      return new NextResponse("Content is required", { status: 400 });
+    if (!content && !messages) {
+      return new NextResponse("Content or messages are required", { status: 400 });
     }
 
-    // Check user limits
     const freeTrial = await checkApiLimit(userId);
     const isPro = await checkSubscription(userId);
 
@@ -42,19 +40,34 @@ export async function POST(req: Request) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: STUDY_PROMPTS[studyType as keyof typeof STUDY_PROMPTS] || STUDY_PROMPTS.summary
-        },
-        {
-          role: "user",
-          content
-        }
-      ]
-    });
+    let response;
+    if (messages) {
+      response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: messages.map((msg: any) => ({
+          role: msg.role as "system" | "user" | "assistant",
+          content: msg.content
+        })),
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+    } else {
+      response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: STUDY_PROMPTS[studyType as keyof typeof STUDY_PROMPTS] || STUDY_PROMPTS.summary
+          },
+          {
+            role: "user",
+            content
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+    }
 
     if (!isPro) {
       await increaseApiLimit(userId);

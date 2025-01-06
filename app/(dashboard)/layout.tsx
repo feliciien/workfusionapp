@@ -1,9 +1,9 @@
 import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
-import { getSessionFromRequest } from "@/lib/jwt";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import type { Subscription } from "@prisma/client";
 
 // Disable caching for this layout
@@ -15,10 +15,7 @@ const DashboardLayout = async ({
 }: {
   children: React.ReactNode;
 }) => {
-  const headersList = headers();
-  const session = await getSessionFromRequest(new Request("http://localhost", {
-    headers: headersList,
-  }));
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect('/auth/signin');
@@ -28,39 +25,28 @@ const DashboardLayout = async ({
   let subscription: Subscription | null = null;
   let apiLimitCount = 0;
 
-  if (session?.id) {
-    try {
-      const [subscriptionData, featureUsage] = await Promise.all([
-        db.subscription.findUnique({
-          where: {
-            userId: session.id
-          }
-        }),
-        db.userFeatureUsage.findUnique({
-          where: {
-            userId_featureType: {
-              userId: session.id,
-              featureType: 'API_USAGE'
-            }
-          }
-        })
-      ]);
+  if (session?.user?.id) {
+    subscription = await db.subscription.findUnique({
+      where: {
+        userId: session.user.id,
+      },
+    });
 
-      subscription = subscriptionData;
-      apiLimitCount = featureUsage?.count || 0;
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
+    apiLimitCount = await db.apiLimit.count({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // Last 24 hours
+        },
+      },
+    });
   }
 
   return (
     <div className="h-full relative dark:bg-gray-900">
       <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 z-80 bg-gray-900">
         <div className="flex h-full flex-col">
-          <Sidebar 
-            apiLimitCount={apiLimitCount} 
-            isPro={subscription?.status === "active"} 
-          />
+          <Sidebar isPro={!!subscription?.isPro} apiLimitCount={apiLimitCount} />
         </div>
       </div>
       <main className="md:pl-72 pb-10 dark:bg-gray-900">

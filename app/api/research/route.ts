@@ -4,7 +4,8 @@ import { getSessionFromRequest } from "@/lib/jwt";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 
-export const runtime = 'edge';
+// Remove edge runtime declaration to make it a serverless function
+// export const runtime = 'edge';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
