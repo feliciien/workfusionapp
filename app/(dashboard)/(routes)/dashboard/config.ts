@@ -15,7 +15,8 @@ import {
   Search,
   LineChart,
   Languages,
-  Image
+  Image,
+  Settings
 } from "lucide-react";
 import { FEATURE_TYPES } from "@/constants";
 
@@ -235,6 +236,50 @@ type EssentialToolType = typeof ESSENTIAL_TOOLS[number];
 type CreativeToolType = typeof CREATIVE_TOOLS[number];
 type ProfessionalToolType = typeof PROFESSIONAL_TOOLS[number];
 type AdvancedToolType = typeof ADVANCED_TOOLS[number];
+
+export const routeCategories = [
+  {
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    href: '/dashboard',
+    color: "text-sky-500"
+  },
+  {
+    label: 'Conversation',
+    icon: MessageSquare,
+    href: '/conversation',
+    color: "text-violet-500",
+  },
+  {
+    label: 'Image Generation',
+    icon: ImageIcon,
+    color: "text-pink-700",
+    href: '/image',
+  },
+  {
+    label: 'Video Generation',
+    icon: VideoIcon,
+    color: "text-orange-700",
+    href: '/video',
+  },
+  {
+    label: 'Music Generation',
+    icon: Music,
+    color: "text-emerald-500",
+    href: '/music',
+  },
+  {
+    label: 'Code Generation',
+    icon: Code,
+    color: "text-green-700",
+    href: '/code',
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    href: '/settings',
+  },
+];
 
 export const sidebarRoutes = [
   {

@@ -3,7 +3,7 @@ import axios from "axios";
 
 // PayPal API configuration
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.paypal.com"; // Live API base URL
-const CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
@@ -12,19 +12,29 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
 
 // Function to get PayPal access token
 async function generateAccessToken() {
-  const auth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
-  const response = await axios.post(
-    `${PAYPAL_API_BASE}/v1/oauth2/token`,
-    new URLSearchParams({ grant_type: "client_credentials" }).toString(),
-    {
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+  try {
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+      console.error("PayPal credentials missing:", { CLIENT_ID, CLIENT_SECRET });
+      throw new Error("PayPal credentials not configured");
     }
-  );
 
-  return response.data.access_token;
+    const auth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
+    const response = await axios.post(
+      `${PAYPAL_API_BASE}/v1/oauth2/token`,
+      "grant_type=client_credentials",
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    return response.data.access_token;
+  } catch (error) {
+    console.error("Error getting PayPal access token:", error);
+    throw error;
+  }
 }
 
 // Function to get subscription details
