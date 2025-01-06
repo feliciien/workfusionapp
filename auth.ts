@@ -41,20 +41,26 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Handle redirects after sign in
+      // Always redirect to dashboard after sign in
+      if (url.includes('from=/dashboard') || url === '/auth/signin') {
+        return `${baseUrl}/dashboard`
+      }
+      
+      // Handle other redirects
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`
-      } else if (url.startsWith(baseUrl)) {
+      }
+      if (url.startsWith(baseUrl)) {
         return url
       }
-      // Default to dashboard after sign in
+      
       return `${baseUrl}/dashboard`
     }
   },
   session: {
     strategy: "jwt"
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
   secret: process.env.NEXTAUTH_SECRET,
 }
 
