@@ -123,9 +123,17 @@ export const api = {
   },
 
   // Learning
-  async getStudyHelp(query: string): Promise<ApiResponse<{ answer: string }>> {
-    const response = await apiClient.post('/study', { query });
-    return response.data;
+  async getStudyHelp(query: string, learningType: string = 'summary'): Promise<ApiResponse<{ answer: string }>> {
+    const response = await apiClient.post('/learning', { 
+      content: query,
+      learningType 
+    });
+    return {
+      success: true,
+      data: {
+        answer: response.data.content
+      }
+    };
   },
 
   async generateIdeas(topic: string): Promise<ApiResponse<{ ideas: string[] }>> {

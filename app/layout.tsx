@@ -53,48 +53,48 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <OrganizationStructuredData />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "SoftwareApplication",
-                "name": "WorkFusion App",
-                "applicationCategory": "BusinessApplication",
-                "description": "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
-                "operatingSystem": "Web",
-                "offers": {
-                  "@type": "Offer",
-                  "price": "0",
-                  "priceCurrency": "USD"
-                }
-              })
-            }}
-          />
-          <link rel="icon" href="/favicon.ico" />
-          <link 
-            rel="apple-touch-icon" 
-            sizes="180x180" 
-            href="/apple-touch-icon.png"
-          />
-          <meta name="theme-color" content="#ffffff" />
-        </head>
-        <body 
-          className={`${inter.className} overflow-x-hidden overscroll-none`} 
-          suppressHydrationWarning
-        >
-          <ErrorBoundary>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <OrganizationStructuredData />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              "name": "WorkFusion App",
+              "applicationCategory": "BusinessApplication",
+              "description": "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
+              "operatingSystem": "Web",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              }
+            })
+          }}
+        />
+        <link rel="icon" href="/favicon.ico" />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="180x180" 
+          href="/apple-touch-icon.png"
+        />
+        <meta name="theme-color" content="#ffffff" />
+      </head>
+      <body 
+        className={`${inter.className} overflow-x-hidden overscroll-none`} 
+        suppressHydrationWarning
+      >
+        <ErrorBoundary>
+          <SessionProvider>
             <ModalProvider />
             <ToasterProvider />
             {children}
-            <Analytics />
-          </ErrorBoundary>
-        </body>
-      </html>
-    </SessionProvider>
+          </SessionProvider>
+          <Analytics />
+        </ErrorBoundary>
+      </body>
+    </html>
   );
 }

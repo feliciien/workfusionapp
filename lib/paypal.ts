@@ -3,30 +3,28 @@ import axios from "axios";
 
 // PayPal API configuration
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.paypal.com"; // Live API base URL
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID as string;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET as string;
+const CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  throw new Error("PayPal credentials not configured");
+}
 
 // Function to get PayPal access token
-export async function getPayPalAccessToken(): Promise<string> {
-  try {
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString("base64");
+async function generateAccessToken() {
+  const auth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
+  const response = await axios.post(
+    `${PAYPAL_API_BASE}/v1/oauth2/token`,
+    new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+    {
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    }
+  );
 
-    const response = await axios.post(
-      `${PAYPAL_API_BASE}/v1/oauth2/token`,
-      new URLSearchParams({ grant_type: "client_credentials" }).toString(),
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    return response.data.access_token;
-  } catch (error) {
-    console.error("[PAYPAL_TOKEN_ERROR]", error);
-    throw new Error("Failed to obtain PayPal access token.");
-  }
+  return response.data.access_token;
 }
 
 // Function to get subscription details
@@ -56,7 +54,7 @@ export async function verifySubscription(subscriptionId: string): Promise<{
   nextBillingTime?: string;
 }> {
   try {
-    const accessToken = await getPayPalAccessToken();
+    const accessToken = await generateAccessToken();
     const subscription = await getSubscriptionDetails(subscriptionId, accessToken);
 
     if (!subscription) {
@@ -79,7 +77,7 @@ export async function verifySubscription(subscriptionId: string): Promise<{
 // Function to cancel subscription
 export async function cancelSubscription(subscriptionId: string): Promise<Response> {
   try {
-    const accessToken = await getPayPalAccessToken();
+    const accessToken = await generateAccessToken();
     
     const response = await fetch(
       `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}/cancel`,
@@ -98,6 +96,79 @@ export async function cancelSubscription(subscriptionId: string): Promise<Respon
     throw new Error("Failed to cancel subscription with PayPal");
   }
 }
+
+export const paypal = {
+  async createOrder(data: any) {
+    const accessToken = await generateAccessToken();
+    const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    return response.json();
+  },
+
+  async captureOrder(orderID: string) {
+    const accessToken = await generateAccessToken();
+    const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderID}/capture`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.json();
+  },
+
+  async getSubscriptionDetails(subscriptionId: string) {
+    try {
+      const accessToken = await generateAccessToken();
+      const response = await axios.get(
+        `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return {
+        status: response.data.status,
+        nextBillingTime: response.data.billing_info?.next_billing_time,
+        planId: response.data.plan_id,
+      };
+    } catch (error) {
+      console.error("[GET_SUBSCRIPTION_DETAILS_ERROR]", error);
+      throw new Error("Failed to get subscription details");
+    }
+  },
+
+  async cancelSubscription(subscriptionId: string) {
+    try {
+      const accessToken = await generateAccessToken();
+      await axios.post(
+        `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return true;
+    } catch (error) {
+      console.error("[CANCEL_SUBSCRIPTION_ERROR]", error);
+      throw new Error("Failed to cancel subscription");
+    }
+  }
+};
 
 export { 
   PAYPAL_API_BASE

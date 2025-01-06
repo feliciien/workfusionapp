@@ -1,167 +1,197 @@
-import { 
-  Code, 
-  MessageSquare, 
+import {
+  Code,
   ImageIcon,
-  VideoIcon,
+  LayoutDashboard,
+  MessageSquare,
   Music,
   Settings,
-  Network,
-  FileText,
-  Database,
+  VideoIcon,
+  Sparkles,
+  Brush,
+  Wand2,
   Bot,
-  Lightbulb,
-  Languages,
-  PenTool,
-  Presentation,
-  GraduationCap,
   BookOpen,
-  Mic,
-  Palette
+  Cog,
+  Zap,
+  Lightbulb,
+  Rocket,
+  Layers,
+  Palette,
+  Pencil,
+  FileText,
+  Headphones,
+  Film,
+  Binary,
+  BrainCircuit,
+  GraduationCap,
+  Wrench
 } from "lucide-react";
 
-// Essential Tools
-const essentialTools = [
+interface Route {
+  label: string;
+  icon: any;
+  href: string;
+  color?: string;
+  bgColor?: string;
+  limit?: number;
+}
+
+interface RouteCategory {
+  category: string;
+  items: Route[];
+}
+
+const essentialTools: Route[] = [
   {
-    label: 'Image Generation',
-    icon: ImageIcon,
-    href: '/image',
-    color: 'text-pink-700',
-    limit: 5,
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+    color: "text-sky-500",
+    bgColor: "bg-sky-500/10",
   },
   {
-    label: 'Code Assistant',
-    icon: Code,
-    href: '/code',
-    color: 'text-green-700',
-    limit: 10,
-  },
-  {
-    label: 'Content Writer',
+    label: "Chat Assistant",
     icon: MessageSquare,
-    href: '/content',
-    color: 'text-violet-500',
-    limit: 10,
-  },
-];
-
-// Creative Suite
-const creativeSuite = [
-  {
-    label: 'Voice Synthesis',
-    icon: Mic,
-    href: '/voice',
-    color: 'text-blue-500',
-    limit: 10,
-  },
-  {
-    label: 'Video Creation',
-    icon: VideoIcon,
-    href: '/video',
-    color: 'text-orange-700',
-    limit: 3,
-  },
-  {
-    label: 'Music Studio',
-    icon: Music,
-    href: '/music',
-    color: 'text-emerald-500',
-    limit: 5,
-  },
-  {
-    label: 'Art Studio',
-    icon: Palette,
-    href: '/art',
-    color: 'text-purple-500',
-    limit: 5,
-  },
-];
-
-// Productivity Tools
-const productivityTools = [
-  {
-    label: 'Presentation Maker',
-    icon: Presentation,
-    href: '/presentation',
-    color: 'text-yellow-600',
-    limit: 5,
-  },
-  {
-    label: 'Idea Generator',
-    icon: Lightbulb,
-    href: '/ideas',
-    color: 'text-amber-500',
-    limit: 10,
-  },
-  {
-    label: 'Translation',
-    icon: Languages,
-    href: '/translate',
-    color: 'text-sky-500',
+    href: "/conversation",
+    color: "text-violet-500",
+    bgColor: "bg-violet-500/10",
     limit: 20,
   },
+  {
+    label: "Image Generation",
+    icon: ImageIcon,
+    color: "text-pink-700",
+    bgColor: "bg-pink-700/10",
+    href: "/image",
+    limit: 20
+  },
 ];
 
-// Advanced Tools
-const advancedTools = [
+const creativeTools: Route[] = [
   {
-    label: 'Data Insights',
-    icon: Database,
-    href: '/data',
-    color: 'text-indigo-500',
-    limit: 10,
+    label: "Music Generation",
+    icon: Music,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10",
+    href: "/music",
+    limit: 20
   },
   {
-    label: 'Network Analysis',
-    icon: Network,
-    href: '/network',
-    color: 'text-rose-500',
-    limit: 5,
+    label: "Video Generation",
+    icon: VideoIcon,
+    color: "text-orange-700",
+    bgColor: "bg-orange-700/10",
+    href: "/video",
+    limit: 20
   },
   {
-    label: 'Study Assistant',
+    label: "Art Studio",
+    icon: Palette,
+    color: "text-violet-500",
+    bgColor: "bg-violet-500/10",
+    href: "/art",
+    limit: 20
+  },
+];
+
+const productivityTools: Route[] = [
+  {
+    label: "Code Generation",
+    icon: Code,
+    color: "text-green-700",
+    bgColor: "bg-green-700/10",
+    href: "/code",
+    limit: 20
+  },
+  {
+    label: "Writing Assistant",
+    icon: Pencil,
+    color: "text-blue-700",
+    bgColor: "bg-blue-700/10",
+    href: "/writing",
+    limit: 20
+  },
+  {
+    label: "Document Analysis",
+    icon: FileText,
+    color: "text-yellow-700",
+    bgColor: "bg-yellow-700/10",
+    href: "/document",
+    limit: 20
+  },
+];
+
+const advancedTools: Route[] = [
+  {
+    label: "Neural Processing",
+    icon: BrainCircuit,
+    color: "text-purple-700",
+    bgColor: "bg-purple-700/10",
+    href: "/neural",
+    limit: 10
+  },
+  {
+    label: "Data Analysis",
+    icon: Binary,
+    color: "text-indigo-700",
+    bgColor: "bg-indigo-700/10",
+    href: "/data",
+    limit: 10
+  },
+];
+
+const educationTools: Route[] = [
+  {
+    label: "Learning Path",
     icon: GraduationCap,
-    href: '/study',
-    color: 'text-teal-500',
-    limit: 10,
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
+    href: "/learning",
+    limit: 20
   },
   {
-    label: 'Research Assistant',
+    label: "Study Assistant",
     icon: BookOpen,
-    href: '/research',
-    color: 'text-cyan-500',
-    limit: 10,
+    color: "text-pink-500",
+    bgColor: "bg-pink-500/10",
+    href: "/study",
+    limit: 20
   },
 ];
 
-// Settings
-const systemTools = [
+const systemTools: Route[] = [
   {
-    label: 'Settings',
+    label: "Settings",
     icon: Settings,
-    href: '/settings',
-    color: 'text-gray-500',
+    href: "/settings",
+    color: "text-gray-700",
+    bgColor: "bg-gray-700/10",
   },
 ];
 
-export const routes = [
+export const routes: RouteCategory[] = [
   {
-    category: 'Essential Tools',
+    category: "Essential Tools",
     items: essentialTools,
   },
   {
-    category: 'Creative Suite',
-    items: creativeSuite,
+    category: "Creative Suite",
+    items: creativeTools,
   },
   {
-    category: 'Productivity Tools',
+    category: "Productivity Tools",
     items: productivityTools,
   },
   {
-    category: 'Advanced Tools',
+    category: "Advanced Tools",
     items: advancedTools,
   },
   {
-    category: 'System',
+    category: "Education Tools",
+    items: educationTools,
+  },
+  {
+    category: "System",
     items: systemTools,
   },
 ];

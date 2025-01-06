@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, increaseFeatureUsage } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const STUDY_PROMPTS = {
+const LEARNING_PROMPTS = {
   flashcards: "Create study flashcards with questions on one side and answers on the other. Format each flashcard as Q: [question] A: [answer]",
   summary: "Create a concise summary of the key concepts and main points. Use bullet points and clear headings.",
   quiz: "Create a quiz with multiple-choice questions and explanations for the answers. Format as Q1: [question] Options: [a,b,c,d] Answer: [correct option] Explanation: [why]",
@@ -27,13 +28,13 @@ export async function POST(req: Request) {
 
     const userId = session.user.id;
     const body = await req.json();
-    const { content, studyType = 'summary', messages } = body;
+    const { content, learningType = 'summary', messages } = body;
 
     if (!content && !messages) {
       return new NextResponse("Content or messages are required", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit(userId);
+    const freeTrial = await checkFeatureLimit(userId, FEATURE_TYPES.STUDY);
     const isPro = await checkSubscription(userId);
 
     if (!freeTrial && !isPro) {
@@ -52,33 +53,22 @@ export async function POST(req: Request) {
         max_tokens: 1000,
       });
     } else {
+      const prompt = `${LEARNING_PROMPTS[learningType as keyof typeof LEARNING_PROMPTS]}\n\nContent: ${content}`;
       response = await openai.chat.completions.create({
         model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: STUDY_PROMPTS[studyType as keyof typeof STUDY_PROMPTS] || STUDY_PROMPTS.summary
-          },
-          {
-            role: "user",
-            content
-          }
-        ],
+        messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
         max_tokens: 1000,
       });
     }
 
     if (!isPro) {
-      await increaseApiLimit(userId);
+      await increaseFeatureUsage(userId, FEATURE_TYPES.STUDY);
     }
 
-    return NextResponse.json(response.choices[0].message);
+    return NextResponse.json({ content: response.choices[0].message.content });
   } catch (error) {
-    console.error("[STUDY_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    console.log("[LEARNING_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

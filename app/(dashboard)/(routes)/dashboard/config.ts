@@ -1,22 +1,42 @@
 import { 
   Code, 
   ImageIcon, 
+  LayoutDashboard, 
   MessageSquare, 
   Music, 
   VideoIcon,
   Mic2,
   Palette,
-  Brain,
   Network,
   FileText,
   PresentationIcon,
   Lightbulb,
-  Languages,
-  LineChart,
   BookOpen,
-  Search
+  Search,
+  LineChart,
+  Languages,
+  Image
 } from "lucide-react";
-import { FEATURE_TYPES, FREE_LIMITS } from "@/constants";
+import { FEATURE_TYPES } from "@/constants";
+
+type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];
+
+export const FREE_LIMITS = {
+  image: 5,
+  code: 5,
+  voice: 5,
+  content: 5,
+  presentation: 5,
+  idea: 5,
+  video: 5,
+  music: 5,
+  art: 5,
+  translation: 5,
+  data: 5,
+  network: 5,
+  study: 5,
+  research: 5
+} as const;
 
 export interface Tool {
   label: string;
@@ -27,190 +47,218 @@ export interface Tool {
   description: string;
   limitedFree?: boolean;
   freeLimit?: number;
-  proOnly?: boolean;
-  featureType?: keyof typeof FEATURE_TYPES;
+  featureType?: FeatureType;
 }
 
 export const tools: Tool[] = [
+  {
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    href: '/dashboard',
+    color: "text-sky-500",
+    bgColor: "bg-sky-500/10",
+    description: "View your dashboard and analytics",
+  },
   {
     label: 'Image Generation',
     icon: ImageIcon,
     href: '/image',
     color: "text-pink-700",
     bgColor: "bg-pink-700/10",
-    description: "Generate stunning images from text descriptions.",
+    description: "Generate images using AI",
     limitedFree: true,
     freeLimit: FREE_LIMITS.image,
-    featureType: "IMAGE_GENERATION"
+    featureType: FEATURE_TYPES.IMAGE_GENERATION
   },
   {
     label: 'Code Assistant',
     icon: Code,
+    href: '/code',
     color: "text-green-700",
     bgColor: "bg-green-700/10",
-    href: '/code',
     description: "Your AI pair programmer. Get help with coding tasks.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.code,
-    featureType: "CODE_GENERATION"
+    featureType: FEATURE_TYPES.CODE_GENERATION
   },
   {
     label: 'Voice Synthesis',
     icon: Mic2,
+    href: '/voice',
     color: "text-violet-700",
     bgColor: "bg-violet-700/10",
-    href: '/voice',
     description: "Convert text to natural-sounding speech.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.voice,
-    featureType: "VOICE_SYNTHESIS"
+    featureType: FEATURE_TYPES.VOICE_SYNTHESIS
   },
   {
     label: 'Content Writer',
     icon: MessageSquare,
+    href: '/content',
     color: "text-blue-700",
     bgColor: "bg-blue-700/10",
-    href: '/content',
     description: "Generate high-quality content for various purposes.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.content,
-    featureType: "CONTENT_WRITER"
+    featureType: FEATURE_TYPES.CONTENT_WRITER
   },
   {
     label: 'Presentation Maker',
     icon: PresentationIcon,
+    href: '/presentation',
     color: "text-orange-700",
     bgColor: "bg-orange-700/10",
-    href: '/presentation',
     description: "Create professional presentations in minutes.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.presentation,
-    featureType: "PRESENTATION"
+    featureType: FEATURE_TYPES.PRESENTATION
   },
   {
     label: 'Idea Generator',
     icon: Lightbulb,
+    href: '/idea',
     color: "text-yellow-700",
     bgColor: "bg-yellow-700/10",
-    href: '/idea',
     description: "Get creative ideas for your projects.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.idea,
-    featureType: "IDEA_GENERATOR"
+    featureType: FEATURE_TYPES.IDEA_GENERATOR
   },
   {
     label: 'Video Creation',
     icon: VideoIcon,
+    href: '/video',
     color: "text-purple-700",
     bgColor: "bg-purple-700/10",
-    href: '/video',
     description: "Create engaging videos with AI.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.video,
-    featureType: "VIDEO_GENERATION"
+    featureType: FEATURE_TYPES.VIDEO_GENERATION
   },
   {
     label: 'Music Studio',
     icon: Music,
+    href: '/music',
     color: "text-emerald-700",
     bgColor: "bg-emerald-700/10",
-    href: '/music',
     description: "Create and compose music with AI.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.music,
-    featureType: "MUSIC_CREATION"
+    featureType: FEATURE_TYPES.MUSIC_CREATION
   },
   {
     label: 'Art Studio',
     icon: Palette,
+    href: '/art',
     color: "text-pink-700",
     bgColor: "bg-pink-700/10",
-    href: '/art',
     description: "Create digital art with AI assistance.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.art,
-    featureType: "ART_STUDIO"
+    featureType: FEATURE_TYPES.ART_STUDIO
   },
   {
     label: 'Translation',
     icon: Languages,
+    href: '/translation',
     color: "text-blue-700",
     bgColor: "bg-blue-700/10",
-    href: '/translation',
     description: "Translate text between languages.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.translation,
-    featureType: "TRANSLATION"
+    featureType: FEATURE_TYPES.TRANSLATION
   },
   {
     label: 'Data Insights',
     icon: LineChart,
+    href: '/data',
     color: "text-green-700",
     bgColor: "bg-green-700/10",
-    href: '/data',
     description: "Analyze data and get insights.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.data,
-    featureType: "DATA_INSIGHTS"
+    featureType: FEATURE_TYPES.DATA_INSIGHTS
   },
   {
     label: 'Network Analysis',
     icon: Network,
+    href: '/network',
     color: "text-violet-700",
     bgColor: "bg-violet-700/10",
-    href: '/network',
     description: "Analyze and visualize networks.",
     limitedFree: true,
     freeLimit: FREE_LIMITS.network,
-    featureType: "NETWORK_ANALYSIS"
+    featureType: FEATURE_TYPES.NETWORK_ANALYSIS
   },
   {
     label: 'Study Assistant',
     icon: BookOpen,
-    color: "text-orange-700",
-    bgColor: "bg-orange-700/10",
     href: '/study',
-    description: "Get help with your studies.",
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/10",
+    description: "Get help with studying and learning",
     limitedFree: true,
     freeLimit: FREE_LIMITS.study,
-    featureType: "STUDY_ASSISTANT"
+    featureType: FEATURE_TYPES.STUDY
   },
   {
     label: 'Research Assistant',
     icon: Search,
-    color: "text-yellow-700",
-    bgColor: "bg-yellow-700/10",
     href: '/research',
-    description: "Get help with research tasks.",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
+    description: "Research any topic with AI",
     limitedFree: true,
     freeLimit: FREE_LIMITS.research,
-    featureType: "RESEARCH_ASSISTANT"
+    featureType: FEATURE_TYPES.RESEARCH
+  },
+  {
+    label: 'Learning Assistant',
+    icon: BookOpen,
+    href: '/learning',
+    color: "text-violet-500",
+    bgColor: "bg-violet-500/10",
+    description: "Interactive learning and study materials",
+    limitedFree: true,
+    freeLimit: FREE_LIMITS.study,
+    featureType: FEATURE_TYPES.STUDY
   }
 ];
 
-export const routeCategories = [
+const ESSENTIAL_TOOLS = [FEATURE_TYPES.IMAGE_GENERATION, FEATURE_TYPES.CODE_GENERATION, FEATURE_TYPES.CONTENT_WRITER] as const;
+const CREATIVE_TOOLS = [FEATURE_TYPES.VIDEO_GENERATION, FEATURE_TYPES.MUSIC_CREATION, FEATURE_TYPES.ART_STUDIO, FEATURE_TYPES.VOICE_SYNTHESIS] as const;
+const PROFESSIONAL_TOOLS = [FEATURE_TYPES.PRESENTATION, FEATURE_TYPES.IDEA_GENERATOR, FEATURE_TYPES.TRANSLATION] as const;
+const ADVANCED_TOOLS = [FEATURE_TYPES.DATA_INSIGHTS, FEATURE_TYPES.NETWORK_ANALYSIS, FEATURE_TYPES.STUDY, FEATURE_TYPES.RESEARCH] as const;
+
+type EssentialToolType = typeof ESSENTIAL_TOOLS[number];
+type CreativeToolType = typeof CREATIVE_TOOLS[number];
+type ProfessionalToolType = typeof PROFESSIONAL_TOOLS[number];
+type AdvancedToolType = typeof ADVANCED_TOOLS[number];
+
+export const sidebarRoutes = [
   {
     name: "Essential Tools",
-    routes: tools.filter(tool => 
-      ["IMAGE_GENERATION", "CODE_GENERATION", "CONTENT_WRITER"].includes(tool.featureType as string)
+    routes: tools.filter((tool): tool is Tool & { featureType: EssentialToolType } => 
+      tool.featureType !== undefined && ESSENTIAL_TOOLS.includes(tool.featureType as EssentialToolType)
     )
   },
   {
-    name: "Creative Suite",
-    routes: tools.filter(tool => 
-      ["VIDEO_GENERATION", "MUSIC_CREATION", "ART_STUDIO", "VOICE_SYNTHESIS"].includes(tool.featureType as string)
+    name: "Creative Tools",
+    routes: tools.filter((tool): tool is Tool & { featureType: CreativeToolType } => 
+      tool.featureType !== undefined && CREATIVE_TOOLS.includes(tool.featureType as CreativeToolType)
     )
   },
   {
-    name: "Productivity Tools",
-    routes: tools.filter(tool => 
-      ["PRESENTATION", "IDEA_GENERATOR", "TRANSLATION"].includes(tool.featureType as string)
+    name: "Professional Tools",
+    routes: tools.filter((tool): tool is Tool & { featureType: ProfessionalToolType } => 
+      tool.featureType !== undefined && PROFESSIONAL_TOOLS.includes(tool.featureType as ProfessionalToolType)
     )
   },
   {
     name: "Advanced Tools",
-    routes: tools.filter(tool => 
-      ["DATA_INSIGHTS", "NETWORK_ANALYSIS", "STUDY_ASSISTANT", "RESEARCH_ASSISTANT"].includes(tool.featureType as string)
+    routes: tools.filter((tool): tool is Tool & { featureType: AdvancedToolType } => 
+      tool.featureType !== undefined && ADVANCED_TOOLS.includes(tool.featureType as AdvancedToolType)
     )
   }
 ];

@@ -52,8 +52,8 @@ export const FEATURE_TYPES = {
   TRANSLATION: 'translation',
   DATA_INSIGHTS: 'data',
   NETWORK_ANALYSIS: 'network',
-  STUDY_ASSISTANT: 'study',
-  RESEARCH_ASSISTANT: 'research',
+  STUDY: 'study',
+  RESEARCH: 'research',
   API_USAGE: 'api'
 } as const;
 

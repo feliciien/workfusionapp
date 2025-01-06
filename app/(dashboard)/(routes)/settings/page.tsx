@@ -1,213 +1,178 @@
-import { Heading } from "@/components/heading";
+"use client";
+
+import { useEffect, useState } from "react";
+import { getSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { SubscriptionButton } from "@/components/subscription-button";
-import { checkSubscription } from "@/lib/subscription";
-import { Settings, Sparkles, Check, Zap, Crown, Star, Clock, Shield, BadgePercent } from "lucide-react";
-import { Analytics } from '@vercel/analytics/react';
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { tools } from "../dashboard/config";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { Settings } from "lucide-react";
+import axios from "axios";
 
-const SettingsPage = async () => {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
+const paypalConfig = {
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+  components: "buttons",
+  intent: "subscription",
+  vault: true,
+  currency: "USD"
+};
 
-  if (!userId) {
-    return {
-      redirect: {
-        destination: "/sign-in",
-        permanent: false,
-      },
+const SettingsPage = () => {
+  const [session, setSession] = useState<any>(null);
+  const [isPro, setIsPro] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      const session = await getSession();
+      if (!session?.user) {
+        redirect("/");
+      }
+      setSession(session);
+
+      // Check subscription status
+      try {
+        const response = await axios.get("/api/subscription/check");
+        setIsPro(response.data.isPro);
+      } catch (error) {
+        console.error("Failed to check subscription status:", error);
+      }
+
+      setLoading(false);
     };
+
+    initializeSession();
+
+    // Log PayPal configuration in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("PayPal Config:", {
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+        monthlyPlanId: process.env.NEXT_PUBLIC_PAYPAL_MONTHLY_PLAN_ID,
+        yearlyPlanId: process.env.NEXT_PUBLIC_PAYPAL_YEARLY_PLAN_ID
+      });
+    }
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
-  const isPro = await checkSubscription(userId);
-  const proTools = tools.filter(tool => tool.proOnly);
-  const limitedTools = tools.filter(tool => tool.limitedFree);
-
-  const features = [
-    {
-      icon: Zap,
-      title: "Unlimited Access",
-      description: "Use all AI tools without any restrictions",
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-500/10"
-    },
-    {
-      icon: Crown,
-      title: "Premium Features",
-      description: "Access to exclusive pro-only features",
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10"
-    },
-    {
-      icon: Star,
-      title: "Priority Processing",
-      description: "Faster response times for all AI operations",
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10"
-    },
-    {
-      icon: Clock,
-      title: "Early Access",
-      description: "Be first to try new features and updates",
-      color: "text-green-500",
-      bgColor: "bg-green-500/10"
-    },
-    {
-      icon: Shield,
-      title: "Priority Support",
-      description: "24/7 premium customer support",
-      color: "text-red-500",
-      bgColor: "bg-red-500/10"
-    }
-  ];
+  if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID) {
+    console.error("PayPal client ID is missing");
+    return <div>PayPal configuration error. Please contact support.</div>;
+  }
 
   return (
-    <div>
-      <Heading 
-        title="Upgrade to Pro" 
-        description="Choose the perfect plan for your needs" 
-        icon={Sparkles} 
-        iconColor="text-violet-500" 
-        bgColor="bg-violet-500/10" 
-      />
-      <div className="px-4 lg:px-8 space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Monthly Plan */}
-          <Card className="p-6 border-2 border-violet-500/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-gradient-to-bl from-violet-500 to-indigo-500 text-white px-4 py-2 rounded-bl-lg text-sm font-medium">
-              14-DAY FREE TRIAL
-            </div>
-            <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
-              Monthly Pro
-              <Sparkles className="h-6 w-6 text-violet-500" />
-            </h3>
-            <div className="mb-4">
-              <span className="text-4xl font-bold">$10</span>
-              <span className="text-muted-foreground">/month</span>
-            </div>
-            <div className="flex items-center gap-2 mb-6">
-              <BadgePercent className="h-4 w-4 text-green-500" />
-              <p className="text-sm text-green-500">14-day free trial included</p>
-            </div>
-            <div className="space-y-4 mb-6">
-              {features.map((feature) => (
-                <div key={feature.title} className="flex items-start gap-3">
-                  <div className={cn("p-2 rounded-lg", feature.bgColor)}>
-                    <feature.icon className={cn("h-4 w-4", feature.color)} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium">{feature.title}</h4>
-                    <p className="text-xs text-muted-foreground">{feature.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-3">
-              <SubscriptionButton 
-                isPro={isPro} 
-                planId={process.env.NEXT_PUBLIC_PAYPAL_MONTHLY_PLAN_ID!}
+    <PayPalScriptProvider options={paypalConfig}>
+      <div className="h-full p-4 space-y-2">
+        <div className="flex items-center justify-between space-y-2">
+          <div>
+            <h2 className="text-2xl font-bold">Settings</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage your account settings and subscription
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Settings className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* User Profile */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Your account information</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center space-x-4">
+            {session?.user?.image && (
+              <img
+                src={session.user.image}
+                alt="Profile"
+                className="rounded-full h-12 w-12"
               />
-              <SubscriptionButton 
-                isPro={isPro} 
-                planId={process.env.NEXT_PUBLIC_PAYPAL_YEARLY_PLAN_ID!}
-                variant="outline"
-              >
-                Switch to Yearly (Save 17%)
-              </SubscriptionButton>
+            )}
+            <div>
+              <p className="font-medium">{session?.user?.name}</p>
+              <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
             </div>
+            <Badge variant={isPro ? "premium" : "secondary"} className="ml-auto">
+              {isPro ? "Pro Plan" : "Free Plan"}
+            </Badge>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Monthly Plan */}
+          <Card className={`flex flex-col ${!isPro ? "border-2 border-primary" : ""}`}>
+            <CardHeader>
+              <CardTitle>Monthly Plan</CardTitle>
+              <CardDescription>Perfect for regular users</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <div className="text-3xl font-bold mb-2">$10</div>
+              <div className="text-sm text-muted-foreground mb-4">/month</div>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  Unlimited AI generations
+                </li>
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  Priority support
+                </li>
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  Advanced features
+                </li>
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <SubscriptionButton 
+                isPro={isPro}
+                planType="monthly"
+              />
+            </CardFooter>
           </Card>
 
           {/* Yearly Plan */}
-          <Card className="p-6 border-2 border-violet-500/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-gradient-to-bl from-violet-500 to-indigo-500 text-white px-4 py-2 rounded-bl-lg text-sm font-medium">
-              BEST VALUE
-            </div>
-            <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
-              Yearly Pro
-              <Crown className="h-6 w-6 text-yellow-500" />
-            </h3>
-            <div className="mb-4">
-              <span className="text-4xl font-bold">$100</span>
-              <span className="text-muted-foreground">/year</span>
-              <div className="mt-1">
-                <span className="text-sm text-green-500">Save $20 (17% off)</span>
+          <Card className={`flex flex-col ${isPro ? "border-2 border-primary" : ""}`}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Yearly Plan</CardTitle>
+                <Badge variant="default">Save 17%</Badge>
               </div>
-            </div>
-            <div className="space-y-4 mb-6">
-              {features.map((feature) => (
-                <div key={feature.title} className="flex items-start gap-3">
-                  <div className={cn("p-2 rounded-lg", feature.bgColor)}>
-                    <feature.icon className={cn("h-4 w-4", feature.color)} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium">{feature.title}</h4>
-                    <p className="text-xs text-muted-foreground">{feature.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <SubscriptionButton 
-              isPro={isPro} 
-              planId={process.env.NEXT_PUBLIC_PAYPAL_YEARLY_PLAN_ID!}
-            />
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card className="p-6 border-violet-500/20">
-            <h3 className="text-xl font-bold mb-4">Pro-Only Tools</h3>
-            <div className="grid gap-4">
-              {proTools.map((tool) => (
-                <div key={tool.href} className="flex items-start gap-3 p-3 rounded-lg hover:bg-violet-500/5 transition">
-                  <div className={cn("p-2 rounded-lg", tool.bgColor)}>
-                    <tool.icon className={cn("h-4 w-4", tool.color)} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">{tool.label}</h4>
-                      <Badge variant="premium" className="text-[10px]">PRO</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{tool.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-6 border-violet-500/20">
-            <h3 className="text-xl font-bold mb-4">Unlimited Usage</h3>
-            <div className="grid gap-4">
-              {limitedTools.map((tool) => (
-                <div key={tool.href} className="flex items-start gap-3 p-3 rounded-lg hover:bg-violet-500/5 transition">
-                  <div className={cn("p-2 rounded-lg", tool.bgColor)}>
-                    <tool.icon className={cn("h-4 w-4", tool.color)} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">{tool.label}</h4>
-                      <Badge variant="outline" className="text-[10px]">
-                        {tool.freeLimit} free / Unlimited with Pro
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{tool.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+              <CardDescription>Best value for power users</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <div className="text-3xl font-bold mb-2">$100</div>
+              <div className="text-sm text-muted-foreground mb-4">/year</div>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  Everything in Monthly
+                </li>
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  2 months free
+                </li>
+                <li className="flex items-center">
+                  <Badge variant="secondary" className="mr-2">✓</Badge>
+                  Early access features
+                </li>
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <SubscriptionButton 
+                isPro={isPro}
+                planType="yearly"
+              />
+            </CardFooter>
           </Card>
         </div>
       </div>
-      <Analytics />
-    </div>
+    </PayPalScriptProvider>
   );
 };
-
-export const dynamic = "force-dynamic";
-export const revalidate = 60;
 
 export default SettingsPage;

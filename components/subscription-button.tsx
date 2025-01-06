@@ -1,106 +1,162 @@
 "use client";
 
-import axios from "axios";
 import { useState, useEffect } from "react";
+import { PayPalButtons } from "@paypal/react-paypal-js";
 import { Button } from "@/components/ui/button";
-import { Zap } from "lucide-react";
+import axios from "axios";
 import { toast } from "react-hot-toast";
-import cn from "classnames";
-import { useSearchParams } from "next/navigation";
+import { Loader2, CreditCard } from "lucide-react";
 
 interface SubscriptionButtonProps {
   isPro: boolean;
-  planId: string;
-  variant?: "default" | "outline";
-  children?: React.ReactNode;
+  planType: "monthly" | "yearly";
 }
 
 export const SubscriptionButton = ({
-  isPro = false,
-  planId,
-  variant = "default",
-  children
+  isPro,
+  planType,
 }: SubscriptionButtonProps) => {
   const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
+  const [showPayPal, setShowPayPal] = useState(false);
+
+  const planId = planType === "monthly" 
+    ? process.env.NEXT_PUBLIC_PAYPAL_MONTHLY_PLAN_ID 
+    : process.env.NEXT_PUBLIC_PAYPAL_YEARLY_PLAN_ID;
 
   useEffect(() => {
-    const verifySubscription = async () => {
-      if (!searchParams) return;
+    // Log environment variables (only in development)
+    if (process.env.NODE_ENV === "development") {
+      console.log("Client ID:", process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
+      console.log("Plan ID:", planId);
+    }
+  }, [planId]);
 
-      const subscriptionId = searchParams.get("subscription_id");
-      const success = searchParams.get("success");
+  const handleSubscribe = () => {
+    if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || !planId) {
+      console.error({
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+        planId: planId
+      });
+      toast.error("PayPal configuration is missing. Please contact support.");
+      return;
+    }
+    setShowPayPal(true);
+  };
 
-      if (success === "true" && subscriptionId) {
-        try {
-          setLoading(true);
-          await axios.get(`/api/paypal/verify?subscription_id=${subscriptionId}`);
-          toast.success("Thank you for subscribing!");
-          
-          // Get base URL for redirect
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (
-            process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : window.location.origin
-          );
-          window.location.href = `${baseUrl}/dashboard`;
-        } catch (error) {
-          console.error("Verification error:", error);
-          toast.error("Failed to verify subscription");
-        } finally {
-          setLoading(false);
-        }
+  const createSubscription = (data: any, actions: any) => {
+    console.log("Creating subscription with plan ID:", planId);
+    if (!planId) {
+      toast.error("Subscription plan not configured");
+      return Promise.reject("Plan ID not configured");
+    }
+
+    return actions.subscription.create({
+      'plan_id': planId,
+      'application_context': {
+        'shipping_preference': 'NO_SHIPPING',
+        'user_action': 'SUBSCRIBE_NOW'
       }
-    };
+    });
+  };
 
-    verifySubscription();
-  }, [searchParams]);
-
-  const onClick = async () => {
+  const onApprove = async (data: any) => {
+    console.log("Subscription approved:", data);
     try {
       setLoading(true);
-      const response = await axios.get(`/api/paypal/subscription?planId=${planId}`);
-      window.location.href = response.data.url;
-    } catch (error) {
+      
+      // Verify the subscription with PayPal
+      const response = await axios.post("/api/subscribe", {
+        subscriptionId: data.subscriptionID,
+        planType: planType,
+        orderID: data.orderID
+      });
+
+      console.log("Subscription response:", response.data);
+      
+      if (response.data.success) {
+        toast.success("Successfully subscribed! Refreshing...");
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || "Failed to activate subscription");
+      }
+    } catch (error: any) {
       console.error("Subscription error:", error);
-      toast.error("Something went wrong with the subscription process");
+      toast.error(error.message || "Failed to activate subscription");
     } finally {
       setLoading(false);
     }
   };
 
+  const onError = (err: any) => {
+    console.error("PayPal error:", err);
+    toast.error("PayPal error occurred. Please try again.");
+    setShowPayPal(false);
+  };
+
+  const onCancel = () => {
+    toast.error("Subscription cancelled");
+    setShowPayPal(false);
+  };
+
   if (isPro) {
     return (
-      <Button variant={variant} className="w-full" disabled>
-        {children || (
-          <>
-            <Zap className="w-4 h-4 mr-2 fill-white" />
-            Already Pro
-          </>
-        )}
+      <Button 
+        className="w-full" 
+        variant="premium" 
+        disabled
+      >
+        Current Plan
+      </Button>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Button disabled className="w-full">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Processing...
+      </Button>
+    );
+  }
+
+  if (!showPayPal) {
+    return (
+      <Button
+        onClick={handleSubscribe}
+        className="w-full"
+        variant="premium"
+      >
+        <CreditCard className="mr-2 h-4 w-4" />
+        {planType === "monthly" ? "Subscribe Monthly" : "Subscribe Yearly"}
       </Button>
     );
   }
 
   return (
-    <Button 
-      onClick={onClick} 
-      disabled={loading} 
-      variant={variant}
-      className={cn(
-        "w-full",
-        variant === "default" && "bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600"
-      )}
-    >
-      {loading ? (
-        <>
-          <Zap className="w-4 h-4 mr-2 fill-white animate-pulse" />
-          Loading...
-        </>
-      ) : children || (
-        <>
-          Upgrade to Pro
-          <Zap className="w-4 h-4 ml-2 fill-white" />
-        </>
-      )}
-    </Button>
+    <div className="w-full space-y-4">
+      <div className="border rounded-lg p-4 bg-white">
+        <PayPalButtons
+          style={{ 
+            layout: "vertical",
+            shape: "rect",
+            label: "subscribe"
+          }}
+          disabled={loading}
+          createSubscription={createSubscription}
+          onApprove={onApprove}
+          onCancel={onCancel}
+          onError={onError}
+        />
+        <Button
+          onClick={() => setShowPayPal(false)}
+          variant="ghost"
+          className="w-full mt-4"
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 };
