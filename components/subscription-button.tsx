@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Loader2, CreditCard } from "lucide-react";
+import { updateSubscriptionStatus } from "@/app/actions/subscription";
 
 interface SubscriptionButtonProps {
   isPro: boolean;
@@ -23,67 +23,54 @@ export const SubscriptionButton = ({
     ? process.env.NEXT_PUBLIC_PAYPAL_MONTHLY_PLAN_ID 
     : process.env.NEXT_PUBLIC_PAYPAL_YEARLY_PLAN_ID;
 
-  useEffect(() => {
-    // Log environment variables (only in development)
-    if (process.env.NODE_ENV === "development") {
-      console.log("Client ID:", process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
-      console.log("Plan ID:", planId);
-    }
-  }, [planId]);
-
   const handleSubscribe = () => {
     if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || !planId) {
-      console.error({
-        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-        planId: planId
+      console.error("Missing configuration:", {
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ? "present" : "missing",
+        planId: planId ? "present" : "missing"
       });
-      toast.error("PayPal configuration is missing. Please contact support.");
+      toast.error("Payment system is not properly configured. Please try again later.");
       return;
     }
     setShowPayPal(true);
   };
 
-  const createSubscription = (data: any, actions: any) => {
-    console.log("Creating subscription with plan ID:", planId);
-    if (!planId) {
-      toast.error("Subscription plan not configured");
-      return Promise.reject("Plan ID not configured");
-    }
-
-    return actions.subscription.create({
-      'plan_id': planId,
-      'application_context': {
-        'shipping_preference': 'NO_SHIPPING',
-        'user_action': 'SUBSCRIBE_NOW'
-      }
-    });
-  };
-
-  const onApprove = async (data: any) => {
-    console.log("Subscription approved:", data);
+  const createSubscription = async (data: any, actions: any) => {
     try {
-      setLoading(true);
-      
-      // Verify the subscription with PayPal
-      const response = await axios.post("/api/subscribe", {
-        subscriptionId: data.subscriptionID,
-        planType: planType,
-        orderID: data.orderID
+      if (!planId) {
+        throw new Error("Subscription plan not configured");
+      }
+
+      const subscription = await actions.subscription.create({
+        plan_id: planId,
+        application_context: {
+          shipping_preference: "NO_SHIPPING",
+        },
       });
 
-      console.log("Subscription response:", response.data);
-      
-      if (response.data.success) {
-        toast.success("Successfully subscribed! Refreshing...");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        throw new Error(response.data.message || "Failed to activate subscription");
+      if (subscription.id) {
+        await updateSubscriptionStatus(subscription.id, "active");
+        toast.success("Subscription created successfully!");
+        return subscription.id;
       }
-    } catch (error: any) {
-      console.error("Subscription error:", error);
-      toast.error(error.message || "Failed to activate subscription");
+      
+      throw new Error("Failed to create subscription");
+    } catch (error) {
+      console.error("Subscription creation error:", error);
+      toast.error("Failed to create subscription. Please try again.");
+      return null;
+    }
+  };
+
+  const onApprove = async (data: any, actions: any) => {
+    try {
+      setLoading(true);
+      await updateSubscriptionStatus(data.subscriptionID, "active");
+      toast.success("Thanks for subscribing!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Subscription approval error:", error);
+      toast.error("Something went wrong. Please contact support.");
     } finally {
       setLoading(false);
     }
@@ -91,72 +78,50 @@ export const SubscriptionButton = ({
 
   const onError = (err: any) => {
     console.error("PayPal error:", err);
-    toast.error("PayPal error occurred. Please try again.");
-    setShowPayPal(false);
+    toast.error("Payment failed. Please try again.");
+    setLoading(false);
   };
-
-  const onCancel = () => {
-    toast.error("Subscription cancelled");
-    setShowPayPal(false);
-  };
-
-  if (isPro) {
-    return (
-      <Button 
-        className="w-full" 
-        variant="premium" 
-        disabled
-      >
-        Current Plan
-      </Button>
-    );
-  }
 
   if (loading) {
     return (
       <Button disabled className="w-full">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Processing...
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        Loading...
       </Button>
     );
   }
 
-  if (!showPayPal) {
+  if (isPro) {
     return (
-      <Button
-        onClick={handleSubscribe}
-        className="w-full"
-        variant="premium"
-      >
-        <CreditCard className="mr-2 h-4 w-4" />
-        {planType === "monthly" ? "Subscribe Monthly" : "Subscribe Yearly"}
+      <Button disabled className="w-full">
+        <CreditCard className="w-4 h-4 mr-2" />
+        You are already subscribed
       </Button>
     );
   }
 
   return (
     <div className="w-full space-y-4">
-      <div className="border rounded-lg p-4 bg-white">
-        <PayPalButtons
-          style={{ 
-            layout: "vertical",
-            shape: "rect",
-            label: "subscribe"
-          }}
-          disabled={loading}
-          createSubscription={createSubscription}
-          onApprove={onApprove}
-          onCancel={onCancel}
-          onError={onError}
-        />
+      {!showPayPal && (
         <Button
-          onClick={() => setShowPayPal(false)}
-          variant="ghost"
-          className="w-full mt-4"
+          onClick={handleSubscribe}
+          className="w-full"
         >
-          Cancel
+          <CreditCard className="w-4 h-4 mr-2" />
+          {planType === "monthly" ? "Subscribe Monthly" : "Subscribe Yearly"}
         </Button>
-      </div>
+      )}
+      
+      {showPayPal && (
+        <div className="w-full p-4 bg-white rounded-lg">
+          <PayPalButtons
+            style={{ layout: "vertical", shape: "rect" }}
+            createSubscription={createSubscription}
+            onApprove={onApprove}
+            onError={onError}
+          />
+        </div>
+      )}
     </div>
   );
 };

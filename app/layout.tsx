@@ -7,6 +7,7 @@ import { ToasterProvider } from "@/components/toaster-provider";
 import ErrorBoundary from "@/components/ErrorBoundary"; 
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 import "./globals.css";
 
@@ -52,6 +53,12 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+
+  if (!paypalClientId) {
+    console.error('PayPal client ID is not configured');
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -88,9 +95,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <ErrorBoundary>
           <SessionProvider>
-            <ModalProvider />
-            <ToasterProvider />
-            {children}
+            <PayPalScriptProvider
+              options={{
+                clientId: paypalClientId || 'test',
+                components: "buttons",
+                intent: "subscription",
+                vault: true,
+              }}
+            >
+              <ModalProvider />
+              <ToasterProvider />
+              {children}
+            </PayPalScriptProvider>
           </SessionProvider>
           <Analytics />
         </ErrorBoundary>
