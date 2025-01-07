@@ -36,7 +36,7 @@ export default function LearningPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [learningType, setLearningType] = useState("summary");
 
-  const learningTool = tools.find(t => t.label === "Learning Assistant");
+  const learningTool = tools.find(t => t.label === "Learning Path");
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("learningHistory");
@@ -48,7 +48,7 @@ export default function LearningPage() {
   if (!learningTool) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground">Learning Assistant tool not found</p>
+        <p className="text-muted-foreground">Learning Path tool not found</p>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function LearningPage() {
     <div>
       <div className="h-full p-4 space-y-2">
         <Heading
-          title="Learning Assistant"
+          title="Learning Path"
           description="Your personal AI tutor to help you learn and understand any topic."
           icon={BookOpen}
           iconColor="text-violet-500"

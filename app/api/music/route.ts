@@ -4,11 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { checkFeatureLimit, increaseFeatureUsage } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { FEATURE_TYPES } from "@/constants";
-import Replicate from "replicate";
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN!,
-});
 
 export async function POST(req: Request) {
   try {
@@ -33,22 +28,66 @@ export async function POST(req: Request) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    const response = await replicate.run(
-      "riffusion/riffusion:8cf61ea6c56afd61d8f5b9ffd14d7c216c0a93844ce2d82ac1c9ecc9c7f24e05",
+    // First check if API key is configured
+    const apiKey = process.env.HUGGINGFACE_TOKEN;
+    if (!apiKey) {
+      throw new Error("Hugging Face API key not configured");
+    }
+
+    console.log("Making request to Hugging Face API with prompt:", prompt);
+
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/musicgen-small",
       {
-        input: {
-          prompt_a: prompt,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          Accept: "audio/wav",
         },
+        method: "POST",
+        body: JSON.stringify({
+          inputs: prompt,
+        }),
       }
     );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Hugging Face API error details:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        error: errorText
+      });
+      throw new Error(`Hugging Face API error: ${response.statusText}. Details: ${errorText}`);
+    }
+
+    console.log("Received successful response from Hugging Face API");
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("audio/")) {
+      console.error("Unexpected content type:", contentType);
+      const responseText = await response.text();
+      console.error("Response body:", responseText);
+      throw new Error("Invalid response format from Hugging Face API");
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    console.log("Received audio buffer of size:", audioBuffer.byteLength);
+
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    const audioUrl = `data:audio/wav;base64,${base64Audio}`;
 
     if (!isPro) {
       await increaseFeatureUsage(userId, FEATURE_TYPES.MUSIC_CREATION);
     }
 
-    return NextResponse.json(response);
+    return NextResponse.json({ audio: audioUrl });
   } catch (error) {
     console.error("[MUSIC_ERROR]", error);
+    if (error instanceof Error) {
+      return new NextResponse(error.message, { status: 500 });
+    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

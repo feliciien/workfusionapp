@@ -33,9 +33,26 @@ const ImagePage = () => {
     url: string;
   }>>([]);
   const [isPro, setIsPro] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
 
   const imageTool = tools.find(tool => tool.href === "/image");
+
+  useEffect(() => {
+    const checkProStatus = async () => {
+      try {
+        const response = await fetch("/api/subscription");
+        const data = await response.json();
+        setIsPro(data.isPro);
+      } catch (error) {
+        console.error("Error checking pro status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkProStatus();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,30 +64,6 @@ const ImagePage = () => {
     }
   });
 
-  const isLoading = form.formState.isSubmitting;
-
-  useEffect(() => {
-    const checkProStatus = async () => {
-      try {
-        const response = await fetch("/api/subscription");
-        const data = await response.json();
-        setIsPro(data.isPro);
-      } catch (error) {
-        console.error("Error checking pro status:", error);
-        setIsPro(false);
-      }
-    };
-
-    checkProStatus();
-  }, []);
-
-  useEffect(() => {
-    if (imageTool && !imageTool.limitedFree && !isPro) {
-      router.push("/");
-      proModal.onOpen();
-    }
-  }, [imageTool, isPro, router, proModal]);
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setImages([]);
@@ -78,6 +71,10 @@ const ImagePage = () => {
       const response = await axios.post("/api/image", values);
       
       const urls = response.data.map((image: { url: string }) => image.url);
+      
+      if (!urls || urls.length === 0) {
+        throw new Error("No images were generated");
+      }
       
       setImages(urls);
       setImageHistory(prev => [...prev, ...urls.map((url: string) => ({
@@ -87,25 +84,35 @@ const ImagePage = () => {
       }))]);
 
       form.reset();
+      toast.success("Images generated successfully!");
     } catch (error: any) {
+      console.error("Image generation error:", error);
       if (error?.response?.status === 403) {
         proModal.onOpen();
       } else {
-        toast.error("Something went wrong.");
+        const errorMessage = error?.response?.data || error?.message || "Something went wrong generating the images.";
+        toast.error(errorMessage);
       }
     }
   };
 
   if (!imageTool) {
+    return null;
+  }
+
+  if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground">Tool not found</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700" />
       </div>
     );
   }
 
   return (
-    <ToolPage tool={imageTool}>
+    <ToolPage
+      tool={imageTool}
+      isLoading={form.formState.isSubmitting}
+    >
       <div className="space-y-8">
         <div className="flex space-x-2 border-b">
           <button

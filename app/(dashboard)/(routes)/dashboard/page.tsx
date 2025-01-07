@@ -7,14 +7,56 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Sparkles, Lock, ArrowRight, Star } from "lucide-react";
+import { Sparkles, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
-const DashboardPage = async () => {
+const DashboardPage = () => {
   const router = useRouter();
-  const isPro = await checkSubscription();
-  const apiLimitCount = !isPro ? await getApiLimitCount() : 0;
-  const remainingGenerations = 5 - (apiLimitCount || 0);
+  const { data: session } = useSession();
+  const [isPro, setIsPro] = useState<boolean>(false);
+  const [apiLimitCount, setApiLimitCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!session?.user?.id) {
+          setIsLoading(false);
+          return;
+        }
+
+        const [proStatus, count] = await Promise.all([
+          checkSubscription(session.user.id),
+          getApiLimitCount(session.user.id)
+        ]);
+
+        setIsPro(proStatus);
+        if (!proStatus) {
+          setApiLimitCount(count || 0);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setIsLoading(false);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchData();
+    }
+  }, [session?.user?.id]);
+
+  const remainingGenerations = 5 - apiLimitCount;
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full relative">
@@ -75,23 +117,14 @@ const DashboardPage = async () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {category.routes.map((tool) => {
+                const isBasicTool = tool.label === "Dashboard" || tool.label === "Settings";
                 const isProTool = tool.proOnly;
-                const isAccessible = isPro || (!isProTool && remainingGenerations > 0);
                 
                 return (
                   <Card
                     key={tool.href}
-                    className={cn(
-                      "group relative p-6 border-black/5 hover:shadow-md transition-all cursor-pointer",
-                      isAccessible ? "hover:scale-[1.02]" : "opacity-60 hover:opacity-80"
-                    )}
-                    onClick={() => {
-                      if (isAccessible) {
-                        router.push(tool.href);
-                      } else if (!isPro) {
-                        router.push('/settings');
-                      }
-                    }}
+                    className="group relative p-6 border-black/5 hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+                    onClick={() => router.push(tool.href)}
                   >
                     <div className="flex flex-col h-full">
                       <div className="flex items-center justify-between mb-4">
@@ -102,9 +135,6 @@ const DashboardPage = async () => {
                           <span className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded-full dark:bg-purple-900/20 dark:text-purple-300">
                             PRO
                           </span>
-                        )}
-                        {!isAccessible && (
-                          <Lock className="w-4 h-4 text-muted-foreground absolute top-4 right-4" />
                         )}
                       </div>
                       <div>

@@ -38,14 +38,27 @@ const MusicPage = () => {
       const response = await axios.post("/api/music", {
         prompt: values.prompt,
       });
+
+      if (!response.data.audio) {
+        throw new Error("No audio received from the API");
+      }
+
       setMusic(response.data.audio);
       form.reset();
+      toast.success("Music generated successfully!");
     } catch (error: any) {
       console.error("Error generating music:", error);
       if (error?.response?.status === 403) {
         proModal.onOpen();
       } else {
-        toast.error("Something went wrong generating the music.");
+        const errorMessage = error?.response?.data || error?.message || "Something went wrong generating the music.";
+        console.error("Full error details:", {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          data: error?.response?.data,
+          message: error?.message
+        });
+        toast.error(errorMessage);
       }
     } finally {
       router.refresh();
@@ -70,69 +83,65 @@ const MusicPage = () => {
       <div className="w-full max-w-2xl">
         <Heading
           title="Music Generation"
-          description="Create AI-driven music from your text prompt."
+          description="Turn your prompt into music."
           icon={Music}
-          iconColor="text-green-600"
-          bgColor="bg-green-100"
+          iconColor="text-emerald-500"
+          bgColor="bg-emerald-500/10"
         />
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="px-4 lg:px-8">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="w-full flex flex-col gap-4"
+              className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
             >
               <FormField
                 name="prompt"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
+                  <FormItem className="col-span-12 lg:col-span-10">
+                    <FormControl className="m-0 p-0">
                       <Input
-                        {...field}
-                        placeholder="e.g. 'an upbeat EDM track with synths'"
-                        className="border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none w-full"
+                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                         disabled={isLoading}
+                        placeholder="Piano solo in jazz style..."
+                        {...field}
                       />
                     </FormControl>
                   </FormItem>
                 )}
               />
-              <Button
-                className="self-end bg-green-600 hover:bg-green-700"
+              <Button 
+                className="col-span-12 lg:col-span-2 w-full" 
                 disabled={isLoading}
-                type="submit"
               >
-                {isLoading ? "Generating..." : "Generate"}
+                Generate
               </Button>
             </form>
           </Form>
-
-          <div className="mt-8">
-            {isLoading && (
-              <div className="p-8 rounded-lg w-full flex items-center justify-center bg-gray-100">
-                <Loader />
+          {isLoading && (
+            <div className="p-20">
+              <Loader />
+            </div>
+          )}
+          {!music && !isLoading && (
+            <Empty label="No music generated." />
+          )}
+          {music && (
+            <div className="p-4 mt-8 rounded-lg border w-full flex items-center justify-center bg-black">
+              <audio controls className="w-full">
+                <source src={music} />
+              </audio>
+              <div className="flex justify-between items-center">
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? "Downloading..." : "Download"}
+                </Button>
               </div>
-            )}
-            {!music && !isLoading && (
-              <Empty label="Enter a prompt and generate music." />
-            )}
-            {music && (
-              <div className="mt-6 space-y-4">
-                <audio controls className="w-full rounded" src={music}>
-                  Your browser does not support the audio element.
-                </audio>
-                <div className="flex justify-between items-center">
-                  <Button
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                  >
-                    {isDownloading ? "Downloading..." : "Download"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

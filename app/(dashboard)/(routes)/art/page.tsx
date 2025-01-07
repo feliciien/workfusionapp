@@ -16,6 +16,8 @@ import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
+import { ToolPage } from "@/components/tool-page";
+import { tools } from "../dashboard/config";
 
 import { formSchema, amountOptions, resolutionOptions, styleOptions } from "./constants";
 import { toast } from "react-hot-toast";
@@ -23,8 +25,7 @@ import { toast } from "react-hot-toast";
 const ArtPage = () => {
   const router = useRouter();
   const [images, setImages] = useState<Array<{url: string}>>([]);
-  const [apiLimitCount, setApiLimitCount] = useState<number>(0);
-  const [isPro, setIsPro] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -37,10 +38,9 @@ const ArtPage = () => {
     }
   });
 
-  const isLoading = form.formState.isSubmitting;
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      setIsLoading(true);
       setImages([]);
       
       const response = await fetch("/api/art", {
@@ -50,289 +50,241 @@ const ArtPage = () => {
       });
 
       if (!response.ok) {
+        const errorData = await response.text();
         if (response.status === 403) {
           toast.error("You have reached your free tier limit. Please upgrade to pro.");
           router.push('/settings');
           return;
         }
-        throw new Error("Failed to generate images");
+        throw new Error(errorData || "Failed to generate images");
       }
 
       const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format");
+      }
       
-      setImages(data.images);
-      setApiLimitCount(data.remaining);
-      setIsPro(data.isPro);
-
+      setImages(data);
       form.reset();
       toast.success('Images generated successfully!');
     } catch (error: any) {
-      console.log('[ART_ERROR]', error);
-      toast.error('Something went wrong. Please try again.');
+      console.error('[ART_ERROR]', error);
+      toast.error(error.message || 'Something went wrong. Please try again.');
     } finally {
+      setIsLoading(false);
       router.refresh();
     }
   };
 
-  const downloadImage = async (imageUrl: string) => {
+  const downloadImage = async (imageUrl: string, index: number) => {
     try {
-      toast.loading('Downloading image...');
+      setDownloadingIndex(index);
       
-      // First check if the image is accessible
-      const checkResponse = await fetch(imageUrl, { method: 'HEAD' });
-      if (!checkResponse.ok) {
-        throw new Error('Image is no longer accessible');
-      }
-
       const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error('Failed to download image');
-      }
-
+      if (!response.ok) throw new Error('Failed to download image');
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
+      link.download = `generated-image-${index + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       
-      // Generate a more descriptive filename
-      const timestamp = new Date().toISOString().split('T')[0];
-      const promptText = form.getValues('prompt').slice(0, 30).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      link.download = `art_${promptText}_${timestamp}.png`;
-      
-      // Use click event to handle download
-      const clickEvent = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: false
-      });
-      link.dispatchEvent(clickEvent);
-      
-      // Cleanup
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        toast.dismiss();
-        toast.success('Image downloaded successfully!');
-      }, 100);
-    } catch (error: any) {
-      console.error('Download error:', error);
-      toast.dismiss();
-      toast.error(error.message || 'Failed to download image');
+      toast.success('Image downloaded successfully!');
+    } catch (error) {
+      console.error('[DOWNLOAD_ERROR]', error);
+      toast.error('Failed to download image');
+    } finally {
+      setDownloadingIndex(null);
     }
   };
 
-  const handleDownload = async (imageUrl: string, index: number) => {
-    setDownloadingIndex(index);
-    await downloadImage(imageUrl);
-    setDownloadingIndex(null);
+  const artTool = tools.find(tool => tool.href === "/art") || {
+    label: "Art Generation",
+    description: "Turn your prompt into an image using AI.",
+    icon: ImageIcon,
+    href: "/art",
+    color: "text-pink-500",
+    bgColor: "bg-pink-500/10",
   };
 
   return (
-    <div className="h-full p-4 space-y-6">
-      <Heading
-        title="AI Art Studio"
-        description={isPro ? "Transform your imagination into stunning artwork." : `${apiLimitCount} / 5 Free Generations`}
-        icon={ImageIcon}
-        iconColor="text-fuchsia-500"
-        bgColor="bg-fuchsia-500/10"
-      />
+    <ToolPage
+      tool={artTool}
+    >
       <div className="px-4 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 border-black/5 dark:border-white/5 shadow-lg hover:shadow-xl transition-shadow">
-            <Form {...form}>
-              <form 
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Create Your Art</h3>
-                  <FormField
-                    name="prompt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            className="min-h-[60px] text-lg p-4 bg-background border-2 border-black/5 dark:border-white/5 rounded-xl focus-visible:ring-fuchsia-500"
-                            disabled={isLoading} 
-                            placeholder="A surreal landscape with floating islands..." 
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
+        <Form {...form}>
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
+          >
+            <FormField
+              name="prompt"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-6">
+                  <FormControl className="m-0 p-0">
+                    <Input
+                      className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
+                      disabled={isLoading}
+                      placeholder="A painting of a cat in space..."
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-2">
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue defaultValue={field.value} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {amountOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="resolution"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-2">
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue defaultValue={field.value} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {resolutionOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="style"
+              render={({ field }) => (
+                <FormItem className="col-span-12 lg:col-span-2">
+                  <Select
+                    disabled={isLoading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue defaultValue={field.value} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {styleOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <Button 
+              className="col-span-12 lg:col-span-2 w-full" 
+              type="submit"
+              disabled={isLoading}
+              size="icon"
+            >
+              Generate
+            </Button>
+          </form>
+        </Form>
+        
+        {isLoading && (
+          <div className="p-20">
+            <Loader />
+          </div>
+        )}
+        
+        {images.length === 0 && !isLoading && (
+          <Card className="rounded-lg p-8 mt-8 border-2 border-dashed">
+            <Empty label="Your generated artwork will appear here." />
+          </Card>
+        )}
+
+        {images.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
+            {images.map((image, index) => (
+              <Card key={index} className="rounded-lg overflow-hidden">
+                <div className="relative aspect-square">
+                  <Image
+                    fill
+                    alt="Generated"
+                    src={image.url}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
                   />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="style"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select 
-                            disabled={isLoading} 
-                            onValueChange={field.onChange} 
-                            value={field.value} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="bg-background border-2 border-black/5 dark:border-white/5 rounded-xl h-[50px]">
-                                <SelectValue defaultValue={field.value} placeholder="Style" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {styleOptions.map((option) => (
-                                <SelectItem 
-                                  key={option.value} 
-                                  value={option.value}
-                                  className="cursor-pointer hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/10"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="amount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select 
-                            disabled={isLoading} 
-                            onValueChange={field.onChange} 
-                            value={field.value} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="bg-background border-2 border-black/5 dark:border-white/5 rounded-xl h-[50px]">
-                                <SelectValue defaultValue={field.value} placeholder="Amount" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {amountOptions.map((option) => (
-                                <SelectItem 
-                                  key={option.value} 
-                                  value={option.value}
-                                  className="cursor-pointer hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/10"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="resolution"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select 
-                            disabled={isLoading} 
-                            onValueChange={field.onChange} 
-                            value={field.value} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="bg-background border-2 border-black/5 dark:border-white/5 rounded-xl h-[50px]">
-                                <SelectValue defaultValue={field.value} placeholder="Resolution" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {resolutionOptions.map((option) => (
-                                <SelectItem 
-                                  key={option.value} 
-                                  value={option.value}
-                                  className="cursor-pointer hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/10"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                 </div>
                 <Button 
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 text-white py-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
-                  type="submit"
+                  onClick={() => downloadImage(image.url, index)}
+                  disabled={downloadingIndex === index}
+                  className="w-full rounded-none"
+                  variant="secondary"
+                  size="sm"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader className="h-6 w-6 animate-spin" />
-                      <span>Generating...</span>
-                    </div>
+                  {downloadingIndex === index ? (
+                    <Loader />
                   ) : (
-                    <div className="flex items-center justify-center gap-2">
-                      <ImageIcon className="h-6 w-6" />
-                      <span>Generate Art</span>
-                    </div>
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </>
                   )}
                 </Button>
-              </form>
-            </Form>
-          </Card>
-
-          <div className="space-y-4">
-            {isLoading && (
-              <div className="p-20">
-                <Loader className="w-10 h-10 animate-spin mx-auto" />
-                <p className="text-center text-sm text-muted-foreground mt-4">
-                  Creating your masterpiece...
-                </p>
-              </div>
-            )}
-            
-            {images.length === 0 && !isLoading && (
-              <Card className="rounded-xl p-12 border-2 border-dashed">
-                <Empty label="Your generated artwork will appear here." />
               </Card>
-            )}
-
-            {images.length > 0 && (
-              <div className="grid grid-cols-1 gap-6">
-                {images.map((image, index) => (
-                  <Card key={index} className="overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-                    <div className="relative aspect-square">
-                      <Image
-                        alt="Generated art"
-                        src={image.url}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-4 bg-black/5 dark:bg-white/5">
-                      <Button 
-                        onClick={() => handleDownload(image.url, index)}
-                        className="w-full bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-lg py-4 font-medium transition-colors"
-                        disabled={downloadingIndex === index}
-                      >
-                        {downloadingIndex === index ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <Loader className="w-5 h-5 animate-spin" />
-                            <span>Downloading...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center gap-2">
-                            <Download className="w-5 h-5" />
-                            <span>Download Artwork</span>
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </ToolPage>
   );
-}
+};
 
 export default ArtPage;

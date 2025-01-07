@@ -1,8 +1,14 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { checkFeatureLimit, increaseFeatureUsage } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { FEATURE_TYPES } from "@/constants";
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 const stylePrompts = {
   "realistic": "ultra realistic, photorealistic, highly detailed, 8k resolution",
@@ -21,12 +27,6 @@ const stylePrompts = {
 const processPrompt = (prompt: string, style: string = "realistic") => {
   // Clean and enhance the prompt
   let processedPrompt = prompt.trim();
-  
-  // Add character-specific enhancements if detected
-  if (processedPrompt.toLowerCase().includes("samurai") || 
-      processedPrompt.toLowerCase().includes("warrior")) {
-    processedPrompt += ", full body shot, detailed armor, dramatic lighting, powerful pose";
-  }
   
   // Add style enhancement
   const styleEnhancement = stylePrompts[style as keyof typeof stylePrompts] || "";
@@ -49,12 +49,6 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription(userId);
-
-    if (!isPro) {
-      return new NextResponse("Pro subscription required", { status: 403 });
-    }
-
     const body = await req.json();
     const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
 
@@ -71,44 +65,67 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt too long. Maximum length is 4000 characters.", { status: 400 });
     }
 
-    // Process and enhance the prompt
-    const enhancedPrompt = processPrompt(prompt, style);
+    const isPro = await checkSubscription(userId);
+    const canGenerate = await checkFeatureLimit(userId, FEATURE_TYPES.IMAGE_GENERATION);
 
-    const freeTrial = await checkApiLimit(userId);
-    if (!freeTrial && !isPro) {
+    if (!isPro && !canGenerate) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    const response = await fetch(
-      "https://api.replicate.com/v1/predictions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          version: "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-          input: {
-            prompt: enhancedPrompt,
-            negative_prompt: "ugly, blurry, poor quality, distorted",
-            num_inference_steps: 50,
-          },
-        }),
-      }
-    );
+    // Process and enhance the prompt
+    const enhancedPrompt = processPrompt(prompt, style);
 
-    if (!response.ok) {
-      return new NextResponse("Art generation failed", { status: 500 });
+    // Check if OpenAI API key is configured
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("OpenAI API key not configured");
+      return new NextResponse("Art generation service not configured", { status: 500 });
     }
 
-    const prediction = await response.json();
+    console.log("Making request to OpenAI API with prompt:", enhancedPrompt);
+
+    const response = await openai.images.generate({
+      prompt: enhancedPrompt,
+      n: parseInt(amount.toString(), 10),
+      size: resolution as "1024x1024" | "512x512" | "256x256",
+      quality: "standard",
+      model: "dall-e-2",
+    });
+
+    if (!response.data || response.data.length === 0) {
+      console.error("No images generated");
+      throw new Error("Failed to generate images");
+    }
+
+    console.log("Successfully generated images");
+
     if (!isPro) {
-      await increaseApiLimit(userId);
+      await increaseFeatureUsage(userId, FEATURE_TYPES.IMAGE_GENERATION);
     }
-    return NextResponse.json(prediction);
-  } catch (error) {
-    console.log("[ART_ERROR]", error);
+
+    // Transform the response to match the expected format
+    const images = response.data.map(image => ({
+      url: image.url
+    }));
+
+    return NextResponse.json(images);
+  } catch (error: any) {
+    console.error("[ART_ERROR]", error);
+    
+    // Handle OpenAI API errors
+    if (error?.response?.data?.error) {
+      const openAIError = error.response.data.error;
+      console.error("OpenAI API error:", openAIError);
+      return new NextResponse(openAIError.message || "Art generation failed", { 
+        status: error.response.status || 500 
+      });
+    }
+    
+    // Handle other errors
+    if (error instanceof Error) {
+      return new NextResponse(error.message, { status: 500 });
+    }
+    
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

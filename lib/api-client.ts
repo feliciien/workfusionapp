@@ -14,9 +14,10 @@ export interface ApiResponse<T> {
 }
 
 export interface Slide {
-  type: 'title' | 'intro' | 'content' | 'conclusion';
+  type?: 'title' | 'intro' | 'content' | 'conclusion';
   title: string;
   content: string | string[];
+  notes?: string;
 }
 
 export interface PresentationResponse {

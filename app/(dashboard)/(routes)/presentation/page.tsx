@@ -20,18 +20,34 @@ import {
   LayoutTemplate,
   Presentation
 } from "lucide-react";
-import { Slide } from "@/lib/api-client";
-import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion, AnimatePresence } from "framer-motion";
+import Script from 'next/script';
+
+// Define the PptxGenJS type from the CDN
+declare global {
+  interface Window {
+    PptxGenJS: any;
+  }
+}
+
+interface Slide {
+  type?: 'title' | 'intro' | 'content' | 'conclusion';
+  title: string;
+  content: string[];
+  notes?: string;
+}
 
 // Templates for different presentation styles
 const PRESENTATION_TEMPLATES = [
   { id: 'business', name: 'Business Presentation', description: 'Professional and formal style' },
-  { id: 'educational', name: 'Educational', description: 'Clear and instructional format' },
+  { id: 'educational', name: 'Educational', description: 'Clear and instructive format' },
   { id: 'creative', name: 'Creative', description: 'Dynamic and engaging style' },
-  { id: 'minimal', name: 'Minimal', description: 'Clean and simple design' },
-];
+  { id: 'minimal', name: 'Minimal', description: 'Clean and simple design' }
+] as const;
+
+type Template = typeof PRESENTATION_TEMPLATES[number]['id'];
 
 export default function PresentationPage() {
   // Tool loading state
@@ -40,34 +56,26 @@ export default function PresentationPage() {
 
   // Form states
   const [topic, setTopic] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState('business');
+  const [template, setTemplate] = useState<Template>('business');
   
   // Presentation states
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
   
   // Loading and progress states
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Initialize tool
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoadingTool(false);
-    }, 500);
+    }, 1000);
+
     return () => clearTimeout(timer);
   }, []);
-
-  // Update current slide
-  useEffect(() => {
-    if (slides.length > 0 && currentSlideIndex < slides.length) {
-      setCurrentSlide(slides[currentSlideIndex]);
-    } else {
-      setCurrentSlide(null);
-    }
-  }, [slides, currentSlideIndex]);
 
   if (isLoadingTool) {
     return (
@@ -97,52 +105,48 @@ export default function PresentationPage() {
     );
   }
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setProgress(0);
-    
-    if (!topic.trim()) {
+    if (!topic) {
       toast.error("Please enter a topic");
-      return;
-    }
-
-    if (topic.length > 1000) {
-      toast.error("Topic is too long. Maximum length is 1000 characters");
       return;
     }
 
     try {
       setIsLoading(true);
       setSlides([]);
-      setCurrentSlideIndex(0);
+      setCurrentSlide(0);
 
       // Simulate progress while generating
       const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + 5, 90));
+        setProgress(prev => Math.min(95, prev + 5));
       }, 500);
 
-      const response = await api.generatePresentation(topic, selectedTemplate);
-
+      const response = await api.generatePresentation(topic, template);
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (!response?.data) {
-        throw new Error('Failed to generate presentation');
+      if (!response.data?.slides) {
+        throw new Error("Invalid response from server");
       }
 
-      if (!response.data.slides || response.data.slides.length === 0) {
-        throw new Error('No slides generated. Please try again.');
-      }
+      // Transform API response to match our Slide interface
+      const transformedSlides: Slide[] = response.data.slides.map((apiSlide) => ({
+        type: apiSlide.type,
+        title: apiSlide.title,
+        content: Array.isArray(apiSlide.content) ? apiSlide.content : [apiSlide.content],
+        notes: apiSlide.notes
+      }));
 
-      setSlides(response.data.slides);
+      setSlides(transformedSlides);
       toast.success("Presentation generated successfully!");
-    } catch (err: any) {
-      console.error("Error generating presentation:", err);
-      toast.error(err.message || "Failed to generate presentation");
-      setError(err.message || "Failed to generate presentation");
+    } catch (error) {
+      console.error("Error generating presentation:", error);
+      toast.error("Failed to generate presentation");
+      setError("Failed to generate presentation. Please try again.");
     } finally {
       setIsLoading(false);
+      setProgress(0);
     }
   };
 
@@ -159,103 +163,74 @@ export default function PresentationPage() {
     setTopic("");
     setSlides([]);
     setError(null);
-    setCurrentSlideIndex(0);
-    setCurrentSlide(null);
+    setCurrentSlide(0);
   };
 
   const nextSlide = () => {
-    if (currentSlideIndex < slides.length - 1) {
-      setCurrentSlideIndex(prev => prev + 1);
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(prev => prev + 1);
     }
   };
 
   const previousSlide = () => {
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(prev => prev - 1);
+    if (currentSlide > 0) {
+      setCurrentSlide(prev => prev - 1);
     }
   };
 
-  const generatePowerPoint = async () => {
-    if (!slides.length) return;
+  const handleDownload = async () => {
+    if (!slides || slides.length === 0) {
+      toast.error("No slides to download");
+      return;
+    }
 
     try {
-      // Dynamically import pptxgenjs only when needed
-      const pptxgen = await import('pptxgenjs');
-      const PptxGenJS = pptxgen.default;
-
-      const pres = new PptxGenJS();
-
-      // Set presentation properties
-      pres.author = 'WorkFusion';
-      pres.company = 'WorkFusion';
-      pres.revision = '1';
-      pres.subject = topic;
-      pres.title = topic;
+      setIsDownloading(true);
+      
+      // Use the CDN version
+      const pres = new window.PptxGenJS();
 
       // Add slides
       slides.forEach((slide) => {
         const pptSlide = pres.addSlide();
-
-        // Add title to all slides
-        pptSlide.addText(slide.title, {
-          x: '5%',
-          y: '5%',
-          w: '90%',
-          h: '15%',
-          fontSize: slide.type === 'title' ? 44 : 32,
+        
+        // Add title
+        pptSlide.addText(slide.title, { 
+          x: 1, 
+          y: 0.5, 
+          w: '80%',
+          fontSize: 24,
           bold: true,
-          align: 'center',
-          color: '363636',
+          color: '363636'
         });
 
-        // Add content based on slide type
-        if (typeof slide.content === 'string') {
-          // Title slide subtitle
-          pptSlide.addText(slide.content, {
-            x: '10%',
-            y: '30%',
-            w: '80%',
-            h: '40%',
-            fontSize: 28,
-            align: 'center',
-            color: '666666',
-          });
-        } else {
-          // Bullet points for other slides
-          const bulletPoints = slide.content.map(point => ({ text: point }));
-          pptSlide.addText(bulletPoints, {
-            x: '10%',
-            y: '25%',
-            w: '80%',
-            h: '70%',
-            fontSize: 24,
-            bullet: { type: 'bullet' },
-            color: '363636',
-            lineSpacing: 32,
+        // Add content
+        if (Array.isArray(slide.content)) {
+          slide.content.forEach((point, idx) => {
+            pptSlide.addText(point, {
+              x: 1,
+              y: 1.5 + (idx * 0.5),
+              w: '80%',
+              fontSize: 18,
+              bullet: true
+            });
           });
         }
 
-        // Add slide number except for title slide
-        if (slide.type !== 'title') {
-          pptSlide.addText(`${slides.indexOf(slide)}/${slides.length - 1}`, {
-            x: '90%',
-            y: '95%',
-            w: '10%',
-            h: '5%',
-            fontSize: 12,
-            color: '666666',
-            align: 'right',
-          });
+        // Add notes if present
+        if (slide.notes) {
+          pptSlide.addNotes(slide.notes);
         }
       });
 
       // Save the presentation
-      const fileName = `${topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.pptx`;
-      await pres.writeFile({ fileName });
-      toast.success("PowerPoint presentation downloaded!");
+      await pres.writeFile({ fileName: "presentation.pptx" });
+      toast.success("Presentation downloaded successfully!");
     } catch (error) {
-      console.error("Error generating PowerPoint:", error);
-      toast.error("Failed to generate PowerPoint presentation");
+      console.error("Error downloading presentation:", error);
+      toast.error("Failed to download presentation");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -282,7 +257,11 @@ export default function PresentationPage() {
       isLoading={isLoading}
       error={error}
     >
-      <form onSubmit={onSubmit} className="w-full">
+      <Script 
+        src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.min.js" 
+        strategy="beforeInteractive"
+      />
+      <form onSubmit={handleSubmit} className="w-full">
         <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
           <div className="flex-1">
             <Input
@@ -294,8 +273,8 @@ export default function PresentationPage() {
             />
           </div>
           <Select
-            value={selectedTemplate}
-            onValueChange={setSelectedTemplate}
+            value={template}
+            onValueChange={(value: Template) => setTemplate(value)}
             disabled={isLoading}
           >
             <SelectTrigger className="w-[200px]">
@@ -343,63 +322,72 @@ export default function PresentationPage() {
         </div>
       )}
 
-      {currentSlide && (
-        <div className="relative">
+      {slides.length > 0 && (
+        <div className="mt-8">
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentSlideIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              key="slides"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-4"
             >
-              <Card className="p-8 min-h-[400px] relative">
-                <div className="absolute top-4 right-4 text-sm text-gray-500">
-                  Slide {currentSlideIndex + 1} of {slides.length}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Generated Slides</h2>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                    disabled={currentSlide === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="px-2 py-1">
+                    {currentSlide + 1} / {slides.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentSlide(prev => Math.min(slides.length - 1, prev + 1))}
+                    disabled={currentSlide === slides.length - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold mb-4">{currentSlide.title}</h2>
-                  {Array.isArray(currentSlide.content) ? (
-                    <ul className="space-y-2 list-disc pl-6">
-                      {currentSlide.content.map((item, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                        >
-                          {item}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-700">{currentSlide.content}</p>
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0, x: 100 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  className="bg-white rounded-lg shadow-lg p-8"
+                >
+                  <h3 className="text-2xl font-bold mb-4">{slides[currentSlide].title}</h3>
+                  <ul className="list-disc pl-6 space-y-2">
+                    {slides[currentSlide].content.map((point, idx) => (
+                      <motion.li
+                        key={idx}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="text-lg"
+                      >
+                        {point}
+                      </motion.li>
+                    ))}
+                  </ul>
+                  {slides[currentSlide].notes && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-600">{slides[currentSlide].notes}</p>
+                    </div>
                   )}
-                </div>
-              </Card>
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </AnimatePresence>
-
-          <div className="absolute top-1/2 -translate-y-1/2 flex justify-between w-full px-4 pointer-events-none">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentSlideIndex(i => Math.max(0, i - 1))}
-              disabled={currentSlideIndex === 0}
-              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentSlideIndex(i => Math.min(slides.length - 1, i + 1))}
-              disabled={currentSlideIndex === slides.length - 1}
-              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       )}
 
@@ -409,16 +397,16 @@ export default function PresentationPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentSlideIndex(0)}
-              disabled={currentSlideIndex === 0}
+              onClick={() => setCurrentSlide(0)}
+              disabled={currentSlide === 0}
             >
               First Slide
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentSlideIndex(slides.length - 1)}
-              disabled={currentSlideIndex === slides.length - 1}
+              onClick={() => setCurrentSlide(slides.length - 1)}
+              disabled={currentSlide === slides.length - 1}
             >
               Last Slide
             </Button>
@@ -435,10 +423,20 @@ export default function PresentationPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={generatePowerPoint}
+              onClick={handleDownload}
+              disabled={isDownloading}
             >
-              <FileDown className="h-4 w-4 mr-2" />
-              Download PPTX
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Download PPTX
+                </>
+              )}
             </Button>
           </div>
           <Button
@@ -449,28 +447,6 @@ export default function PresentationPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             New Presentation
           </Button>
-        </div>
-      )}
-
-      {slides.length > 0 && (
-        <div className="grid grid-cols-4 gap-4 mt-8">
-          {slides.map((slide, index) => (
-            <Card
-              key={index}
-              className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
-                index === currentSlideIndex ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setCurrentSlideIndex(index)}
-            >
-              <div className="text-xs font-medium mb-2">Slide {index + 1}</div>
-              <h3 className="text-sm font-medium truncate">{slide.title}</h3>
-              <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                {Array.isArray(slide.content)
-                  ? slide.content[0] + (slide.content.length > 1 ? '...' : '')
-                  : slide.content}
-              </div>
-            </Card>
-          ))}
         </div>
       )}
     </ToolPage>
