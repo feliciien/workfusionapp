@@ -10,6 +10,9 @@ const nextConfig = {
       "replicate.com",
       "replicate.delivery",
       "pb.juntossomosmais.com.br",
+      "avatars.githubusercontent.com",
+      "lh3.googleusercontent.com",
+      "platform-lookaside.fbsbx.com",
     ],
   },
   webpack: (config, { isServer }) => {
@@ -29,26 +32,16 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcrypt']
   },
-  headers: () => [
-    {
-      source: '/(.*)',
-      headers: [
-        {
-          key: 'X-Frame-Options',
-          value: 'DENY'
-        }
-      ]
-    },
-    {
-      source: '/(.*).(jpg|jpeg|png|svg|gif|ico|webp)',
-      headers: [
-        {
-          key: 'Cache-Control',
-          value: 'public, max-age=31536000, immutable',
-        },
-      ],
-    },
-  ],
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  swcMinify: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+  compress: true,
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

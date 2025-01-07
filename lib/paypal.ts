@@ -6,15 +6,21 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.paypal.com
 const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 
-if (!CLIENT_ID || !CLIENT_SECRET) {
-  throw new Error("PayPal credentials not configured");
+// Check if we're in production and credentials are missing
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction && (!CLIENT_ID || !CLIENT_SECRET)) {
+  console.error("PayPal credentials missing in production environment");
 }
 
 // Function to get PayPal access token
 async function generateAccessToken() {
   try {
     if (!CLIENT_ID || !CLIENT_SECRET) {
-      console.error("PayPal credentials missing:", { CLIENT_ID, CLIENT_SECRET });
+      console.error("PayPal credentials missing:", { 
+        hasClientId: !!CLIENT_ID, 
+        hasClientSecret: !!CLIENT_SECRET,
+        environment: process.env.NODE_ENV 
+      });
       throw new Error("PayPal credentials not configured");
     }
 
@@ -32,7 +38,7 @@ async function generateAccessToken() {
 
     return response.data.access_token;
   } catch (error) {
-    console.error("Error getting PayPal access token:", error);
+    console.error("Failed to generate PayPal access token:", error);
     throw error;
   }
 }
@@ -109,17 +115,27 @@ export async function cancelSubscription(subscriptionId: string): Promise<Respon
 
 export const paypal = {
   async createOrder(data: any) {
-    const accessToken = await generateAccessToken();
-    const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(data),
-    });
+    try {
+      if (!CLIENT_ID || !CLIENT_SECRET) {
+        throw new Error("PayPal credentials not configured");
+      }
 
-    return response.json();
+      const accessToken = await generateAccessToken();
+      const response = await axios.post(
+        `${PAYPAL_API_BASE}/v2/checkout/orders`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Failed to create PayPal order:", error);
+      throw error;
+    }
   },
 
   async captureOrder(orderID: string) {
