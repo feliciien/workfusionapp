@@ -1,6 +1,7 @@
+import { authOptions } from "@/auth";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { getSessionFromRequest } from "@/lib/jwt";
-import { checkSubscription } from "@/lib/subscription";
+import prismadb from "@/lib/prismadb";
 
 // Remove edge runtime for now since we're using Prisma
 // export const runtime = 'edge';
@@ -9,21 +10,21 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const session = await getSessionFromRequest(req);
-    const userId = session?.id;
+    const session = await getServerSession(authOptions);
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription(userId);
+    const subscription = await prismadb.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+      },
+    });
 
-    return NextResponse.json({ isPro });
+    return NextResponse.json(subscription);
   } catch (error) {
     console.error("[SUBSCRIPTION_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

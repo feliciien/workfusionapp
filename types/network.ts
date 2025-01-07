@@ -17,7 +17,7 @@ export type NetworkStatus = 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
 export interface NetworkHealth {
   score: number;                 // 0-100
   status: NetworkStatus;
-  recommendations: NetworkRecommendation[];
+  recommendations: string[];
 }
 
 export interface NetworkRecommendation {

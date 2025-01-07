@@ -2,17 +2,27 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { NetworkHealth, NetworkMetrics, NetworkRecommendation } from "@/types/network";
+import { NetworkMetrics, NetworkHealth } from "@/types/network";
 import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 interface NetworkRecommendationsProps {
   metrics: NetworkMetrics;
-  health?: NetworkHealth;
+  health: NetworkHealth;
   isPro: boolean;
 }
 
 export function NetworkRecommendations({ metrics, health, isPro }: NetworkRecommendationsProps) {
   const healthStatus = getHealthStatus(metrics.healthScore);
+
+  const getRecommendationIcon = (recommendation: string) => {
+    if (recommendation.toLowerCase().includes('high') || recommendation.toLowerCase().includes('poor')) {
+      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    }
+    if (recommendation.toLowerCase().includes('error') || recommendation.toLowerCase().includes('critical')) {
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    }
+    return <Info className="h-4 w-4 text-blue-500" />;
+  };
 
   return (
     <Card className="col-span-4">
@@ -35,26 +45,18 @@ export function NetworkRecommendations({ metrics, health, isPro }: NetworkRecomm
           </div>
           
           <div className="space-y-4">
-            {health?.recommendations?.map((rec, index) => (
-              <div key={index} className="flex items-start space-x-2">
-                {rec.type === 'warning' ? (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                ) : rec.type === 'success' ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Info className="h-5 w-5 text-blue-500" />
-                )}
-                <div>
-                  <p className="font-medium">{rec.title}</p>
-                  <p className="text-sm text-muted-foreground">{rec.description}</p>
+            {health.recommendations.length > 0 ? (
+              health.recommendations.map((recommendation, index) => (
+                <div key={index} className="flex items-start space-x-2">
+                  {getRecommendationIcon(recommendation)}
+                  <p className="text-sm text-muted-foreground">{recommendation}</p>
                 </div>
-              </div>
-            ))}
-            
-            {!health?.recommendations?.length && (
-              <div className="p-4 bg-secondary/50 rounded-lg">
+              ))
+            ) : (
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
                 <p className="text-sm text-muted-foreground">
-                  No recommendations at this time. Your network is performing well.
+                  Your network is performing well. No recommendations at this time.
                 </p>
               </div>
             )}
