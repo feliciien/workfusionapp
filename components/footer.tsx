@@ -3,39 +3,32 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { Badge } from "@/components/ui/badge";
 
 const footerLinks = {
   product: [
     { name: 'Features', href: '/features' },
     { name: 'Integrations', href: '/integrations' },
     { name: 'Pricing', href: '/pricing' },
-    { name: 'Changelog', href: '/changelog' },
-    { name: 'Documentation', href: '/docs' },
-    { name: 'API Reference', href: '/api' },
+    { name: 'API Docs', href: '/api-docs' },
+    { name: 'Status', href: 'https://status.workfusionapp.com', external: true },
   ],
   company: [
     { name: 'About', href: '/about' },
-    { name: 'Careers', href: '/careers' },
     { name: 'Blog', href: '/blog' },
-    { name: 'Press Kit', href: '/press' },
-    { name: 'Partners', href: '/partners' },
     { name: 'Contact', href: '/contact' },
   ],
   resources: [
-    { name: 'Community', href: '/community' },
     { name: 'Help Center', href: '/help' },
     { name: 'Support', href: '/support' },
-    { name: 'Status', href: '/status' },
-    { name: 'Training', href: '/training' },
-    { name: 'Webinars', href: '/webinars' },
+    { name: 'Documentation', href: '/docs', comingSoon: true },
+    { name: 'Community', href: '/community', comingSoon: true },
   ],
   legal: [
     { name: 'Privacy', href: '/privacy' },
     { name: 'Terms', href: '/terms' },
-    { name: 'Security', href: '/security' },
-    { name: 'Compliance', href: '/compliance' },
-    { name: 'Accessibility', href: '/accessibility' },
-    { name: 'Cookie Policy', href: '/cookies' },
+    { name: 'Security', href: '/security', comingSoon: true },
+    { name: 'Cookie Policy', href: '/cookies', comingSoon: true },
   ],
 };
 
@@ -99,7 +92,8 @@ export const Footer = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
+                className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                type="submit"
               >
                 Subscribe
               </motion.button>
@@ -107,62 +101,56 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
-          {/* Product Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Product</h3>
-            <ul className="space-y-4">
-              {footerLinks.product.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Company</h3>
-            <ul className="space-y-4">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Resources Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Resources</h3>
-            <ul className="space-y-4">
-              {footerLinks.resources.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Legal</h3>
-            <ul className="space-y-4">
-              {footerLinks.legal.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Links Section */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          {Object.entries(footerLinks).map(([category, links]) => (
+            <div key={category}>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+                {category}
+              </h3>
+              <ul className="space-y-4">
+                {links.map((link) => (
+                  <li key={link.name}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                      >
+                        {link.name}
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </a>
+                    ) : link.comingSoon ? (
+                      <span className="text-gray-400 flex items-center gap-2">
+                        {link.name}
+                        <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+                      </span>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        {link.name}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Bottom section with increased spacing */}
