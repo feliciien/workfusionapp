@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { useState } from 'react';
 
 const integrations = [
   {
@@ -24,6 +25,12 @@ const integrations = [
 ];
 
 export const IntegrationsSection = () => {
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+
+  const handleImageLoad = (name: string) => {
+    setLoadedImages(prev => ({ ...prev, [name]: true }));
+  };
+
   return (
     <section className="py-20 bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,18 +51,27 @@ export const IntegrationsSection = () => {
             >
               <div className="relative w-16 h-16 mx-auto mb-4">
                 <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors duration-200" />
-                <Image
-                  src={integration.icon}
-                  alt={integration.name}
-                  width={64}
-                  height={64}
-                  className="relative z-10"
-                />
+                {!loadedImages[integration.name] && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                <div className={`transition-opacity duration-300 ${loadedImages[integration.name] ? 'opacity-100' : 'opacity-0'}`}>
+                  <Image
+                    src={integration.icon}
+                    alt={integration.name}
+                    width={64}
+                    height={64}
+                    className="relative z-10"
+                    onLoad={() => handleImageLoad(integration.name)}
+                    priority
+                  />
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2 text-center">
+              <h3 className="text-xl font-semibold text-white text-center mb-2">
                 {integration.name}
               </h3>
-              <p className="text-gray-400 text-center">
+              <p className="text-gray-400 text-center text-sm">
                 {integration.description}
               </p>
             </div>
