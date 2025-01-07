@@ -6,7 +6,11 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const isAuth = !!token;
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth');
-  const isPublicPath = request.nextUrl.pathname === '/';
+  const isPublicPath = request.nextUrl.pathname === '/' || 
+                      request.nextUrl.pathname.startsWith('/public') ||
+                      request.nextUrl.pathname.startsWith('/_next') ||
+                      request.nextUrl.pathname.includes('.') || // Allow all files with extensions
+                      request.nextUrl.pathname === '/api/auth';
 
   // Redirect authenticated users away from auth pages
   if (isAuth && isAuthPage) {
@@ -26,6 +30,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Match all paths except static files, api routes, and Next.js internals
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 }
