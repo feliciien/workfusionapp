@@ -7,19 +7,32 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Network, Activity, TrendingUp, Wifi } from "lucide-react";
 
 interface NetworkDashboardProps {
-  metrics: NetworkMetrics;
+  metrics?: NetworkMetrics;
   health: NetworkHealth;
   isPro: boolean;
 }
 
-export function NetworkDashboard({ metrics, health, isPro }: NetworkDashboardProps) {
-  const getLatestValue = (arr: { value: number; timestamp: Date }[]) => 
+const defaultMetrics: NetworkMetrics = {
+  latency: [],
+  bandwidth: [],
+  packetLoss: [],
+  jitter: [],
+  healthScore: 0,
+  status: 'fair'
+};
+
+export function NetworkDashboard({ 
+  metrics = defaultMetrics,
+  health,
+  isPro 
+}: NetworkDashboardProps) {
+  const getLatestValue = (arr: { value: number; timestamp: Date }[] = []) => 
     arr[arr.length - 1]?.value ?? 0;
 
   const formatData = (metrics: NetworkMetrics) => {
     // Combine all metrics into a single timeline
     const timePoints = new Set<string>();
-    [...metrics.latency, ...metrics.bandwidth, ...metrics.packetLoss].forEach(m => 
+    [...(metrics.latency || []), ...(metrics.bandwidth || []), ...(metrics.packetLoss || [])].forEach(m => 
       timePoints.add(new Date(m.timestamp).toISOString())
     );
 
@@ -27,9 +40,9 @@ export function NetworkDashboard({ metrics, health, isPro }: NetworkDashboardPro
       const point = new Date(time);
       return {
         time: point.toLocaleTimeString(),
-        latency: metrics.latency.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
-        bandwidth: metrics.bandwidth.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
-        packetLoss: metrics.packetLoss.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
+        latency: metrics.latency?.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
+        bandwidth: metrics.bandwidth?.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
+        packetLoss: metrics.packetLoss?.find(m => new Date(m.timestamp).getTime() === point.getTime())?.value ?? null,
       };
     });
   };
