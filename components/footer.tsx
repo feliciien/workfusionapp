@@ -79,8 +79,8 @@ const socialLinks = [
 
 export const Footer = () => {
   return (
-    <footer className="bg-gray-900 border-t border-gray-800">
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
+    <footer className="w-full bg-background border-t">
+      <div className="mx-auto max-w-7xl px-6 py-12 md:py-16 lg:py-20">
         {/* Newsletter Section */}
         <div className="pb-8 mb-12 border-b border-gray-800">
           <div className="max-w-3xl mx-auto text-center">
@@ -107,19 +107,14 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
           {/* Product Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">
-              Product
-            </h3>
-            <ul className="space-y-3">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Product</h3>
+            <ul className="space-y-4">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-gray-400 hover:text-purple-400 transition-colors duration-300"
-                  >
+                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
                     {link.name}
                   </Link>
                 </li>
@@ -128,17 +123,12 @@ export const Footer = () => {
           </div>
 
           {/* Company Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">
-              Company
-            </h3>
-            <ul className="space-y-3">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Company</h3>
+            <ul className="space-y-4">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-gray-400 hover:text-purple-400 transition-colors duration-300"
-                  >
+                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
                     {link.name}
                   </Link>
                 </li>
@@ -147,17 +137,12 @@ export const Footer = () => {
           </div>
 
           {/* Resources Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">
-              Resources
-            </h3>
-            <ul className="space-y-3">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Resources</h3>
+            <ul className="space-y-4">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-gray-400 hover:text-purple-400 transition-colors duration-300"
-                  >
+                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
                     {link.name}
                   </Link>
                 </li>
@@ -166,17 +151,12 @@ export const Footer = () => {
           </div>
 
           {/* Legal Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">
-              Legal
-            </h3>
-            <ul className="space-y-3">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Legal</h3>
+            <ul className="space-y-4">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-gray-400 hover:text-purple-400 transition-colors duration-300"
-                  >
+                  <Link href={link.href} className="text-muted-foreground hover:text-foreground transition-colors">
                     {link.name}
                   </Link>
                 </li>
@@ -185,47 +165,24 @@ export const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <div className="relative w-10 h-10">
-                <Image
-                  src="/logo.svg"
-                  alt="WorkFusion Logo"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-2xl font-bold text-white">WorkFusion</span>
-            </div>
-            
-            <div className="flex space-x-6">
-              {socialLinks.map((item) => (
-                <motion.a
-                  key={item.name}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-purple-400 transition-colors duration-300"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <span className="sr-only">{item.name}</span>
-                  {item.icon}
-                </motion.a>
-              ))}
-            </div>
+        {/* Bottom section with increased spacing */}
+        <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="flex items-center space-x-6">
+            {socialLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {link.icon}
+              </Link>
+            ))}
           </div>
-          
-          <div className="mt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-base text-gray-400 mb-4 md:mb-0">
-              {new Date().getFullYear()} WorkFusion. All rights reserved.
-            </p>
-            <p className="text-sm text-gray-500">
-              Made with ❤️ in San Francisco, CA
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {new Date().getFullYear()} WorkFusion. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

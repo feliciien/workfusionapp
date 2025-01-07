@@ -190,6 +190,61 @@ body {
     opacity: 0;
   }
 
+  /* Enhanced CTA Button */
+  .cta-button {
+    @apply inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply transition-all duration-200 ease-in-out;
+    @apply shadow-lg hover:shadow-xl;
+    @apply transform hover:-translate-y-0.5;
+    background: linear-gradient(135deg, var(--primary) 0%, #4F46E5 100%);
+  }
+
+  .cta-button:hover {
+    background: linear-gradient(135deg, #4F46E5 0%, var(--primary) 100%);
+  }
+
+  .cta-button:focus {
+    @apply ring-2 ring-primary ring-offset-2 outline-none;
+  }
+
+  /* Image optimization */
+  .image-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .image-loading {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .image-loaded {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  /* Blur-up loading effect */
+  .image-blur-wrapper {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .image-blur {
+    filter: blur(10px);
+    transform: scale(1.1);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .image-blur.loaded {
+    opacity: 0;
+  }
+
   /* Material Icons */
   .material-icons-outlined {
     font-family: 'Material Icons Outlined';

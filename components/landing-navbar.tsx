@@ -19,9 +19,9 @@ export const LandingNavbar = () => {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const onUpgradeClick = () => {
+  const onPrimaryAction = () => {
     if (session?.user) {
-      router.push("/settings");
+      router.push("/dashboard");
     } else {
       router.push("/auth/signin");
     }
@@ -46,31 +46,31 @@ export const LandingNavbar = () => {
             </h1>
           </Link>
 
-          <div className="flex items-center gap-x-2">
+          <div className="flex items-center gap-x-4">
             {session?.user ? (
               <Button 
                 onClick={() => router.push("/dashboard")}
-                variant="default" 
-                className="rounded-full"
+                variant="ghost"
+                className="text-white hover:bg-white/10"
               >
                 Dashboard
               </Button>
             ) : (
               <>
+                <Link href="/auth/signin">
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-white/10"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
                 <Button 
-                  onClick={() => router.push("/auth/signin")}
-                  variant="ghost" 
-                  className="rounded-full text-white hover:text-white hover:bg-gray-700"
+                  onClick={onPrimaryAction}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
                 >
-                  Sign In
-                </Button>
-                <Button 
-                  onClick={onUpgradeClick}
-                  variant="premium" 
-                  className="rounded-full"
-                >
-                  <Zap className="w-4 h-4 mr-2 fill-white" />
-                  <span>Upgrade</span>
+                  Get Started
+                  <Zap className="w-4 h-4 ml-2" />
                 </Button>
               </>
             )}
