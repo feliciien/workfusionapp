@@ -46,40 +46,53 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: '/auth/verify-request',
   },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      try {
+        return true;
+      } catch (error) {
+        console.error('SignIn error:', error);
+        return false;
+      }
+    },
     async jwt({ token, account, profile }) {
       if (account) {
-        token.accessToken = account.access_token
+        token.accessToken = account.access_token;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.id = token.sub as string
+        session.user.id = token.sub as string;
       }
-      return session
+      return session;
     },
     async redirect({ url, baseUrl }) {
-      // Always redirect to dashboard after sign in
-      if (url.includes('from=/dashboard') || url === '/auth/signin') {
-        return `${baseUrl}/dashboard`
-      }
-      
-      // Handle other redirects
-      if (url.startsWith('/')) {
-        return `${baseUrl}${url}`
-      }
-      if (url.startsWith(baseUrl)) {
-        return url
-      }
-      
-      return `${baseUrl}/dashboard`
-    }
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  debug: true,
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
+  logger: {
+    error(code, ...message) {
+      console.error(code, message);
+    },
+    warn(code, ...message) {
+      console.warn(code, message);
+    },
+    debug(code, ...message) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(code, message);
+      }
+    },
+  },
 }
 
 const handler = NextAuth(authOptions)

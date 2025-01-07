@@ -10,7 +10,12 @@ export async function middleware(request: NextRequest) {
                       request.nextUrl.pathname.startsWith('/public') ||
                       request.nextUrl.pathname.startsWith('/_next') ||
                       request.nextUrl.pathname.includes('.') || // Allow all files with extensions
-                      request.nextUrl.pathname === '/api/auth';
+                      request.nextUrl.pathname.startsWith('/api/auth');
+
+  // Allow all API auth routes to pass through
+  if (request.nextUrl.pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
+  }
 
   // Redirect authenticated users away from auth pages
   if (isAuth && isAuthPage) {
@@ -30,7 +35,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files, api routes, and Next.js internals
-    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (auth API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     * - files with extensions (.css, .js, etc.)
+     */
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|public|.*\\..*|api/webhooks).*)',
   ],
 }

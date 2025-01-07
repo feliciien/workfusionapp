@@ -18,10 +18,17 @@ export default function SignIn() {
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading({ ...isLoading, [provider]: true });
     try {
-      await signIn(provider, {
+      const result = await signIn(provider, {
         callbackUrl: from,
-        redirect: true,
+        redirect: false,
       });
+      
+      if (result?.error) {
+        console.error(`Authentication error: ${result.error}`);
+        // Handle error appropriately
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
     } catch (error) {
       console.error(`Failed to sign in with ${provider}:`, error);
     } finally {

@@ -5,6 +5,8 @@ import { checkSubscription } from "@/lib/subscription";
 // Remove edge runtime for now since we're using Prisma
 // export const runtime = 'edge';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const session = await getSessionFromRequest(req);

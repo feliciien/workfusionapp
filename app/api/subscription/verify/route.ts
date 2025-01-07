@@ -3,6 +3,8 @@ import { getSessionFromRequest } from "@/lib/jwt";
 import { createNeonClient } from "@/lib/db";
 import { verifySubscription } from "@/lib/paypal";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const session = await getSessionFromRequest(req);
