@@ -29,19 +29,26 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcrypt']
   },
-  headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY'
-          }
-        ]
-      }
-    ];
-  }
+  headers: () => [
+    {
+      source: '/(.*)',
+      headers: [
+        {
+          key: 'X-Frame-Options',
+          value: 'DENY'
+        }
+      ]
+    },
+    {
+      source: '/(.*).(jpg|jpeg|png|svg|gif|ico|webp)',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
+        },
+      ],
+    },
+  ],
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
