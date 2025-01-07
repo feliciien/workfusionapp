@@ -24,7 +24,10 @@ import {
   Binary,
   BrainCircuit,
   GraduationCap,
-  Wrench
+  Wrench,
+  Activity,
+  Network,
+  Wifi
 } from "lucide-react";
 
 interface Route {
@@ -122,6 +125,14 @@ const productivityTools: Route[] = [
 ];
 
 const advancedTools: Route[] = [
+  {
+    label: "Network Monitor",
+    icon: Activity,
+    color: "text-cyan-500",
+    bgColor: "bg-cyan-500/10",
+    href: "/network",
+    limit: 50
+  },
   {
     label: "Neural Processing",
     icon: BrainCircuit,

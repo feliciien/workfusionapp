@@ -7,7 +7,6 @@ import { ToasterProvider } from "@/components/toaster-provider";
 import ErrorBoundary from "@/components/ErrorBoundary"; 
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { SessionProvider } from "@/components/providers/session-provider";
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 import "./globals.css";
 
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
     siteName: "WorkFusion App",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og.png",
         width: 1200,
         height: 630,
         alt: "WorkFusion App",
@@ -40,25 +39,23 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "WorkFusion App - Advanced AI Platform for Business Automation",
     description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity.",
-    images: ["/og-image.jpg"],
-    creator: "@workfusionapp",
+    images: ["/og.png"],
+    creator: "@workfusion",
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "black" },
+  ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-
-  if (!paypalClientId) {
-    console.error('PayPal client ID is not configured');
-  }
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -95,20 +92,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <ErrorBoundary>
           <SessionProvider>
-            <PayPalScriptProvider
-              options={{
-                clientId: paypalClientId || 'test',
-                components: "buttons",
-                intent: "subscription",
-                vault: true,
-              }}
-            >
-              <ModalProvider />
-              <ToasterProvider />
-              {children}
-            </PayPalScriptProvider>
+            <ToasterProvider />
+            <ModalProvider />
+            {children}
+            <Analytics />
           </SessionProvider>
-          <Analytics />
         </ErrorBoundary>
       </body>
     </html>

@@ -1,28 +1,20 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import os from 'os';
+import {
+  NetworkMetrics,
+  NetworkHealth,
+  NetworkStatus,
+  NetworkMetric,
+  NetworkInterface,
+  NetworkRecommendation
+} from '@/types/network';
 
 const execAsync = promisify(exec);
 
-export interface NetworkMetrics {
-  downloadSpeed: number;  // in Mbps
-  uploadSpeed: number;    // in Mbps
-  latency: number;       // in ms
-  jitter: number;        // in ms
-  packetLoss: number;    // in percentage
-  timestamp: Date;
-}
-
-export interface NetworkHealth {
-  score: number;         // 0-100
-  status: 'good' | 'fair' | 'poor';
-  recommendations: string[];
-}
-
-async function pingHost(host: string): Promise<{ latency: number; packetLoss: number }> {
+async function pingHost(host: string, count: number = 5): Promise<{ latency: number; packetLoss: number }> {
   try {
-    const count = 5;
-    const { stdout } = await execAsync(`ping -c ${count} ${host}`);
+    const { stdout } = await execAsync(`ping -c ${count} ${host}`, { timeout: 10000 });
     
     // Parse ping statistics
     const stats = stdout.split('\n').filter(line => line.includes('packet loss') || line.includes('min/avg/max'));
@@ -36,80 +28,103 @@ async function pingHost(host: string): Promise<{ latency: number; packetLoss: nu
   }
 }
 
-async function measureBandwidth(): Promise<{ download: number; upload: number }> {
+async function measureBandwidth(): Promise<number> {
   try {
-    // Simulate bandwidth test (replace with actual speed test implementation)
+    // TODO: Implement actual speed test using speedtest-net or similar
+    // For now, return a simulated value
     const downloadSpeed = Math.random() * 100 + 50; // 50-150 Mbps
-    const uploadSpeed = Math.random() * 50 + 25;    // 25-75 Mbps
-    
-    return {
-      download: parseFloat(downloadSpeed.toFixed(2)),
-      upload: parseFloat(uploadSpeed.toFixed(2))
-    };
+    return parseFloat(downloadSpeed.toFixed(2));
   } catch (error) {
     console.error('Error measuring bandwidth:', error);
-    return { download: 0, upload: 0 };
+    return 0;
   }
 }
 
 export async function getNetworkMetrics(testHost: string = '8.8.8.8'): Promise<NetworkMetrics> {
-  const [pingResults, bandwidthResults] = await Promise.all([
-    pingHost(testHost),
-    measureBandwidth()
-  ]);
+  const { latency, packetLoss } = await pingHost(testHost);
+  const bandwidth = await measureBandwidth();
+  const timestamp = new Date();
 
   return {
-    downloadSpeed: bandwidthResults.download,
-    uploadSpeed: bandwidthResults.upload,
-    latency: pingResults.latency,
-    jitter: Math.random() * 5, // Simulated jitter
-    packetLoss: pingResults.packetLoss,
-    timestamp: new Date()
+    latency: [{ value: latency, timestamp }],
+    bandwidth: [{ value: bandwidth, timestamp }],
+    packetLoss: [{ value: packetLoss, timestamp }],
+    jitter: [{ value: Math.random() * 5, timestamp }], // TODO: Implement actual jitter measurement
+    healthScore: 0, // Will be calculated by calculateNetworkHealth
+    status: 'good' // Will be updated by calculateNetworkHealth
   };
 }
 
 export function calculateNetworkHealth(metrics: NetworkMetrics): NetworkHealth {
+  // Calculate health score based on latest metrics
+  const getLatestValue = (arr: NetworkMetric[]) => arr[arr.length - 1]?.value ?? 0;
+  
+  const latency = getLatestValue(metrics.latency);
+  const bandwidth = getLatestValue(metrics.bandwidth);
+  const packetLoss = getLatestValue(metrics.packetLoss);
+  const jitter = getLatestValue(metrics.jitter);
+
+  // Weight factors for each metric
   const weights = {
-    downloadSpeed: 0.25,
-    uploadSpeed: 0.25,
-    latency: 0.2,
-    jitter: 0.15,
-    packetLoss: 0.15
+    latency: 0.3,
+    bandwidth: 0.3,
+    packetLoss: 0.25,
+    jitter: 0.15
   };
 
-  // Normalize metrics to 0-100 scale
-  const downloadScore = Math.min(100, (metrics.downloadSpeed / 100) * 100);
-  const uploadScore = Math.min(100, (metrics.uploadSpeed / 50) * 100);
-  const latencyScore = Math.max(0, 100 - (metrics.latency / 100) * 100);
-  const jitterScore = Math.max(0, 100 - (metrics.jitter / 10) * 100);
-  const packetLossScore = Math.max(0, 100 - metrics.packetLoss * 10);
+  // Calculate individual scores (0-100)
+  const scores = {
+    latency: Math.max(0, 100 - (latency / 2)), // 0ms = 100, 200ms = 0
+    bandwidth: Math.min(100, (bandwidth / 1.5)), // 150Mbps = 100
+    packetLoss: Math.max(0, 100 - (packetLoss * 10)), // 0% = 100, 10% = 0
+    jitter: Math.max(0, 100 - (jitter * 20)) // 0ms = 100, 5ms = 0
+  };
 
-  const score = Math.round(
-    downloadScore * weights.downloadSpeed +
-    uploadScore * weights.uploadSpeed +
-    latencyScore * weights.latency +
-    jitterScore * weights.jitter +
-    packetLossScore * weights.packetLoss
-  );
+  // Calculate weighted average
+  const score = Object.entries(weights).reduce((total, [key, weight]) => {
+    return total + (scores[key as keyof typeof scores] * weight);
+  }, 0);
 
-  const recommendations: string[] = [];
+  // Determine status based on score
+  let status: NetworkStatus = 'excellent';
+  if (score < 60) status = 'critical';
+  else if (score < 70) status = 'poor';
+  else if (score < 80) status = 'fair';
+  else if (score < 90) status = 'good';
+
+  // Generate recommendations
+  const recommendations: NetworkRecommendation[] = [];
   
-  if (metrics.downloadSpeed < 50) {
-    recommendations.push("Consider upgrading your internet plan for better download speeds");
+  if (latency > 100) {
+    recommendations.push({
+      type: 'warning',
+      title: 'High Latency Detected',
+      description: 'Consider checking for network congestion or switching to a closer server.',
+      priority: 1
+    });
   }
-  if (metrics.uploadSpeed < 25) {
-    recommendations.push("Upload speed is below recommended levels for video conferencing");
+
+  if (packetLoss > 1) {
+    recommendations.push({
+      type: 'warning',
+      title: 'Packet Loss Detected',
+      description: 'Check your network connection and cable quality.',
+      priority: 1
+    });
   }
-  if (metrics.latency > 50) {
-    recommendations.push("High latency detected. Check for network congestion or try a wired connection");
-  }
-  if (metrics.packetLoss > 1) {
-    recommendations.push("Packet loss detected. This may indicate network reliability issues");
+
+  if (bandwidth < 50) {
+    recommendations.push({
+      type: 'info',
+      title: 'Low Bandwidth',
+      description: 'Your connection might be throttled or experiencing congestion.',
+      priority: 2
+    });
   }
 
   return {
-    score,
-    status: score >= 80 ? 'good' : score >= 60 ? 'fair' : 'poor',
+    score: Math.round(score),
+    status,
     recommendations
   };
 }

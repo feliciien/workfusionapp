@@ -18,7 +18,7 @@ export const PayPalProvider = ({
   children
 }: PayPalProviderProps) => {
   if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID) {
-    console.error("PayPal client ID not configured");
+    console.error("PayPal client ID not configured. Please check your .env file.");
     return <>{children}</>;
   }
 
