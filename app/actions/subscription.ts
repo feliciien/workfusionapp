@@ -1,13 +1,14 @@
 'use server';
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function getSubscriptionStatus() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
 
-    if (!userId) {
+    if (!session?.user?.email) {
       return {
         success: false,
         message: "Unauthorized",
@@ -17,7 +18,7 @@ export async function getSubscriptionStatus() {
 
     const subscription = await prisma.subscription.findUnique({
       where: {
-        userId: userId,
+        userId: session.user.email,
       },
       select: {
         status: true,
@@ -59,9 +60,9 @@ export async function getSubscriptionStatus() {
 
 export async function updateSubscriptionStatus(subscriptionId: string, status: string) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
 
-    if (!userId) {
+    if (!session?.user?.email) {
       return {
         success: false,
         message: "Unauthorized",
@@ -70,7 +71,7 @@ export async function updateSubscriptionStatus(subscriptionId: string, status: s
 
     await prisma.subscription.update({
       where: {
-        userId: userId,
+        userId: session.user.email,
       },
       data: {
         status: status,

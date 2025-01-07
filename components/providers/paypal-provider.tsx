@@ -6,24 +6,23 @@ interface PayPalProviderProps {
   children: React.ReactNode;
 }
 
-const paypalConfig = {
-  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-  components: "buttons",
-  intent: "subscription",
-  vault: true,
-  currency: "USD"
-};
+export const PayPalProvider = ({ children }: PayPalProviderProps) => {
+  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-export const PayPalProvider = ({
-  children
-}: PayPalProviderProps) => {
-  if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID) {
-    console.error("PayPal client ID not configured. Please check your .env file.");
+  if (!clientId) {
+    console.error("PayPal client ID is not configured");
     return <>{children}</>;
   }
 
   return (
-    <PayPalScriptProvider options={paypalConfig}>
+    <PayPalScriptProvider
+      options={{
+        clientId,
+        components: "buttons",
+        intent: "subscription",
+        vault: true,
+      }}
+    >
       {children}
     </PayPalScriptProvider>
   );

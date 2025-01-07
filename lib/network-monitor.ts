@@ -1,177 +1,147 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import os from 'os';
-import {
-  NetworkMetrics,
-  NetworkHealth,
-  NetworkStatus,
-  NetworkMetric,
-  NetworkInterface,
-  NetworkRecommendation
-} from '@/types/network';
+import { NetworkMetrics, NetworkHealth } from "@/types/network";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-async function pingHost(host: string, count: number = 5): Promise<{ latency: number; packetLoss: number }> {
-  try {
-    const { stdout } = await execAsync(`ping -c ${count} ${host}`, { timeout: 10000 });
-    
-    // Parse ping statistics
-    const stats = stdout.split('\n').filter(line => line.includes('packet loss') || line.includes('min/avg/max'));
-    const packetLoss = parseFloat(stats[0].match(/(\d+\.?\d*)%/)?.[1] || '0');
-    const latency = parseFloat(stats[1]?.match(/\d+\.\d+/)?.[0] || '0');
+const DEFAULT_TEST_HOST = "8.8.8.8"; // Google's DNS server as a reliable test target
 
-    return { latency, packetLoss };
+export async function getNetworkMetrics(userId: string): Promise<{ metrics: NetworkMetrics; health: NetworkHealth }> {
+  try {
+    const pingResults = await measureLatency();
+    const bandwidthResults = await estimateBandwidth();
+    const packetLossResults = await measurePacketLoss();
+
+    const metrics: NetworkMetrics = {
+      latency: [{ value: pingResults.latency, timestamp: new Date() }],
+      bandwidth: [{ value: bandwidthResults, timestamp: new Date() }],
+      packetLoss: [{ value: packetLossResults, timestamp: new Date() }],
+      jitter: [{ value: pingResults.jitter, timestamp: new Date() }],
+      healthScore: calculateHealthScore(pingResults.latency, bandwidthResults, packetLossResults),
+      status: determineNetworkStatus(pingResults.latency, bandwidthResults, packetLossResults)
+    };
+
+    const health: NetworkHealth = {
+      score: metrics.healthScore,
+      status: metrics.status,
+      recommendations: generateRecommendations(metrics)
+    };
+
+    return { metrics, health };
   } catch (error) {
-    console.error('Error during ping test:', error);
-    return { latency: 0, packetLoss: 100 };
+    console.error("Error in network monitoring:", error);
+    return {
+      metrics: getDefaultMetrics(),
+      health: getDefaultHealth()
+    };
   }
 }
 
-async function measureBandwidth(): Promise<number> {
+async function measureLatency(): Promise<{ latency: number; jitter: number }> {
   try {
-    // TODO: Implement actual speed test using speedtest-net or similar
-    // For now, return a simulated value
-    const downloadSpeed = Math.random() * 100 + 50; // 50-150 Mbps
-    return parseFloat(downloadSpeed.toFixed(2));
+    const { stdout } = await execAsync(`ping -c 5 ${DEFAULT_TEST_HOST}`);
+    const lines = stdout.split('\n');
+    const times = lines
+      .filter(line => line.includes('time='))
+      .map(line => parseFloat(line.split('time=')[1].split(' ')[0]));
+
+    const latency = times.reduce((a, b) => a + b, 0) / times.length;
+    const jitter = calculateJitter(times);
+
+    return { latency, jitter };
   } catch (error) {
-    console.error('Error measuring bandwidth:', error);
+    console.error('Error measuring latency:', error);
+    return { latency: 0, jitter: 0 };
+  }
+}
+
+async function estimateBandwidth(): Promise<number> {
+  // Simplified bandwidth estimation
+  // In a real implementation, you might want to use speedtest-net or a similar package
+  return 100; // Mock value in Mbps
+}
+
+async function measurePacketLoss(): Promise<number> {
+  try {
+    const { stdout } = await execAsync(`ping -c 10 ${DEFAULT_TEST_HOST}`);
+    const transmitted = parseInt(stdout.match(/(\d+) packets transmitted/)?.[1] || '0');
+    const received = parseInt(stdout.match(/(\d+) packets received/)?.[1] || '0');
+    
+    if (transmitted === 0) return 0;
+    return ((transmitted - received) / transmitted) * 100;
+  } catch (error) {
+    console.error('Error measuring packet loss:', error);
     return 0;
   }
 }
 
-export async function getNetworkMetrics(testHost: string = '8.8.8.8'): Promise<NetworkMetrics> {
-  const { latency, packetLoss } = await pingHost(testHost);
-  const bandwidth = await measureBandwidth();
-  const timestamp = new Date();
-
-  return {
-    latency: [{ value: latency, timestamp }],
-    bandwidth: [{ value: bandwidth, timestamp }],
-    packetLoss: [{ value: packetLoss, timestamp }],
-    jitter: [{ value: Math.random() * 5, timestamp }], // TODO: Implement actual jitter measurement
-    healthScore: 0, // Will be calculated by calculateNetworkHealth
-    status: 'good' // Will be updated by calculateNetworkHealth
-  };
-}
-
-export function calculateNetworkHealth(metrics: NetworkMetrics): NetworkHealth {
-  // Calculate health score based on latest metrics
-  const getLatestValue = (arr: NetworkMetric[]) => arr[arr.length - 1]?.value ?? 0;
+function calculateJitter(times: number[]): number {
+  if (times.length < 2) return 0;
   
-  const latency = getLatestValue(metrics.latency);
-  const bandwidth = getLatestValue(metrics.bandwidth);
-  const packetLoss = getLatestValue(metrics.packetLoss);
-  const jitter = getLatestValue(metrics.jitter);
-
-  // Weight factors for each metric
-  const weights = {
-    latency: 0.3,
-    bandwidth: 0.3,
-    packetLoss: 0.25,
-    jitter: 0.15
-  };
-
-  // Calculate individual scores (0-100)
-  const scores = {
-    latency: Math.max(0, 100 - (latency / 2)), // 0ms = 100, 200ms = 0
-    bandwidth: Math.min(100, (bandwidth / 1.5)), // 150Mbps = 100
-    packetLoss: Math.max(0, 100 - (packetLoss * 10)), // 0% = 100, 10% = 0
-    jitter: Math.max(0, 100 - (jitter * 20)) // 0ms = 100, 5ms = 0
-  };
-
-  // Calculate weighted average
-  const score = Object.entries(weights).reduce((total, [key, weight]) => {
-    return total + (scores[key as keyof typeof scores] * weight);
-  }, 0);
-
-  // Determine status based on score
-  let status: NetworkStatus = 'excellent';
-  if (score < 60) status = 'critical';
-  else if (score < 70) status = 'poor';
-  else if (score < 80) status = 'fair';
-  else if (score < 90) status = 'good';
-
-  // Generate recommendations
-  const recommendations: NetworkRecommendation[] = [];
+  let totalJitter = 0;
+  for (let i = 1; i < times.length; i++) {
+    totalJitter += Math.abs(times[i] - times[i - 1]);
+  }
   
-  if (latency > 100) {
-    recommendations.push({
-      type: 'warning',
-      title: 'High Latency Detected',
-      description: 'Consider checking for network congestion or switching to a closer server.',
-      priority: 1
-    });
+  return totalJitter / (times.length - 1);
+}
+
+function calculateHealthScore(latency: number, bandwidth: number, packetLoss: number): number {
+  // Simple scoring algorithm - can be made more sophisticated
+  const latencyScore = Math.max(0, 100 - latency);
+  const bandwidthScore = Math.min(100, bandwidth);
+  const packetLossScore = Math.max(0, 100 - (packetLoss * 10));
+
+  return Math.round((latencyScore + bandwidthScore + packetLossScore) / 3);
+}
+
+function determineNetworkStatus(latency: number, bandwidth: number, packetLoss: number): 'excellent' | 'good' | 'fair' | 'poor' | 'critical' {
+  const score = calculateHealthScore(latency, bandwidth, packetLoss);
+  
+  if (score >= 90) return 'excellent';
+  if (score >= 75) return 'good';
+  if (score >= 60) return 'fair';
+  if (score >= 40) return 'poor';
+  return 'critical';
+}
+
+function generateRecommendations(metrics: NetworkMetrics): string[] {
+  const recommendations: string[] = [];
+
+  if (metrics.latency[0]?.value > 100) {
+    recommendations.push("High latency detected. Consider checking your network connection or switching to a closer server.");
   }
 
-  if (packetLoss > 1) {
-    recommendations.push({
-      type: 'warning',
-      title: 'Packet Loss Detected',
-      description: 'Check your network connection and cable quality.',
-      priority: 1
-    });
+  if (metrics.bandwidth[0]?.value < 50) {
+    recommendations.push("Low bandwidth detected. Consider upgrading your internet plan or checking for background downloads.");
   }
 
-  if (bandwidth < 50) {
-    recommendations.push({
-      type: 'info',
-      title: 'Low Bandwidth',
-      description: 'Your connection might be throttled or experiencing congestion.',
-      priority: 2
-    });
+  if (metrics.packetLoss[0]?.value > 1) {
+    recommendations.push("Packet loss detected. Check for network interference or faulty equipment.");
   }
 
+  if (metrics.jitter[0]?.value > 30) {
+    recommendations.push("High jitter detected. This may affect real-time applications. Consider using a wired connection.");
+  }
+
+  return recommendations;
+}
+
+function getDefaultMetrics(): NetworkMetrics {
   return {
-    score: Math.round(score),
-    status,
-    recommendations
+    latency: [],
+    bandwidth: [],
+    packetLoss: [],
+    jitter: [],
+    healthScore: 0,
+    status: 'fair'
   };
 }
 
-export function getNetworkInterfaces(): { name: string; address: string; type: string }[] {
-  const interfaces = os.networkInterfaces();
-  const result: { name: string; address: string; type: string }[] = [];
-
-  Object.entries(interfaces).forEach(([name, addrs]) => {
-    addrs?.forEach(addr => {
-      if (addr.family === 'IPv4' && !addr.internal) {
-        result.push({
-          name,
-          address: addr.address,
-          type: addr.internal ? 'internal' : 'external'
-        });
-      }
-    });
-  });
-
-  return result;
-}
-
-export async function monitorNetworkHealth(
-  interval: number = 5000,
-  callback: (metrics: NetworkMetrics, health: NetworkHealth) => void
-): Promise<() => void> {
-  let isRunning = true;
-
-  const monitor = async () => {
-    while (isRunning) {
-      try {
-        const metrics = await getNetworkMetrics();
-        const health = calculateNetworkHealth(metrics);
-        callback(metrics, health);
-        await new Promise(resolve => setTimeout(resolve, interval));
-      } catch (error) {
-        console.error('Error in network monitoring:', error);
-        await new Promise(resolve => setTimeout(resolve, interval));
-      }
-    }
-  };
-
-  monitor();
-
-  // Return cleanup function
-  return () => {
-    isRunning = false;
+function getDefaultHealth(): NetworkHealth {
+  return {
+    score: 0,
+    status: 'fair',
+    recommendations: ["Unable to perform network tests. Please check your connection."]
   };
 }

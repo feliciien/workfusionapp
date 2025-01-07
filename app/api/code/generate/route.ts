@@ -67,7 +67,12 @@ const TEMPLATE_CONFIGS: Record<TemplateId, TemplateConfig> = {
   'next-fullstack': {
     dependencies: {
       '@prisma/client': '^5.7.1',
-      '@clerk/nextjs': '^4.29.1',
+      'next': '^14.0.4',
+      'react': '^18.2.0',
+      'react-dom': '^18.2.0',
+      'next-auth': '^4.24.5',
+      '@auth/prisma-adapter': '^2.0.0',
+      'prisma': '^5.7.1',
       '@tanstack/react-query': '^5.17.1',
       'zod': '^3.22.4',
       'axios': '^1.6.3',
