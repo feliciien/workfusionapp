@@ -71,8 +71,8 @@ export const Sidebar = ({
           <div className="px-3 pb-2">
             <Progress 
               value={usagePercentage} 
-              className="h-1 bg-zinc-800"
-              indicatorClassName={cn(
+              className={cn(
+                "h-1",
                 usagePercentage >= 90 ? "bg-red-500" :
                 usagePercentage >= 75 ? "bg-yellow-500" :
                 "bg-blue-500"

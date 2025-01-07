@@ -1,16 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import { withAccelerate } from '@prisma/extension-accelerate';
-
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-}
 
 const prismaClientSingleton = () => {
-  const client = new PrismaClient();
-  const extendedClient = client.$extends(withAccelerate());
-  return extendedClient as unknown as PrismaClient;
+  return new PrismaClient();
 };
+
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
 
 const prisma = globalThis.prisma ?? prismaClientSingleton();
 

@@ -181,5 +181,6 @@ export const paypal = {
 };
 
 export { 
-  PAYPAL_API_BASE
+  PAYPAL_API_BASE,
+  generateAccessToken as getPayPalAccessToken
 };

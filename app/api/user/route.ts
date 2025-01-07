@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
-import { getSessionFromRequest } from "@/lib/jwt";
-import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import prisma from "@/lib/prismadb";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   try {
-    const session = await getSessionFromRequest(req);
-    const userId = session?.id;
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         id: userId
+      },
+      include: {
+        subscription: true,
+        settings: true,
+        apiLimit: true
       }
     });
 
@@ -23,17 +29,9 @@ export async function GET(req: Request) {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image
-    });
+    return NextResponse.json(user);
   } catch (error) {
-    console.error("[USER_ERROR]", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    console.error("[USER_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

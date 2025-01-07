@@ -1,7 +1,9 @@
+'use server';
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import prismadb from "@/lib/prismadb";
+import prisma from "@/lib/prismadb";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
     }
 
     // Create network metrics entry
-    const metrics = await prismadb.networkMetrics.create({
+    const metrics = await prisma.networkMetrics.create({
       data: {
         userId,
         latency,
@@ -75,7 +77,7 @@ export async function GET(req: Request) {
         startDate.setHours(startDate.getHours() - 24);
     }
 
-    const metrics = await prismadb.networkMetrics.findMany({
+    const metrics = await prisma.networkMetrics.findMany({
       where: {
         userId,
         createdAt: {

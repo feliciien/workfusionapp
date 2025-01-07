@@ -136,8 +136,8 @@ const NeuralPage = () => {
                   </div>
                   <Progress
                     value={result.confidence * 100}
-                    className="h-2"
-                    indicatorClassName={cn(
+                    className={cn(
+                      "h-2",
                       result.confidence > 0.7 ? "bg-green-500" :
                       result.confidence > 0.4 ? "bg-yellow-500" :
                       "bg-red-500"

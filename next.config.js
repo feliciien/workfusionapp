@@ -5,31 +5,29 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'oaidalleapiprodscus.blob.core.windows.net'
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.openai.com'
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com'
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com'
-      }
-    ]
+    domains: [
+      "res.cloudinary.com",
+      "replicate.com",
+      "replicate.delivery",
+      "pb.juntossomosmais.com.br",
+    ],
   },
-  webpack(config, { isServer }) {
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push({
+        '@prisma/client': 'commonjs @prisma/client'
+      });
+    }
+    
     config.module.rules.push({
       test: /\.svg$/,
       use: ['@svgr/webpack']
     });
+    
     return config;
+  },
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', 'bcrypt']
   },
   headers() {
     return [

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/jwt";
 import { checkSubscription } from "@/lib/subscription";
 
-export const runtime = 'edge';
+// Remove edge runtime for now since we're using Prisma
+// export const runtime = 'edge';
 
 export async function GET(req: Request) {
   try {
