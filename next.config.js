@@ -13,6 +13,7 @@ const nextConfig = {
       "avatars.githubusercontent.com",
       "lh3.googleusercontent.com",
       "platform-lookaside.fbsbx.com",
+      "oaidalleapiprodscus.blob.core.windows.net"
     ],
   },
   webpack: (config, { isServer }) => {
