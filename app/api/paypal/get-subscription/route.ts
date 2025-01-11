@@ -2,7 +2,6 @@ import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
@@ -54,13 +53,16 @@ export async function GET(req: Request) {
     const { access_token } = await authResponse.json();
 
     // Get subscription details
-    const subscriptionResponse = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const subscriptionResponse = await fetch(
+      `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!subscriptionResponse.ok) {
       const errorText = await subscriptionResponse.text();
