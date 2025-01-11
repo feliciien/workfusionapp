@@ -5,11 +5,14 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['oaidalleapiprodscus.blob.core.windows.net', 'img.clerk.com'],
+    domains: [
+      'oaidalleapiprodscus.blob.core.windows.net',
+      'lh3.googleusercontent.com', // Added Google user content domain
+    ],
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'img.clerk.com',
+        hostname: 'lh3.googleusercontent.com', // Replaced 'img.clerk.com' with Google domain
       },
       {
         protocol: 'https',
@@ -19,7 +22,12 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000", "localhost:3001", "localhost:3002", "localhost:3003"],
+      allowedOrigins: [
+        "localhost:3000",
+        "localhost:3001",
+        "localhost:3002",
+        "localhost:3003",
+      ],
     },
   },
   reactStrictMode: true,
@@ -44,7 +52,7 @@ const nextConfig = {
         ],
       },
     ];
-  }
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
