@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;

@@ -6,11 +6,13 @@ import { checkSubscription } from "@/lib/subscription";
 import { trackEvent } from "@/lib/analytics";
 import prismadb from "@/lib/prismadb";
 
+export const runtime = 'nodejs';
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const maxDuration = 60; // Maximum allowed duration for hobby plan
+const maxDuration = 60; // Maximum allowed duration for hobby plan
 
 interface ConversationMessage {
   content: string;

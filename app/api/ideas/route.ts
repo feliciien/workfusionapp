@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import OpenAI from 'openai';
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@/lib/auth"; // Import the auth function
+import { getAuthSession } from "@/lib/auth"; // Updated import
 import { headers } from "next/headers";
+
+export const runtime = 'nodejs';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -32,8 +34,9 @@ export async function POST(req: Request) {
   try {
     // Initialize headers first
     headers();
-    const { userId } = await auth();
-    
+    const session = await getAuthSession(); // Updated to use getAuthSession()
+    const userId = session?.user?.id;
+
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }

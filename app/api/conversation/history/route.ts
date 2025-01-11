@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
@@ -15,18 +16,18 @@ export async function GET() {
 
     const conversations = await prismadb.conversation.findMany({
       where: {
-        userId
+        userId,
       },
       orderBy: {
-        createdAt: 'desc'
+        createdAt: 'desc',
       },
       include: {
         messages: {
           orderBy: {
-            createdAt: 'asc'
-          }
-        }
-      }
+            createdAt: 'asc',
+          },
+        },
+      },
     });
 
     return NextResponse.json(conversations);

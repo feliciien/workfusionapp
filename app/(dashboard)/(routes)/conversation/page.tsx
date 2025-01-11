@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Heading } from "@/components/heading";
-import { MessageSquare, Moon, Sun, Trash, Zap } from "lucide-react";
+import { MessageSquare, Moon, Sun, Trash, ClipboardCopy } from "lucide-react";
 import { Form } from "@/components/form";
 import { Loader } from "@/components/loader";
 import { cn } from "@/lib/utils";
@@ -14,13 +14,12 @@ import { Empty } from "@/components/empty";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import * as z from "zod";
-import { ClipboardCopy } from "lucide-react";
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp?: Date;
-  status?: 'sending' | 'sent' | 'error';
+  status?: "sending" | "sent" | "error";
   id?: string;
 }
 
@@ -33,7 +32,7 @@ const formSchema = z.object({
 export default function ConversationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const conversationId = searchParams.get('id');
+  const conversationId = searchParams?.get("id");
 
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,7 +47,7 @@ export default function ConversationPage() {
   useEffect(() => {
     setMounted(true);
     // Check for system dark mode preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     setDarkMode(prefersDark);
   }, []);
 
@@ -56,14 +55,15 @@ export default function ConversationPage() {
     if (conversationId && mounted) {
       loadConversation(conversationId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, mounted]);
 
   useEffect(() => {
     if (mounted) {
       if (darkMode) {
-        document.documentElement.classList.add('dark');
+        document.documentElement.classList.add("dark");
       } else {
-        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.remove("dark");
       }
     }
   }, [darkMode, mounted]);
@@ -75,11 +75,11 @@ export default function ConversationPage() {
       const response = await axios.get(`/api/conversation/${id}`);
       const formattedMessages = response.data.messages.map((msg: any) => ({
         role: msg.role,
-        content: typeof msg.content === 'string' ? msg.content : msg.content.text || '',
+        content: typeof msg.content === "string" ? msg.content : msg.content.text || "",
       }));
       setMessages(formattedMessages);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversation');
+      setError(err instanceof Error ? err.message : "Failed to load conversation");
     } finally {
       setLoading(false);
     }
@@ -93,36 +93,37 @@ export default function ConversationPage() {
 
       const messageId = Date.now().toString();
       const userMessage: Message = {
-        role: 'user',
+        role: "user",
         content: values.prompt,
         timestamp: new Date(),
-        status: 'sending',
+        status: "sending",
         id: messageId,
       };
 
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
 
-      const response = await axios.post('/api/conversation', {
+      const response = await axios.post("/api/conversation", {
         messages: newMessages,
         conversationId,
       });
 
       const assistantMessage: Message = {
-        role: 'assistant',
-        content: typeof response.data === 'string' 
-          ? response.data 
-          : response.data.content || response.data.text || '',
+        role: "assistant",
+        content:
+          typeof response.data === "string"
+            ? response.data
+            : response.data.content || response.data.text || "",
         timestamp: new Date(),
-        status: 'sent',
+        status: "sent",
         id: Date.now().toString(),
       };
 
-      setMessages((current) => 
-        current.map(msg => msg.id === messageId ? { ...msg, status: 'sent' as const } : msg)
-        .concat([assistantMessage])
+      setMessages((current) =>
+        current
+          .map((msg) => (msg.id === messageId ? { ...msg, status: "sent" as const } : msg))
+          .concat([assistantMessage])
       );
-
     } catch (error: any) {
       if (retryCount < 2) {
         setRetrying(true);
@@ -138,11 +139,11 @@ export default function ConversationPage() {
       } else {
         toast.error("Something went wrong. Please try again.");
       }
-      console.error('[CONVERSATION_ERROR]', error);
-      
+      console.error("[CONVERSATION_ERROR]", error);
+
       setMessages((current) =>
-        current.map(msg => 
-          msg.status === 'sending' ? { ...msg, status: 'error' as const } : msg
+        current.map((msg) =>
+          msg.status === "sending" ? { ...msg, status: "error" as const } : msg
         )
       );
     } finally {
@@ -195,7 +196,7 @@ export default function ConversationPage() {
           >
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -216,20 +217,22 @@ export default function ConversationPage() {
         )}
         <div className="flex flex-col space-y-4 max-w-4xl mx-auto">
           {messages.map((message, index) => (
-            <div 
+            <div
               key={message.id || index}
               className={cn(
                 "flex items-start gap-x-4 rounded-xl p-4 animate-fade-in transition-all",
-                message.role === "user" 
-                  ? "ml-auto bg-primary text-primary-foreground max-w-[80%]" 
+                message.role === "user"
+                  ? "ml-auto bg-primary text-primary-foreground max-w-[80%]"
                   : "mr-auto bg-muted max-w-[80%]",
-                message.status === 'error' && "border-2 border-destructive"
+                message.status === "error" && "border-2 border-destructive"
               )}
             >
-              <div className={cn(
-                "flex-shrink-0 rounded-full p-2",
-                message.role === "user" ? "bg-primary-foreground/10" : "bg-primary/10"
-              )}>
+              <div
+                className={cn(
+                  "flex-shrink-0 rounded-full p-2",
+                  message.role === "user" ? "bg-primary-foreground/10" : "bg-primary/10"
+                )}
+              >
                 {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
               </div>
               <div className="flex flex-col flex-1 min-w-[200px]">
@@ -239,9 +242,9 @@ export default function ConversationPage() {
                   </span>
                   {message.timestamp && (
                     <span className="text-xs opacity-70">
-                      {new Date(message.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   )}
@@ -249,7 +252,7 @@ export default function ConversationPage() {
                 <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                   {message.content}
                 </p>
-                {message.status === 'error' && (
+                {message.status === "error" && (
                   <Button
                     variant="destructive"
                     size="sm"
@@ -278,8 +281,14 @@ export default function ConversationPage() {
               <BotAvatar />
               <div className="flex space-x-2">
                 <div className="w-2 h-2 rounded-full bg-current animate-bounce" />
-                <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.2s]" />
-                <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.4s]" />
+                <div
+                  className="w-2 h-2 rounded-full bg-current animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                />
+                <div
+                  className="w-2 h-2 rounded-full bg-current animate-bounce"
+                  style={{ animationDelay: "0.4s" }}
+                />
               </div>
             </div>
           )}
@@ -288,10 +297,7 @@ export default function ConversationPage() {
 
       <div className="p-4 lg:p-8 border-t bg-background">
         <div className="max-w-4xl mx-auto">
-          <Form
-            isLoading={loading}
-            onSubmit={onSubmit}
-          />
+          <Form isLoading={loading} onSubmit={onSubmit} />
         </div>
       </div>
 
@@ -299,15 +305,14 @@ export default function ConversationPage() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background p-6 rounded-xl shadow-lg border z-50">
           <h3 className="text-lg font-semibold mb-2">Upgrade Required</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            You&apos;ve reached your free trial limit. Upgrade to continue using the AI conversation feature.
+            You've reached your free trial limit. Upgrade to continue using the AI conversation
+            feature.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowUpgrade(false)}>
               Cancel
             </Button>
-            <Button onClick={() => router.push('/settings')}>
-              Upgrade Now
-            </Button>
+            <Button onClick={() => router.push("/settings")}>Upgrade Now</Button>
           </div>
         </div>
       )}

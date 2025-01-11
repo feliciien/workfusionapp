@@ -1,5 +1,4 @@
-import { getToken } from "next-auth/jwt";
-import { NextResponse, NextRequest } from "next/server";
+import { withAuth } from "next-auth/middleware";
 
 // List of public routes that don't require authentication
 const publicRoutes = [
@@ -12,29 +11,22 @@ const publicRoutes = [
   "/api/auth",
 ];
 
-export async function middleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-
-  // Handle public routes
-  if (publicRoutes.some((route) => path.startsWith(route))) {
-    return NextResponse.next();
-  }
-
-  // Check authentication
-  const token = await getToken({ req });
-
-  if (!token) {
-    const signInUrl = new URL("/sign-in", req.url);
-    signInUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(signInUrl);
-  }
-
-  return NextResponse.next();
-}
+export default withAuth({
+  callbacks: {
+    authorized: ({ req, token }) => {
+      // Always allow access to public routes
+      if (publicRoutes.some((route) => req.nextUrl.pathname.startsWith(route))) {
+        return true;
+      }
+      // Require authentication for other routes
+      return !!token;
+    },
+  },
+});
 
 export const config = {
   matcher: [
-    "/((?!.+\\.[\\w]+$|_next|favicon.ico).*)",
+    "/((?!.*\\..*|_next|favicon\\.ico).*)",
     "/",
   ],
 };
