@@ -19,13 +19,19 @@ export const SubscriptionButton = ({
   isPro = false,
   planId,
   variant = "default",
-  children
+  children,
 }: SubscriptionButtonProps) => {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const verifySubscription = async () => {
+      if (!searchParams) {
+        console.error("Search parameters not found");
+        toast.error("Search parameters not found");
+        return;
+      }
+
       const subscriptionId = searchParams.get("subscription_id");
       const success = searchParams.get("success");
 
@@ -36,9 +42,11 @@ export const SubscriptionButton = ({
           toast.success("Thank you for subscribing!");
           
           // Get base URL for redirect
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (
-            process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : window.location.origin
-          );
+          const baseUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||
+            (process.env.VERCEL_URL
+              ? `https://${process.env.VERCEL_URL}`
+              : window.location.origin);
           window.location.href = `${baseUrl}/dashboard`;
         } catch (error) {
           console.error("Verification error:", error);
@@ -79,13 +87,14 @@ export const SubscriptionButton = ({
   }
 
   return (
-    <Button 
-      onClick={onClick} 
-      disabled={loading} 
+    <Button
+      onClick={onClick}
+      disabled={loading}
       variant={variant}
       className={cn(
         "w-full",
-        variant === "default" && "bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600"
+        variant === "default" &&
+          "bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600"
       )}
     >
       {loading ? (
@@ -93,11 +102,13 @@ export const SubscriptionButton = ({
           <Zap className="w-4 h-4 mr-2 fill-white animate-pulse" />
           Loading...
         </>
-      ) : children || (
-        <>
-          Upgrade to Pro
-          <Zap className="w-4 h-4 ml-2 fill-white" />
-        </>
+      ) : (
+        children || (
+          <>
+            Upgrade to Pro
+            <Zap className="w-4 h-4 ml-2 fill-white" />
+          </>
+        )
       )}
     </Button>
   );

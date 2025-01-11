@@ -6,11 +6,11 @@ const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: n
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 const DAY_IN_MS = 86_400_000;
 
-export const checkSubscription = async (): Promise<boolean> => {
+export const checkSubscription = async (_userId?: string): Promise<boolean> => {
   const start = Date.now();
   try {
     const session = await getAuthSession();
-    const userId = session?.user?.id;
+    const userId = _userId || session?.user?.id;
 
     console.log("[SUBSCRIPTION_CHECK] Starting check:", {
       userId,

@@ -76,7 +76,7 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
 
     const userId = session.user.id;
 
-    const isPro = await checkSubscription(userId);
+    const isPro = await checkSubscription(); // Ensure no arguments are passed
     if (isPro) {
       return true;
     }

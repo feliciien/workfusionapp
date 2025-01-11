@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -64,6 +64,7 @@ const PayPalSuccessPage = () => {
   }, [searchParams, router]);
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="h-full flex flex-col items-center justify-center space-y-6">
       {status === "loading" && (
         <>
@@ -95,6 +96,7 @@ const PayPalSuccessPage = () => {
         </>
       )}
     </div>
+    </Suspense>
   );
 };
 

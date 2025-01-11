@@ -10,6 +10,12 @@ export default function SubscriptionHandler() {
 
   useEffect(() => {
     const handleSubscriptionCallback = async () => {
+      if (!searchParams) {
+        console.error("Search parameters not found");
+        toast.error("Search parameters not found");
+        return;
+      }
+
       const subscriptionId = searchParams.get("subscription_id");
       if (!subscriptionId) return;
 
