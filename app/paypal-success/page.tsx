@@ -16,6 +16,14 @@ const PayPalSuccessPage = () => {
 
   useEffect(() => {
     const handleSubscription = async () => {
+      if (!searchParams) {
+        setStatus("error");
+        setError("Search parameters not found");
+        toast.error("Search parameters not found");
+        setTimeout(() => router.push("/dashboard"), 2000);
+        return;
+      }
+
       const subscriptionId = searchParams.get("subscription_id");
 
       if (!subscriptionId) {
