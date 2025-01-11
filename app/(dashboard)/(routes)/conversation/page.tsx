@@ -305,8 +305,7 @@ export default function ConversationPage() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background p-6 rounded-xl shadow-lg border z-50">
           <h3 className="text-lg font-semibold mb-2">Upgrade Required</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            You've reached your free trial limit. Upgrade to continue using the AI conversation
-            feature.
+            {"You've reached your free trial limit. Upgrade to continue using the AI conversation feature."}
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setShowUpgrade(false)}>
