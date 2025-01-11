@@ -7,39 +7,38 @@ import { tools, routeCategories } from "./config";
 import { MAX_FREE_COUNTS } from "@/constants";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
-  const { isLoaded, userId } = useAuth();
+  const { data: session, status } = useSession();
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiLimitCount, setApiLimitCount] = useState(0);
 
   useEffect(() => {
     const checkStatus = async () => {
-      if (!isLoaded || !userId) return;
+      if (status !== "authenticated") return;
 
       try {
         setIsLoading(true);
         const [subResponse, limitResponse] = await Promise.all([
           fetch("/api/subscription"),
-          fetch("/api/api-limit")
+          fetch("/api/api-limit"),
         ]);
 
         if (!subResponse.ok || !limitResponse.ok) {
-          throw new Error('Failed to fetch status');
+          throw new Error("Failed to fetch status");
         }
-        
+
         const [subData, limitData] = await Promise.all([
           subResponse.json(),
-          limitResponse.json()
+          limitResponse.json(),
         ]);
 
         setIsPro(subData.isPro);
         setApiLimitCount(limitData.count || 0);
-        
       } catch (error) {
         console.error("[DASHBOARD] Error checking status:", error);
         setIsPro(false);
@@ -49,13 +48,13 @@ const DashboardPage = () => {
     };
 
     checkStatus();
-  }, [isLoaded, userId]);
+  }, [status]);
 
   const getFreeProgress = () => {
     return Math.min((apiLimitCount / MAX_FREE_COUNTS) * 100, 100);
   };
 
-  if (isLoading) {
+  if (isLoading || status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse space-y-4">
@@ -116,12 +115,14 @@ const DashboardPage = () => {
                 const isAccessible = isPro || (!isProTool && remainingGenerations > 0);
 
                 return (
-                  <Link 
+                  <Link
                     key={tool.href}
                     href={isAccessible ? tool.href : "/settings"}
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg transition-all",
-                      isAccessible ? "hover:bg-muted/50 cursor-pointer" : "opacity-70 cursor-not-allowed bg-muted/20",
+                      isAccessible
+                        ? "hover:bg-muted/50 cursor-pointer"
+                        : "opacity-70 cursor-not-allowed bg-muted/20",
                       tool.limitedFree && !isPro && remainingGenerations > 0 && "border border-yellow-500/20"
                     )}
                   >

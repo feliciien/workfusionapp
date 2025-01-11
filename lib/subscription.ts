@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { prismaEdge } from "@/lib/prisma-edge";
 
@@ -9,13 +9,15 @@ const DAY_IN_MS = 86_400_000;
 export const checkSubscription = async (): Promise<boolean> => {
   const start = Date.now();
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
+
     console.log("[SUBSCRIPTION_CHECK] Starting check:", {
       userId,
       timestamp: new Date().toISOString(),
-      stack: new Error().stack
+      stack: new Error().stack,
     });
-    
+
     if (!userId) {
       console.log("[SUBSCRIPTION_CHECK] No user ID found");
       return false;
@@ -27,7 +29,7 @@ export const checkSubscription = async (): Promise<boolean> => {
       console.log("[SUBSCRIPTION_CHECK] Returning cached result:", {
         userId,
         result: cached.result,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       return cached.result;
     }
@@ -42,7 +44,7 @@ export const checkSubscription = async (): Promise<boolean> => {
     console.log("[SUBSCRIPTION_CHECK] User record:", {
       userId,
       userExists: !!user,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     const userSubscription = await prismaEdge.userSubscription.findUnique({
@@ -61,15 +63,17 @@ export const checkSubscription = async (): Promise<boolean> => {
     console.log("[SUBSCRIPTION_CHECK] Edge subscription:", {
       userId,
       hasSubscription: !!userSubscription,
-      subscriptionDetails: userSubscription ? {
-        id: userSubscription.paypalSubscriptionId,
-        customerId: userSubscription.paypalCustomerId,
-        planId: userSubscription.paypalPlanId,
-        currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
-        status: userSubscription.paypalStatus,
-      } : null,
+      subscriptionDetails: userSubscription
+        ? {
+            id: userSubscription.paypalSubscriptionId,
+            customerId: userSubscription.paypalCustomerId,
+            planId: userSubscription.paypalPlanId,
+            currentPeriodEnd: userSubscription.paypalCurrentPeriodEnd,
+            status: userSubscription.paypalStatus,
+          }
+        : null,
       timeElapsed: Date.now() - start,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (!userSubscription) {
@@ -83,16 +87,18 @@ export const checkSubscription = async (): Promise<boolean> => {
     console.log("[SUBSCRIPTION_CHECK] Validation result:", {
       userId,
       currentTime: new Date(Date.now()).toISOString(),
-      endTime: userSubscription.paypalCurrentPeriodEnd?.getTime() ? new Date(userSubscription.paypalCurrentPeriodEnd?.getTime()).toISOString() : null,
+      endTime: userSubscription.paypalCurrentPeriodEnd?.getTime()
+        ? new Date(userSubscription.paypalCurrentPeriodEnd?.getTime()).toISOString()
+        : null,
       isValid,
       timeElapsed: Date.now() - start,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Cache the result
     SUBSCRIPTION_CHECK_CACHE[userId] = {
       result: isValid,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     return isValid;
@@ -101,7 +107,7 @@ export const checkSubscription = async (): Promise<boolean> => {
       error: error?.message || String(error),
       stack: error?.stack || new Error().stack,
       timeElapsed: Date.now() - start,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     return false;
   }

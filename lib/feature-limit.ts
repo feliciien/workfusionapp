@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
 import { checkSubscription } from "@/lib/subscription";
@@ -15,25 +15,27 @@ const handleError = (error: unknown, context: string) => {
   const dbError = error as DatabaseError;
   console.error(`[${context}] Error:`, {
     code: dbError.code || 'UNKNOWN',
-    message: dbError.message || 'An unknown error occurred'
+    message: dbError.message || 'An unknown error occurred',
   });
 };
 
 export const incrementFeatureUsage = async (featureType: FeatureType): Promise<void> => {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return;
     }
+
+    const userId = session.user.id;
 
     await db.$transaction(async (prisma: TransactionClient) => {
       const userFeatureUsage = await prisma.userFeatureUsage.findUnique({
         where: {
           userId_featureType: {
             userId,
-            featureType
-          }
+            featureType,
+          },
         },
       });
 
@@ -42,8 +44,8 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
           where: {
             userId_featureType: {
               userId,
-              featureType
-            }
+              featureType,
+            },
           },
           data: {
             count: userFeatureUsage.count + 1,
@@ -66,13 +68,15 @@ export const incrementFeatureUsage = async (featureType: FeatureType): Promise<v
 
 export const checkFeatureLimit = async (featureType: FeatureType): Promise<boolean> => {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return false;
     }
 
-    const isPro = await checkSubscription();
+    const userId = session.user.id;
+
+    const isPro = await checkSubscription(userId);
     if (isPro) {
       return true;
     }
@@ -81,12 +85,13 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
       where: {
         userId_featureType: {
           userId,
-          featureType
-        }
+          featureType,
+        },
       },
     });
 
     const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 100;
+
     if (!userFeatureUsage || userFeatureUsage.count < limit) {
       return true;
     }
@@ -101,18 +106,20 @@ export const checkFeatureLimit = async (featureType: FeatureType): Promise<boole
 
 export const getFeatureUsage = async (featureType: FeatureType): Promise<number> => {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return 0;
     }
+
+    const userId = session.user.id;
 
     const userFeatureUsage = await db.userFeatureUsage.findUnique({
       where: {
         userId_featureType: {
           userId,
-          featureType
-        }
+          featureType,
+        },
       },
     });
 

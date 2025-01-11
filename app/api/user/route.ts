@@ -1,20 +1,24 @@
-import { auth, currentUser } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const { userId } = auth();
-    const user = await currentUser();
+    const session = await getAuthSession();
+    const user = session?.user;
 
-    if (!userId || !user) {
+    if (!user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    // Split the user's name into first and last name if available
+    const [firstName = "", ...lastNameParts] = user.name?.split(" ") || [];
+    const lastName = lastNameParts.join(" ");
+
     return NextResponse.json({
-      userId: userId,
-      email: user.emailAddresses[0]?.emailAddress,
-      firstName: user.firstName,
-      lastName: user.lastName
+      userId: user.id,
+      email: user.email,
+      firstName,
+      lastName
     });
   } catch (error) {
     console.error("[USER_ERROR]", error);

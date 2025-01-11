@@ -1,6 +1,6 @@
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { Analytics } from '@vercel/analytics/react';
@@ -24,7 +24,8 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
     console.log("[CODE_API] Checking access for user:", userId);
 
     if (!userId) {
@@ -33,12 +34,10 @@ export async function POST(req: Request) {
     }
 
     const isPro = await checkSubscription();
-    console.log("[CODE_API] Pro status:", { userId, isPro });
 
     if (!isPro) {
       const hasApiLimit = await checkApiLimit();
-      console.log("[CODE_API] API limit check:", { userId, hasApiLimit });
-      
+
       if (!hasApiLimit) {
         return new NextResponse("Free tier limit reached", { status: 403 });
       }
@@ -46,7 +45,6 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { messages, language } = body;
-    console.log("[CODE_API] Received messages:", messages);
 
     if (!messages) {
       return new NextResponse("Messages are required", { status: 400 });
@@ -54,14 +52,17 @@ export async function POST(req: Request) {
 
     // Add language context to the system message if specified
     const systemMessage = language 
-      ? { ...instructionMessage, content: `${instructionMessage.content}\nGenerate code in ${language}.` }
+      ? {
+          ...instructionMessage,
+          content: `${instructionMessage.content}\nGenerate code in ${language}.`,
+        }
       : instructionMessage;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",  // Using GPT-4 for better code generation
+      model: "gpt-4-turbo-preview",
       messages: [systemMessage, ...messages],
-      temperature: 0.7,  // Slightly creative but still focused
-      max_tokens: 2000,  // Allow for longer code samples
+      temperature: 0.7,
+      max_tokens: 2000,
       top_p: 0.95,
       frequency_penalty: 0,
       presence_penalty: 0,
@@ -76,33 +77,33 @@ export async function POST(req: Request) {
       throw new Error("No response from OpenAI");
     }
 
-    return NextResponse.json(response.choices[0].message, { 
+    return NextResponse.json(response.choices[0].message, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate'
-      }
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
     });
   } catch (error: unknown) {
     console.error("[CODE_API_ERROR]", error instanceof Error ? error.message : error);
-    
+
     // Return more specific error messages
     if (error instanceof OpenAI.APIError) {
       return new NextResponse(
         JSON.stringify({
           error: "OpenAI API Error",
           message: error.message,
-          code: error.code
-        }), 
+          code: error.code,
+        }),
         { status: error.status || 500 }
       );
     }
-    
+
     return new NextResponse(
       JSON.stringify({
         error: "Internal Server Error",
-        message: error instanceof Error ? error.message : "Unknown error occurred"
-      }), 
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+      }),
       { status: 500 }
     );
   }

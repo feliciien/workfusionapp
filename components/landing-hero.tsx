@@ -1,13 +1,15 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import TypewriterComponent from "typewriter-effect";
 import { Analytics } from "@vercel/analytics/react";
 import { Button } from "./ui/button";
 
 export const LandingHero = () => {
-  const { isSignedIn, user } = useUser();
+  const { data: session, status } = useSession();
+  const isSignedIn = status === "authenticated";
+  const user = session?.user;
 
   return (
     <div className="relative min-h-screen flex flex-col justify-center isolate text-white font-bold py-24 text-center space-y-16">
@@ -36,8 +38,8 @@ export const LandingHero = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight max-w-4xl mx-auto animate-fade-in-up">
-            {isSignedIn && user?.firstName
-              ? `Welcome back, ${user.firstName}!`
+            {isSignedIn && user?.name
+              ? `Welcome back, ${user.name}!`
               : "Transform Your Ideas into Reality with AI"}
           </h1>
 
@@ -107,5 +109,3 @@ export const LandingHero = () => {
     </div>
   );
 };
-
-// ... rest of the code remains the same ...

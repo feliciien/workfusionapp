@@ -1,15 +1,17 @@
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
+
 export const UserAvatar = () => {
-	const { user } = useUser();
-	return (
-		<Avatar className="h-8 w-8">
-			<AvatarImage src={user?.profileImageUrl} />
-			<AvatarFallback>
-				{user?.firstName?.charAt(0)}
-				{user?.lastName?.charAt(0)}
-			</AvatarFallback>
-		</Avatar>
-	);
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
+  return (
+    <Avatar className="h-8 w-8">
+      <AvatarImage src={user?.image || undefined} />
+      <AvatarFallback>
+        {user?.name?.charAt(0)}
+      </AvatarFallback>
+    </Avatar>
+  );
 };

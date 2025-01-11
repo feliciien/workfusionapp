@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 import { checkApiLimit } from "@/lib/api-limit";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
     const body = await req.json();
     const { latency, bandwidth, packetLoss, status, metadata } = body;
 
@@ -44,9 +45,10 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
     const { searchParams } = new URL(req.url);
-    const timeframe = searchParams.get("timeframe") as "day" | "week" | "month" || "day";
+    const timeframe = (searchParams.get("timeframe") as "day" | "week" | "month") || "day";
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });

@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
@@ -17,7 +17,8 @@ async function getUserSubscriptionId(userId: string): Promise<string | null> {
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });

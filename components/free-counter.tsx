@@ -1,14 +1,14 @@
 "use client";
 
 import { FC, useEffect, useState } from "react";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 import { MAX_FREE_COUNTS } from "@/constants";
 import { Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Progress } from "./ui/progress";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import {
   Tooltip,
   TooltipContent,
@@ -31,18 +31,18 @@ interface FreeCounterProps {
   isPro: boolean;
 }
 
-export const FreeCounter: FC<FreeCounterProps> = ({ 
+export const FreeCounter: FC<FreeCounterProps> = ({
   apiLimits = {},
-  isPro = false 
+  isPro = false,
 }) => {
   const [mounted, setMounted] = useState(false);
   const [apiData, setApiData] = useState<ApiLimitData>({
     count: 0,
     limit: MAX_FREE_COUNTS,
-    limits: apiLimits
+    limits: apiLimits,
   });
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -51,11 +51,11 @@ export const FreeCounter: FC<FreeCounterProps> = ({
   useEffect(() => {
     const fetchLimits = async () => {
       try {
-        const response = await fetch('/api/api-limit');
+        const response = await fetch("/api/api-limit");
         const data = await response.json();
         setApiData(data);
       } catch (error) {
-        console.error('Failed to fetch API limits:', error);
+        console.error("Failed to fetch API limits:", error);
       }
     };
 
@@ -67,7 +67,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     }
   }, [mounted, isPro]);
 
-  if (!mounted || !isSignedIn) {
+  if (!mounted || status === "loading" || !session) {
     return null;
   }
 
@@ -91,7 +91,11 @@ export const FreeCounter: FC<FreeCounterProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => router.push('/pro')} variant="premium" className="w-full">
+                <Button
+                  onClick={() => router.push("/pro")}
+                  variant="premium"
+                  className="w-full"
+                >
                   Upgrade
                   <Zap className="w-4 h-4 ml-2 fill-white" />
                 </Button>

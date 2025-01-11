@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { getApiLimitCount } from "@/lib/api-limit";
 
@@ -7,7 +7,8 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });

@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
 
@@ -40,7 +40,8 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
     const isPro = await checkSubscription();
 
     if (!userId) {

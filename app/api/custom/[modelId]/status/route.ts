@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 // Access the in-memory training sessions (in production, use a database)
@@ -9,32 +9,33 @@ export async function GET(
   { params }: { params: { modelId: string } }
 ) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const modelId = params.modelId;
-    const session = trainingSessions[modelId];
+    const sessionData = trainingSessions[modelId];
 
-    if (!session) {
+    if (!sessionData) {
       return new NextResponse("Training session not found", { status: 404 });
     }
 
-    if (session.userId !== userId) {
+    if (sessionData.userId !== userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     return NextResponse.json({
-      status: session.status,
-      progress: session.progress,
-      currentEpoch: session.currentEpoch,
-      startTime: session.startTime,
+      status: sessionData.status,
+      progress: sessionData.progress,
+      currentEpoch: sessionData.currentEpoch,
+      startTime: sessionData.startTime,
     });
 
   } catch (error) {
-    console.log('[STATUS_ERROR]', error);
+    console.log("[STATUS_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

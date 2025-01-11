@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
@@ -13,7 +13,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -35,7 +36,7 @@ export async function GET(
     if (prediction.status === "starting" || prediction.status === "processing") {
       return NextResponse.json({
         status: prediction.status,
-        output: null
+        output: null,
       });
     }
 
@@ -43,7 +44,7 @@ export async function GET(
     if (prediction.status === "succeeded" && prediction.output) {
       return NextResponse.json({
         status: "succeeded",
-        output: prediction.output
+        output: prediction.output,
       });
     }
 
@@ -51,20 +52,20 @@ export async function GET(
     if (prediction.status === "failed") {
       return NextResponse.json({
         status: "failed",
-        error: prediction.error || "Video generation failed"
+        error: prediction.error || "Video generation failed",
       });
     }
 
     // Default response for other statuses
     return NextResponse.json({
       status: prediction.status,
-      output: prediction.output
+      output: prediction.output,
     });
 
   } catch (error) {
-    console.error('[VIDEO_STATUS_ERROR]', error);
+    console.error("[VIDEO_STATUS_ERROR]", error);
     if (error instanceof Error) {
-      console.error('Error details:', error.message);
+      console.error("Error details:", error.message);
     }
     return new NextResponse("Error checking video status", { status: 500 });
   }

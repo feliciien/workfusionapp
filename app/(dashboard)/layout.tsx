@@ -1,10 +1,9 @@
-import NavbarWrapper from "@/components/navbar-wrapper";
-import Sidebar from "@/components/sidebar";
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { DashboardShell } from "@/components/dashboard-shell";
 
 // Disable caching for this layout
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = auth();
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+
   if (!userId) {
     redirect("/sign-in");
   }
@@ -38,16 +39,8 @@ export default async function DashboardLayout({
   });
 
   return (
-    <div className="h-full relative dark:bg-gray-900">
-      <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-gray-900">
-        <div className="flex h-full flex-col">
-          <Sidebar apiLimits={apiLimitData.limits || {}} isPro={isPro} />
-        </div>
-      </div>
-      <main className="md:pl-72 dark:bg-gray-900">
-        <NavbarWrapper />
-        {children}
-      </main>
-    </div>
+    <DashboardShell apiLimits={apiLimitData.limits || {}} isPro={isPro}>
+      {children}
+    </DashboardShell>
   );
 }

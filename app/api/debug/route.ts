@@ -1,11 +1,12 @@
-import { auth, currentUser } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
 
 export async function GET() {
   try {
-    const { userId } = auth();
-    const user = await currentUser();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
+    const user = session?.user;
 
     if (!userId || !user) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -22,8 +23,8 @@ export async function GET() {
     const allSubscriptions = await prismadb.userSubscription.findMany();
 
     return NextResponse.json({
-      clerkUserId: userId,
-      userEmail: user.emailAddresses[0]?.emailAddress,
+      userId: userId,
+      userEmail: user.email,
       subscription: subscription,
       allSubscriptions: allSubscriptions,
       now: new Date(),

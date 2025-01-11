@@ -1,10 +1,9 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Montserrat } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import { Analytics } from "@vercel/analytics/react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Zap } from "lucide-react";
@@ -16,8 +15,10 @@ const font = Montserrat({
 });
 
 export const LandingNavbar = () => {
-  const { isSignedIn } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  const isSignedIn = status === "authenticated";
 
   const onUpgradeClick = () => {
     if (isSignedIn) {

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs";
-import { clerkClient } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
@@ -35,7 +34,7 @@ async function getPayPalAccessToken() {
   return access_token;
 }
 
-async function createSubscription(plan: PlanType, userId: string) {
+async function createSubscription(plan: PlanType, user: any) {
   if (!PAYPAL_API_BASE || !PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
     throw new Error("Missing required PayPal configuration");
   }
@@ -49,15 +48,15 @@ async function createSubscription(plan: PlanType, userId: string) {
       headers: {
         Authorization: `Bearer ${access_token}`,
         "Content-Type": "application/json",
-        "PayPal-Request-Id": `${userId}-${Date.now()}`, // Idempotency key
+        "PayPal-Request-Id": `${user.id}-${Date.now()}`, // Idempotency key
       },
       body: JSON.stringify({
         plan_id: PLAN_DETAILS[plan].plan_id,
         subscriber: {
           name: {
-            given_name: "Subscriber",
+            given_name: user.name || "Subscriber",
           },
-          email_address: "subscriber@example.com", // This will be updated by PayPal during checkout
+          email_address: user.email || "subscriber@example.com", // Will be updated during checkout
         },
         application_context: {
           brand_name: "WorkFusion",
@@ -90,57 +89,51 @@ async function createSubscription(plan: PlanType, userId: string) {
 
 export async function GET(req: Request) {
   try {
-    const user = await currentUser();
+    const session = await getAuthSession();
+    const user = session?.user;
+
     if (!user) {
       return new NextResponse(
         JSON.stringify({ error: "Unauthorized" }),
-        { 
-          status: 401, 
-          headers: { 
-            "Content-Type": "application/json",
-          } 
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
     const { searchParams } = new URL(req.url);
-    const plan = searchParams.get('plan') as PlanType || 'monthly';
+    const plan = (searchParams.get('plan') as PlanType) || 'monthly';
 
     if (!PLAN_DETAILS[plan]) {
       return new NextResponse(
         JSON.stringify({ error: "Invalid subscription plan" }),
-        { 
-          status: 400, 
-          headers: { 
-            "Content-Type": "application/json",
-          } 
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    const subscription = await createSubscription(plan, user.id);
+    const subscription = await createSubscription(plan, user);
 
     return new NextResponse(
       JSON.stringify(subscription),
-      { 
-        status: 200, 
-        headers: { 
-          "Content-Type": "application/json",
-        } 
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       }
     );
   } catch (error) {
     console.error("Error creating subscription:", error);
     return new NextResponse(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
-        status: 500, 
-        headers: { 
-          "Content-Type": "application/json",
-        } 
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
       }
     );
   }

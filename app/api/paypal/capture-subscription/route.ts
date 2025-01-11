@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
@@ -25,7 +25,9 @@ async function associateSubscriptionWithUser(userId: string, subscriptionId: str
 
 export async function POST(req: Request) {
   try {
-    const user = await currentUser();
+    const session = await getAuthSession();
+    const user = session?.user;
+
     if (!user) {
       return new NextResponse(
         JSON.stringify({ error: "Unauthorized" }),

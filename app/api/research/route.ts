@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { checkSubscription } from "@/lib/subscription";
@@ -19,7 +19,9 @@ const researchInstructions = {
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
+
     const body = await req.json();
     const { messages, researchType } = body;
 
@@ -40,7 +42,9 @@ export async function POST(req: Request) {
 
     const systemMessage = {
       role: "system",
-      content: researchInstructions[researchType as keyof typeof researchInstructions] || researchInstructions.academic,
+      content:
+        researchInstructions[researchType as keyof typeof researchInstructions] ||
+        researchInstructions.academic,
     };
 
     const response = await openai.chat.completions.create({

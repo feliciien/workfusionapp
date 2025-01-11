@@ -1,11 +1,12 @@
-import { auth, currentUser } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const { userId } = auth();
-    const user = await currentUser();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
+    const user = session?.user;
 
     console.log("[SUBSCRIPTION_API] Check started:", {
       userId,
@@ -32,9 +33,9 @@ export async function GET() {
       timestamp: new Date().toISOString()
     });
 
-    const isPro = userSubscription?.paypalStatus === "ACTIVE" && 
-                 userSubscription?.paypalCurrentPeriodEnd ? 
-                 userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() : 
+    const isPro = userSubscription?.paypalStatus === "ACTIVE" &&
+                 userSubscription?.paypalCurrentPeriodEnd ?
+                 userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() :
                  false;
 
     return NextResponse.json({

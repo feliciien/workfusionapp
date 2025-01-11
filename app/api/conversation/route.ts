@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
@@ -20,8 +20,8 @@ interface ConversationMessage {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     });
 
     // Store conversation in database
-    const messageContent = response.choices[0].message.content || "";
+    const messageContent = response.choices[0].message?.content || "";
     if (conversationId) {
       try {
         await prismadb.conversation.update({
@@ -140,9 +140,10 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const authSession = await auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
-    if (!authSession?.userId) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -156,7 +157,7 @@ export async function GET(req: Request) {
     const conversation = await prismadb.conversation.findUnique({
       where: {
         id: conversationId,
-        userId: authSession.userId,
+        userId: userId,
       },
       include: {
         messages: {

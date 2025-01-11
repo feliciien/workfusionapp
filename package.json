@@ -63,6 +63,7 @@
     "lucide-react": "^0.468.0",
     "micro": "^10.0.1",
     "next": "^14.0.4",
+    "next-auth": "^4.24.11",
     "openai": "^4.76.2",
     "postcss": "^8.4.49",
     "pptxgenjs": "^3.12.0",

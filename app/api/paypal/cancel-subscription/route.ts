@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs"; // Assuming you're using Clerk for authentication
+import { getAuthSession } from "@/lib/auth"; // Migrated from Clerk to NextAuth
 import { headers } from "next/headers";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
@@ -16,13 +16,14 @@ export async function POST(req: Request) {
   try {
     // Initialize headers first
     headers();
-    const session = await auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
-    if (!session?.userId) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subscriptionId = await getAndRemoveUserSubscriptionId(session.userId);
+    const subscriptionId = await getAndRemoveUserSubscriptionId(userId);
 
     if (!subscriptionId) {
       return NextResponse.json({ error: "Subscription not found." }, { status: 404 });

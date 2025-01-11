@@ -1,9 +1,10 @@
-import { auth } from "@clerk/nextjs";
+import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
     const { searchParams } = new URL(req.url);
     const planId = searchParams.get("planId");
 

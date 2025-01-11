@@ -1,3 +1,6 @@
-import { auth } from "@clerk/nextjs";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export { auth };
+export async function getAuthSession() {
+  return await getServerSession(authOptions);
+}

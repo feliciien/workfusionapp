@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { MAX_FREE_COUNTS, FREE_LIMITS, FEATURE_TYPES } from "@/constants";
@@ -7,8 +7,8 @@ const FREE_CREDITS = MAX_FREE_COUNTS;
 
 export const increaseFeatureUsage = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return;
@@ -18,19 +18,19 @@ export const increaseFeatureUsage = async (featureType: string) => {
       where: {
         userId_featureType: {
           userId,
-          featureType
-        }
+          featureType,
+        },
       },
       create: {
         userId,
         featureType,
-        count: 1
+        count: 1,
       },
       update: {
         count: {
-          increment: 1
-        }
-      }
+          increment: 1,
+        },
+      },
     });
 
     return usage;
@@ -41,14 +41,15 @@ export const increaseFeatureUsage = async (featureType: string) => {
 
 export const checkFeatureLimit = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return false;
     }
 
     const isPro = await checkSubscription();
+
     if (isPro) {
       return true;
     }
@@ -57,12 +58,15 @@ export const checkFeatureLimit = async (featureType: string) => {
       where: {
         userId_featureType: {
           userId,
-          featureType
-        }
-      }
+          featureType,
+        },
+      },
     });
 
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
+    const limit =
+      FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] ||
+      FREE_CREDITS;
+
     if (!usage || usage.count < limit) {
       return true;
     }
@@ -76,13 +80,13 @@ export const checkFeatureLimit = async (featureType: string) => {
 
 export const getFeatureUsage = async (featureType: string) => {
   try {
-    const session = await auth();
-    const userId = session?.userId;
+    const session = await getAuthSession();
+    const userId = session?.user?.id;
 
     if (!userId) {
       return {
         count: 0,
-        limit: FREE_CREDITS
+        limit: FREE_CREDITS,
       };
     }
 
@@ -90,22 +94,24 @@ export const getFeatureUsage = async (featureType: string) => {
       where: {
         userId_featureType: {
           userId,
-          featureType
-        }
-      }
+          featureType,
+        },
+      },
     });
 
-    const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || FREE_CREDITS;
+    const limit =
+      FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] ||
+      FREE_CREDITS;
 
     return {
       count: usage?.count || 0,
-      limit
+      limit,
     };
   } catch (error) {
     console.error("[GET_FEATURE_USAGE_ERROR]", error);
     return {
       count: 0,
-      limit: FREE_CREDITS
+      limit: FREE_CREDITS,
     };
   }
 };
@@ -121,26 +127,26 @@ export const checkApiLimit = async () => {
 
 export const getApiLimitCount = async () => {
   const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
-  
+
   // Get all feature usage
-  const session = await auth();
-  const userId = session?.userId;
-  
+  const session = await getAuthSession();
+  const userId = session?.user?.id;
+
   let limits: { [key: string]: number } = {};
-  
+
   if (userId) {
     const usages = await db.userFeatureUsage.findMany({
-      where: { userId }
+      where: { userId },
     });
-    
+
     for (const usage of usages) {
       limits[usage.featureType] = usage.count;
     }
   }
-  
+
   return {
     count,
     limit,
-    limits
+    limits,
   };
 };
