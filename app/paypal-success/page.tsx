@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Loader } from "@/components/loader";
@@ -10,21 +10,13 @@ import { CheckCircle, XCircle } from "lucide-react";
 
 const PayPalSuccessPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const handleSubscription = async () => {
-      if (!searchParams) {
-        setStatus("error");
-        setError("Search parameters not found");
-        toast.error("Search parameters not found");
-        setTimeout(() => router.push("/dashboard"), 2000);
-        return;
-      }
-
-      const subscriptionId = searchParams.get("subscription_id");
+      const params = new URLSearchParams(window.location.search);
+      const subscriptionId = params.get("subscription_id");
 
       if (!subscriptionId) {
         setStatus("error");
@@ -61,41 +53,43 @@ const PayPalSuccessPage = () => {
     };
 
     handleSubscription();
-  }, [searchParams, router]);
+  }, [router]);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-    <div className="h-full flex flex-col items-center justify-center space-y-6">
-      {status === "loading" && (
-        <>
-          <Loader />
-          <Heading
-            title="Activating Subscription..."
-            description="Please wait while we activate your subscription."
-          />
-        </>
-      )}
+      <div className="h-full flex flex-col items-center justify-center space-y-6">
+        {status === "loading" && (
+          <>
+            <Loader />
+            <Heading
+              title="Activating Subscription..."
+              description="Please wait while we activate your subscription."
+            />
+          </>
+        )}
 
-      {status === "success" && (
-        <>
-          <CheckCircle className="w-16 h-16 text-green-500" />
-          <Heading
-            title="Subscription Activated!"
-            description="Thank you for subscribing to WorkFusion."
-          />
-        </>
-      )}
+        {status === "success" && (
+          <>
+            <CheckCircle className="w-16 h-16 text-green-500" />
+            <Heading
+              title="Subscription Activated!"
+              description="Thank you for subscribing to WorkFusion."
+            />
+          </>
+        )}
 
-      {status === "error" && (
-        <>
-          <XCircle className="w-16 h-16 text-red-500" />
-          <Heading
-            title="Activation Failed"
-            description={error || "An error occurred while activating your subscription"}
-          />
-        </>
-      )}
-    </div>
+        {status === "error" && (
+          <>
+            <XCircle className="w-16 h-16 text-red-500" />
+            <Heading
+              title="Activation Failed"
+              description={
+                error || "An error occurred while activating your subscription"
+              }
+            />
+          </>
+        )}
+      </div>
     </Suspense>
   );
 };
