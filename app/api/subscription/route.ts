@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
@@ -11,7 +13,7 @@ export async function GET() {
     console.log("[SUBSCRIPTION_API] Check started:", {
       userId,
       userExists: !!user,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (!userId || !user) {
@@ -21,8 +23,8 @@ export async function GET() {
 
     const userSubscription = await prisma.userSubscription.findUnique({
       where: {
-        userId: userId
-      }
+        userId: userId,
+      },
     });
 
     console.log("[SUBSCRIPTION_API] Subscription found:", {
@@ -30,19 +32,19 @@ export async function GET() {
       subscriptionExists: !!userSubscription,
       status: userSubscription?.paypalStatus,
       endDate: userSubscription?.paypalCurrentPeriodEnd,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
-    const isPro = userSubscription?.paypalStatus === "ACTIVE" &&
-                 userSubscription?.paypalCurrentPeriodEnd ?
-                 userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now() :
-                 false;
+    const isPro =
+      userSubscription?.paypalStatus === "ACTIVE" &&
+      userSubscription?.paypalCurrentPeriodEnd
+        ? userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now()
+        : false;
 
     return NextResponse.json({
       ...userSubscription,
-      isPro
+      isPro,
     });
-
   } catch (error) {
     console.error("[SUBSCRIPTION_API] Error:", error);
     return new NextResponse("Internal Error", { status: 500 });

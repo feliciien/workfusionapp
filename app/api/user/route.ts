@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
@@ -18,7 +20,7 @@ export async function GET() {
       userId: user.id,
       email: user.email,
       firstName,
-      lastName
+      lastName,
     });
   } catch (error) {
     console.error("[USER_ERROR]", error);
