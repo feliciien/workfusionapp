@@ -11,7 +11,7 @@ import { Empty } from "@/components/empty";
 import { Heading } from "@/components/heading";
 import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardFooter } from "@/components/ui/card";
@@ -27,14 +27,16 @@ const ImagePage = () => {
   const router = useRouter();
   const proModal = useProModal();
   const [images, setImages] = useState<string[]>([]);
-  const [imageHistory, setImageHistory] = useState<Array<{
-    prompt: string;
-    style: string;
-    url: string;
-  }>>([]);
+  const [imageHistory, setImageHistory] = useState<
+    Array<{
+      prompt: string;
+      style: string;
+      url: string;
+    }>
+  >([]);
   const [isPro, setIsPro] = useState(false);
 
-  const imageTool = tools.find(tool => tool.href === "/image");
+  const imageTool = tools.find((tool) => tool.href === "/image");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,8 +44,8 @@ const ImagePage = () => {
       prompt: "",
       amount: "1",
       resolution: "1024x1024",
-      style: "realistic"
-    }
+      style: "realistic",
+    },
   });
 
   const isLoading = form.formState.isSubmitting;
@@ -75,15 +77,18 @@ const ImagePage = () => {
       setImages([]);
 
       const response = await axios.post("/api/image", values);
-      
+
       const urls = response.data.map((image: { url: string }) => image.url);
-      
+
       setImages(urls);
-      setImageHistory(prev => [...prev, ...urls.map((url: string) => ({
-        prompt: values.prompt,
-        style: values.style,
-        url
-      }))]);
+      setImageHistory((prev) => [
+        ...prev,
+        ...urls.map((url: string) => ({
+          prompt: values.prompt,
+          style: values.style,
+          url,
+        })),
+      ]);
 
       form.reset();
     } catch (error: any) {
@@ -107,16 +112,20 @@ const ImagePage = () => {
     <ToolPage tool={imageTool}>
       <div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
+          >
             <FormField
               name="prompt"
               render={({ field }) => (
                 <FormItem className="col-span-12">
+                  <FormLabel>Prompt</FormLabel>
                   <FormControl className="m-0 p-0">
                     <Input
                       className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                      disabled={isLoading} 
-                      placeholder="A picture of a horse in Swiss alps" 
+                      disabled={isLoading}
+                      placeholder="A picture of a horse in Swiss alps"
                       {...field}
                     />
                   </FormControl>
@@ -129,6 +138,7 @@ const ImagePage = () => {
               name="style"
               render={({ field }) => (
                 <FormItem className="col-span-12 lg:col-span-6">
+                  <FormLabel>Style</FormLabel>
                   <Select
                     disabled={isLoading}
                     onValueChange={field.onChange}
@@ -141,24 +151,12 @@ const ImagePage = () => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="realistic">
-                        Realistic
-                      </SelectItem>
-                      <SelectItem value="artistic">
-                        Artistic
-                      </SelectItem>
-                      <SelectItem value="anime">
-                        Anime
-                      </SelectItem>
-                      <SelectItem value="digital-art">
-                        Digital Art
-                      </SelectItem>
-                      <SelectItem value="illustration">
-                        Illustration
-                      </SelectItem>
-                      <SelectItem value="minimalist">
-                        Minimalist
-                      </SelectItem>
+                      <SelectItem value="realistic">Realistic</SelectItem>
+                      <SelectItem value="artistic">Artistic</SelectItem>
+                      <SelectItem value="anime">Anime</SelectItem>
+                      <SelectItem value="digital-art">Digital Art</SelectItem>
+                      <SelectItem value="illustration">Illustration</SelectItem>
+                      <SelectItem value="minimalist">Minimalist</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -170,6 +168,7 @@ const ImagePage = () => {
               name="resolution"
               render={({ field }) => (
                 <FormItem className="col-span-12 lg:col-span-6">
+                  <FormLabel>Resolution</FormLabel>
                   <Select
                     disabled={isLoading}
                     onValueChange={field.onChange}
@@ -182,23 +181,17 @@ const ImagePage = () => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="256x256">
-                        256x256
-                      </SelectItem>
-                      <SelectItem value="512x512">
-                        512x512
-                      </SelectItem>
-                      <SelectItem value="1024x1024">
-                        1024x1024
-                      </SelectItem>
+                      <SelectItem value="256x256">256x256</SelectItem>
+                      <SelectItem value="512x512">512x512</SelectItem>
+                      <SelectItem value="1024x1024">1024x1024</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button className="col-span-12" type="submit" disabled={isLoading} size="icon">
-              Generate
+            <Button className="col-span-12" type="submit" disabled={isLoading}>
+              {isLoading ? "Generating..." : "Generate"}
             </Button>
           </form>
         </Form>
@@ -207,9 +200,7 @@ const ImagePage = () => {
             <Loader />
           </div>
         )}
-        {images.length === 0 && !isLoading && (
-          <Empty label="No images generated." />
-        )}
+        {images.length === 0 && !isLoading && <Empty label="No images generated." />}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
           {images.map((src) => (
             <Card key={src} className="rounded-lg overflow-hidden">
@@ -222,7 +213,11 @@ const ImagePage = () => {
                 />
               </div>
               <CardFooter className="p-2">
-                <Button onClick={() => window.open(src)} variant="secondary" className="w-full">
+                <Button
+                  onClick={() => window.open(src)}
+                  variant="secondary"
+                  className="w-full"
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
