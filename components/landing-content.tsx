@@ -4,24 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Analytics } from "@vercel/analytics/react";
 import Image from "next/image";
 
+import ArticleIcon from "@mui/icons-material/Article";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
+import IntegrationInstructionsIcon from "@mui/icons-material/IntegrationInstructions";
+
 const features = [
   {
-    title: "Generate Text in Seconds",
+    title: "Generate Text Effortlessly",
     description:
-      "Quickly produce high-quality content for blogs, social media, and marketing materials with our AI-powered text generation.",
-    icon: "flash_on",
+      "Leverage our AI to produce high-quality content instantly, saving you time and effort.",
+    icon: ArticleIcon,
   },
   {
-    title: "Automate Repetitive Tasks",
+    title: "Automate Your Workflow",
     description:
-      "Streamline your workflow by letting our AI handle mundane tasks, giving you more time to focus on what matters.",
-    icon: "autorenew",
+      "Let our AI handle repetitive tasks, freeing you to focus on innovation and growth.",
+    icon: AutorenewIcon,
   },
   {
-    title: "Seamless Integration",
+    title: "Seamless AI Integration",
     description:
-      "Easily integrate our AI tools into your existing systems and processes without any hassle.",
-    icon: "integration_instructions",
+      "Integrate our AI tools into your systems effortlessly, without any technical hurdles.",
+    icon: IntegrationInstructionsIcon,
   },
 ];
 
@@ -50,9 +54,7 @@ export const LandingContent = () => {
               className="p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
               <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center mb-4">
-                <span className="material-icons-outlined text-pink-600">
-                  {feature.icon}
-                </span>
+                <feature.icon className="text-pink-600" fontSize="large" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 {feature.title}
