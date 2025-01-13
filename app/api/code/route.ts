@@ -3,7 +3,15 @@ import { checkSubscription } from "@/lib/subscription";
 import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { Analytics } from '@vercel/analytics/react';
+
+interface CodeRequestBody {
+  messages: OpenAI.Chat.ChatCompletionMessageParam[];
+  language?: string;
+}
+
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("Missing OpenAI API key in environment variables.");
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -19,47 +27,45 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 5. Handle errors and edge cases
 6. If the user specifies a language, use that language
 7. Format the code properly with correct indentation
-8. Include example usage where appropriate`
+8. Include example usage where appropriate`,
 };
 
 export async function POST(req: Request) {
   try {
     const session = await getAuthSession();
     const userId = session?.user?.id;
-    console.log("[CODE_API] Checking access for user:", userId);
 
     if (!userId) {
-      console.log("[CODE_API] No user ID found");
+      console.error("[CODE_API] No user ID found");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
+    const [isPro, hasApiLimit] = await Promise.all([
+      checkSubscription(),
+      checkApiLimit(),
+    ]);
 
-    if (!isPro) {
-      const hasApiLimit = await checkApiLimit();
-
-      if (!hasApiLimit) {
-        return new NextResponse("Free tier limit reached", { status: 403 });
-      }
+    if (!isPro && !hasApiLimit) {
+      return new NextResponse("Free tier limit reached", { status: 403 });
     }
 
-    const body = await req.json();
+    const body: CodeRequestBody = await req.json();
     const { messages, language } = body;
 
-    if (!messages) {
-      return new NextResponse("Messages are required", { status: 400 });
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return new NextResponse("Messages are required and must be an array", { status: 400 });
     }
 
-    // Add language context to the system message if specified
-    const systemMessage = language 
-      ? {
-          ...instructionMessage,
-          content: `${instructionMessage.content}\nGenerate code in ${language}.`,
-        }
-      : instructionMessage;
+    // Construct system message with optional language context
+    const systemMessage: OpenAI.Chat.ChatCompletionMessageParam = {
+      ...instructionMessage,
+      content:
+        instructionMessage.content +
+        (language ? `\nGenerate code in ${language}.` : ""),
+    };
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4",
       messages: [systemMessage, ...messages],
       temperature: 0.7,
       max_tokens: 2000,
@@ -68,26 +74,25 @@ export async function POST(req: Request) {
       presence_penalty: 0,
     });
 
-    // Only increase the API limit count for free users
     if (!isPro) {
       await increaseApiLimit();
     }
 
-    if (!response.choices[0].message) {
-      throw new Error("No response from OpenAI");
+    const aiMessage = response.choices[0]?.message;
+    if (!aiMessage) {
+      throw new Error("No response from OpenAI.");
     }
 
-    return NextResponse.json(response.choices[0].message, {
+    return NextResponse.json(aiMessage, {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
       },
     });
   } catch (error: unknown) {
-    console.error("[CODE_API_ERROR]", error instanceof Error ? error.message : error);
+    console.error("[CODE_API_ERROR]", error);
 
-    // Return more specific error messages
     if (error instanceof OpenAI.APIError) {
       return new NextResponse(
         JSON.stringify({
@@ -102,7 +107,7 @@ export async function POST(req: Request) {
     return new NextResponse(
       JSON.stringify({
         error: "Internal Server Error",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
+        message: error instanceof Error ? error.message : "An unknown error occurred",
       }),
       { status: 500 }
     );
