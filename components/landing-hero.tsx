@@ -43,6 +43,22 @@ export const LandingHero = () => {
               : "Transform Your Ideas into Reality with AI"}
           </h1>
 
+          {/* Moved Demo Video Here */}
+          <div className="w-full max-w-3xl mt-8">
+            <video
+              className="w-full h-auto rounded-lg shadow-lg"
+              controls
+              poster="/videos/demo-thumbnail.jpg" // Placeholder thumbnail
+            >
+              <source src="/videos/demo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+
+          <p className="text-2xl font-semibold mt-4">
+            AI Tools to Automate Your Workflow and Boost Productivity
+          </p>
+
           <div className="text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black animate-fade-in-up-delayed">
             <TypewriterComponent
               options={{

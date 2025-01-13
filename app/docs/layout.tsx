@@ -1,8 +1,10 @@
 import { Metadata } from "next";
+import DocsMobileNavbar from "@/components/docs-mobile-navbar";
 
 export const metadata: Metadata = {
   title: "Documentation - WorkFusion",
-  description: "Comprehensive documentation for WorkFusion platform. Learn about our AI models, features, API integration, and best practices.",
+  description:
+    "Comprehensive documentation for WorkFusion platform. Learn about our AI models, features, API integration, and best practices.",
   keywords: [
     "WorkFusion documentation",
     "AI platform docs",
@@ -11,7 +13,7 @@ export const metadata: Metadata = {
     "content creation",
     "image generation",
     "voice synthesis",
-    "AI models"
+    "AI models",
   ],
 };
 
@@ -22,6 +24,7 @@ export default function DocsLayout({
 }) {
   return (
     <div className="h-full">
+      <DocsMobileNavbar />
       {children}
     </div>
   );
