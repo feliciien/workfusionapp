@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import TypewriterComponent from "typewriter-effect";
 import { Analytics } from "@vercel/analytics/react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
 
 export const LandingHero = () => {
@@ -11,22 +12,25 @@ export const LandingHero = () => {
   const isSignedIn = status === "authenticated";
   const user = session?.user;
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showPlayButton, setShowPlayButton] = useState(true);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play();
+      setShowPlayButton(false);
+    }
+  }, []);
+
+  const handlePlayButtonClick = () => {
+    if (videoRef.current) {
+      videoRef.current.play();
+      setShowPlayButton(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col justify-center isolate text-white font-bold py-24 text-center space-y-16">
-      {/* Animated gradient background with floating shapes */}
-      <div
-        className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-size-200 bg-pos-0 overflow-hidden"
-        style={{
-          backgroundSize: "400% 400%",
-          animation: "gradientShift 15s ease-in-out infinite",
-        }}
-      >
-        {/* Floating shapes */}
-        <div className="absolute w-96 h-96 -top-48 -left-48 bg-purple-500/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute w-96 h-96 top-1/2 right-0 bg-pink-500/30 rounded-full blur-3xl animate-float-delayed"></div>
-        <div className="absolute w-96 h-96 bottom-0 left-1/4 bg-blue-500/30 rounded-full blur-3xl animate-float-slow"></div>
-      </div>
-
       {/* Main Content Container */}
       <div className="relative z-10 container mx-auto px-4">
         {/* Main Title and Typewriter Section */}
@@ -43,16 +47,37 @@ export const LandingHero = () => {
               : "Transform Your Ideas into Reality with AI"}
           </h1>
 
-          {/* Moved Demo Video Here */}
-          <div className="w-full max-w-3xl mt-8">
+          {/* Modified Video Section */}
+          <div className="relative w-full max-w-3xl mt-8">
             <video
+              ref={videoRef}
               className="w-full h-auto rounded-lg shadow-lg"
-              controls
-              poster="/videos/demo-thumbnail.jpg" // Placeholder thumbnail
+              poster="/videos/demo-thumbnail.jpg"
+              muted
+              autoPlay
+              playsInline
             >
               <source src="/videos/demo.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
+            {showPlayButton && (
+              <button
+                onClick={handlePlayButtonClick}
+                className="absolute inset-0 flex items-center justify-center"
+                aria-label="Play video"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="80"
+                  height="80"
+                  viewBox="0 0 24 24"
+                  fill="white"
+                  className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+            )}
           </div>
 
           <p className="text-2xl font-semibold mt-4">
@@ -79,7 +104,8 @@ export const LandingHero = () => {
           </div>
 
           <p className="text-sm md:text-xl font-light text-zinc-200 max-w-2xl mx-auto leading-relaxed animate-fade-in-up">
-            Experience the power of advanced AI models to boost your creativity, productivity, and innovation—no coding required.
+            Experience the power of advanced AI models to boost your creativity,
+            productivity, and innovation—no coding required.
           </p>
         </div>
 
@@ -107,7 +133,9 @@ export const LandingHero = () => {
         {/* Trust Indicators */}
         <div className="mt-16 flex flex-col items-center space-y-6 animate-fade-in-up">
           <div className="flex items-center space-x-2 text-zinc-300">
-            <span className="material-icons-outlined text-green-400">verified</span>
+            <span className="material-icons-outlined text-green-400">
+              verified
+            </span>
             <span className="text-sm">Enterprise-grade security</span>
           </div>
 
@@ -118,7 +146,9 @@ export const LandingHero = () => {
           </div>
 
           <p className="text-zinc-300 font-light">
-            Trusted by <span className="font-semibold text-white">10,000+</span> creators worldwide
+            Trusted by{" "}
+            <span className="font-semibold text-white">10,000+</span> creators
+            worldwide
           </p>
         </div>
       </div>
