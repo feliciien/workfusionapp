@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LandingNavbar } from "@/components/landing-navbar";
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// Import the Prism theme as a default import
-import prism from "react-syntax-highlighter/dist/esm/styles/prism";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
 interface DocSection {
   title: string;
@@ -38,11 +37,39 @@ const sections: Section[] = [
       { title: "Authentication", id: "authentication" },
     ],
   },
-  // ... (other sections unchanged)
+  {
+    title: "Core Features",
+    items: [
+      { title: "AI Models", id: "ai-models" },
+      { title: "Code Generation", id: "code-generation" },
+      { title: "Content Creation", id: "content-creation" },
+      { title: "Image Generation", id: "image-generation" },
+      { title: "Voice Synthesis", id: "voice-synthesis" },
+    ],
+  },
+  {
+    title: "Advanced Usage",
+    items: [
+      { title: "API Reference", id: "api-reference" },
+      { title: "Customization", id: "customization" },
+      { title: "Best Practices", id: "best-practices" },
+      { title: "Rate Limits", id: "rate-limits" },
+    ],
+  },
+  {
+    title: "Resources",
+    items: [
+      { title: "Examples", id: "examples" },
+      { title: "Tutorials", id: "tutorials" },
+      { title: "FAQ", id: "faq" },
+      { title: "Support", id: "support" },
+    ],
+  },
 ];
 
 const DocContent: DocContent = {
-  // ... (DocContent remains the same)
+  // ... (DocContent remains the same as before)
+  // Include all the DocContent sections as before
 };
 
 export default function DocsPage() {
@@ -119,25 +146,8 @@ export default function DocsPage() {
                 {DocContent[activeSection]?.title}
               </h1>
               <ReactMarkdown
-                components={{
-                  code({ node, inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={prism as Record<string, React.CSSProperties>}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                }}
+                remarkPlugins={[remarkGfm as any]}
+                rehypePlugins={[rehypeHighlight as any]}
               >
                 {DocContent[activeSection]?.content || ""}
               </ReactMarkdown>
