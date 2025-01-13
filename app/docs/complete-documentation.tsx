@@ -2,7 +2,7 @@
 
 import { LandingNavbar } from "@/components/landing-navbar";
 
-export default function DocsPage() {
+export default function CompleteDocumentationPage() {
   return (
     <div>
       <LandingNavbar />
