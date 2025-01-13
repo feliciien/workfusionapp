@@ -44,7 +44,7 @@ export const LandingHero = () => {
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight max-w-4xl mx-auto animate-fade-in-up">
             {isSignedIn && user?.name
               ? `Welcome back, ${user.name}!`
-              : "Transform Your Ideas into Reality with AI"}
+              : "Unleash Your Creativity with Advanced AI Tools"}
           </h1>
 
           {/* Modified Video Section */}
@@ -81,7 +81,7 @@ export const LandingHero = () => {
           </div>
 
           <p className="text-2xl font-semibold mt-4">
-            AI Tools to Automate Your Workflow and Boost Productivity
+            Empower Yourself with Cutting-Edge AI Solutions
           </p>
 
           <div className="text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black animate-fade-in-up-delayed">
@@ -116,7 +116,7 @@ export const LandingHero = () => {
               variant="premium"
               className="w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
-              {isSignedIn ? "Go to Dashboard" : "Start Creating for Free"}
+              {isSignedIn ? "Go to Dashboard" : "Get Started Now"}
             </Button>
           </Link>
 
@@ -128,28 +128,6 @@ export const LandingHero = () => {
               View Documentation
             </Button>
           </Link>
-        </div>
-
-        {/* Trust Indicators */}
-        <div className="mt-16 flex flex-col items-center space-y-6 animate-fade-in-up">
-          <div className="flex items-center space-x-2 text-zinc-300">
-            <span className="material-icons-outlined text-green-400">
-              verified
-            </span>
-            <span className="text-sm">Enterprise-grade security</span>
-          </div>
-
-          <div className="flex flex-wrap justify-center items-center gap-8 text-zinc-400 text-sm">
-            <span>✓ No credit card required</span>
-            <span>✓ Cancel anytime</span>
-            <span>✓ 24/7 support</span>
-          </div>
-
-          <p className="text-zinc-300 font-light">
-            Trusted by{" "}
-            <span className="font-semibold text-white">10,000+</span> creators
-            worldwide
-          </p>
         </div>
       </div>
     </div>
