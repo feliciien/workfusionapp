@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3003"),
   icons: {
-    apple: "/icon.png",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     title: "WorkFusion App - Advanced AI Platform for Business Automation",
@@ -63,7 +63,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <OrganizationStructuredData />
         <script
@@ -90,7 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body
-        className={`${inter.className} overflow-x-hidden overscroll-none`}
+        className={`${inter.className} h-full overflow-x-hidden overscroll-none`}
         suppressHydrationWarning
       >
         <Providers>
