@@ -13,19 +13,8 @@ export const LandingHero = () => {
 
   return (
     <div className="relative min-h-screen flex flex-col justify-center isolate text-white font-bold py-24 text-center space-y-16">
-      {/* Animated gradient background with floating shapes */}
-      <div
-        className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-size-200 bg-pos-0 overflow-hidden"
-        style={{
-          backgroundSize: "400% 400%",
-          animation: "gradientShift 15s ease-in-out infinite",
-        }}
-      >
-        {/* Floating shapes */}
-        <div className="absolute w-96 h-96 -top-48 -left-48 bg-purple-500/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute w-96 h-96 top-1/2 right-0 bg-pink-500/30 rounded-full blur-3xl animate-float-delayed"></div>
-        <div className="absolute w-96 h-96 bottom-0 left-1/4 bg-blue-500/30 rounded-full blur-3xl animate-float-slow"></div>
-      </div>
+      {/* Subtle static background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-gray-800 to-gray-900"></div>
 
       {/* Main Content Container */}
       <div className="relative z-10 container mx-auto px-4">
