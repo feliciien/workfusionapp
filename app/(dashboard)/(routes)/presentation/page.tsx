@@ -8,44 +8,65 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api, { Slide } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { 
-  Loader2, 
-  ChevronRight, 
-  ChevronLeft, 
-  Copy, 
-  RefreshCw, 
+import {
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  Copy,
+  RefreshCw,
   FileDown,
   LayoutTemplate,
   Presentation,
-  Upload
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Templates for different presentation styles
 const PRESENTATION_TEMPLATES = [
-  { id: 'business', name: 'Business Presentation', description: 'Professional and formal style' },
-  { id: 'educational', name: 'Educational', description: 'Clear and instructional format' },
-  { id: 'creative', name: 'Creative', description: 'Dynamic and engaging style' },
-  { id: 'minimal', name: 'Minimal', description: 'Clean and simple design' },
+  {
+    id: "business",
+    name: "Business Presentation",
+    description: "Professional and formal style",
+  },
+  {
+    id: "educational",
+    name: "Educational",
+    description: "Clear and instructional format",
+  },
+  {
+    id: "creative",
+    name: "Creative",
+    description: "Dynamic and engaging style",
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    description: "Clean and simple design",
+  },
 ];
 
 export default function PresentationPage() {
   // Tool loading state
   const [isLoadingTool, setIsLoadingTool] = useState(true);
-  const [tool, setTool] = useState(tools.find(t => t.href === "/presentation"));
+  const [tool, setTool] = useState(tools.find((t) => t.href === "/presentation"));
 
   // Form states
   const [topic, setTopic] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState('business');
+  const [selectedTemplate, setSelectedTemplate] = useState("business");
   const [file, setFile] = useState<File | null>(null);
 
   // Presentation states
   const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
-  
+
   // Loading and progress states
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -73,7 +94,9 @@ export default function PresentationPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading presentation tool...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading presentation tool...
+          </p>
         </div>
       </div>
     );
@@ -82,10 +105,14 @@ export default function PresentationPage() {
   if (!tool) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-red-500">Configuration Error</h2>
-        <p className="mt-2 text-muted-foreground">Unable to load presentation tool configuration.</p>
-        <Button 
-          variant="outline" 
+        <h2 className="text-2xl font-bold text-red-500">
+          Configuration Error
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          Unable to load presentation tool configuration.
+        </p>
+        <Button
+          variant="outline"
           className="mt-4"
           onClick={() => window.location.reload()}
         >
@@ -100,7 +127,7 @@ export default function PresentationPage() {
     e.preventDefault();
     setError(null);
     setProgress(0);
-    
+
     if (!topic.trim() && !file) {
       toast.error("Please enter a topic or upload a document");
       return;
@@ -111,7 +138,11 @@ export default function PresentationPage() {
       return;
     }
 
-    if (file && file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    if (
+      file &&
+      file.type !==
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
       toast.error("Please upload a valid Word (.docx) document");
       return;
     }
@@ -123,23 +154,26 @@ export default function PresentationPage() {
 
       // Simulate progress while generating
       const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + 5, 90));
+        setProgress((prev) => Math.min(prev + 5, 90));
       }, 500);
 
       let response;
       if (file) {
         const formData = new FormData();
-        formData.append('template', selectedTemplate);
-        formData.append('file', file);
+        formData.append("template", selectedTemplate);
+        formData.append("file", file);
 
-        response = await fetch('/api/presentation', {
-          method: 'POST',
+        response = await fetch("/api/presentation", {
+          method: "POST",
           body: formData,
-        }).then(res => res.json());
+        }).then((res) => res.json());
       } else {
-        const apiResponse = await api.generatePresentation(topic, selectedTemplate);
+        const apiResponse = await api.generatePresentation(
+          topic,
+          selectedTemplate
+        );
         if (!apiResponse.success || !apiResponse.data?.slides) {
-          throw new Error(apiResponse.error || 'Failed to generate presentation');
+          throw new Error(apiResponse.error || "Failed to generate presentation");
         }
         response = apiResponse.data;
       }
@@ -148,7 +182,7 @@ export default function PresentationPage() {
       setProgress(100);
 
       if (!response?.slides || response.slides.length === 0) {
-        throw new Error('No slides generated. Please try again.');
+        throw new Error("No slides generated. Please try again.");
       }
 
       setSlides(response.slides);
@@ -173,13 +207,13 @@ export default function PresentationPage() {
 
   const nextSlide = () => {
     if (currentSlideIndex < slides.length - 1) {
-      setCurrentSlideIndex(prev => prev + 1);
+      setCurrentSlideIndex((prev) => prev + 1);
     }
   };
 
   const previousSlide = () => {
     if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(prev => prev - 1);
+      setCurrentSlideIndex((prev) => prev - 1);
     }
   };
 
@@ -188,15 +222,15 @@ export default function PresentationPage() {
 
     try {
       // Dynamically import pptxgenjs only when needed
-      const pptxgen = await import('pptxgenjs');
+      const pptxgen = await import("pptxgenjs");
       const PptxGenJS = pptxgen.default;
 
       const pres = new PptxGenJS();
 
       // Set presentation properties
-      pres.author = 'WorkFusion';
-      pres.company = 'WorkFusion';
-      pres.revision = '1';
+      pres.author = "WorkFusion";
+      pres.company = "WorkFusion";
+      pres.revision = "1";
       pres.subject = topic || "Generated Presentation";
       pres.title = topic || "Generated Presentation";
 
@@ -206,59 +240,61 @@ export default function PresentationPage() {
 
         // Add title to all slides
         pptSlide.addText(slide.title, {
-          x: '5%',
-          y: '5%',
-          w: '90%',
-          h: '15%',
-          fontSize: slide.type === 'title' ? 44 : 32,
+          x: "5%",
+          y: "5%",
+          w: "90%",
+          h: "15%",
+          fontSize: slide.type === "title" ? 44 : 32,
           bold: true,
-          align: 'center',
-          color: '363636',
+          align: "center",
+          color: "363636",
         });
 
         // Add content based on slide type
-        if (typeof slide.content === 'string') {
+        if (typeof slide.content === "string") {
           // Title slide subtitle
           pptSlide.addText(slide.content, {
-            x: '10%',
-            y: '30%',
-            w: '80%',
-            h: '40%',
+            x: "10%",
+            y: "30%",
+            w: "80%",
+            h: "40%",
             fontSize: 28,
-            align: 'center',
-            color: '666666',
+            align: "center",
+            color: "666666",
           });
         } else {
           // Bullet points for other slides
-          const bulletPoints = slide.content.map(point => ({ text: point }));
+          const bulletPoints = slide.content.map((point) => ({ text: point }));
           pptSlide.addText(bulletPoints, {
-            x: '10%',
-            y: '25%',
-            w: '80%',
-            h: '70%',
+            x: "10%",
+            y: "25%",
+            w: "80%",
+            h: "70%",
             fontSize: 24,
-            bullet: { type: 'bullet' },
-            color: '363636',
+            bullet: { type: "bullet" },
+            color: "363636",
             lineSpacing: 32,
           });
         }
 
         // Add slide number except for title slide
-        if (slide.type !== 'title') {
+        if (slide.type !== "title") {
           pptSlide.addText(`${slides.indexOf(slide)}/${slides.length - 1}`, {
-            x: '90%',
-            y: '95%',
-            w: '10%',
-            h: '5%',
+            x: "90%",
+            y: "95%",
+            w: "10%",
+            h: "5%",
             fontSize: 12,
-            color: '666666',
-            align: 'right',
+            color: "666666",
+            align: "right",
           });
         }
       });
 
       // Save the presentation
-      const fileName = `${(topic || "presentation").replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.pptx`;
+      const fileName = `${(topic || "presentation")
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_presentation.pptx`;
       await pres.writeFile({ fileName });
       toast.success("PowerPoint presentation downloaded!");
     } catch (error) {
@@ -271,237 +307,258 @@ export default function PresentationPage() {
     if (!slides.length) return;
 
     const presentationText = slides
-      .map(slide => 
-        `${slide.title}\n\n${
-          Array.isArray(slide.content)
-            ? slide.content.join('\n')
-            : slide.content
-        }`
+      .map(
+        (slide) =>
+          `${slide.title}\n\n${
+            Array.isArray(slide.content)
+              ? slide.content.join("\n")
+              : slide.content
+          }`
       )
-      .join('\n\n---\n\n');
-    
+      .join("\n\n---\n\n");
+
     navigator.clipboard.writeText(presentationText);
-    toast.success('Copied to clipboard!');
+    toast.success("Copied to clipboard!");
   };
 
   return (
-    <ToolPage
-      tool={tool}
-      isLoading={isLoading}
-      error={error}
-    >
-      <form onSubmit={onSubmit} className="w-full">
-        <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
-          <div className="flex-1">
-            <Input
-              placeholder="Enter your presentation topic..."
-              value={topic}
-              onChange={(e) => {
-                setTopic(e.target.value);
-                if (e.target.value && file) {
-                  setFile(null);
-                }
-              }}
-              disabled={isLoading || !!file}
-              className="w-full"
-            />
+    <ToolPage tool={tool} isLoading={isLoading} error={error}>
+      {/* Improved design starts here */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <form onSubmit={onSubmit} className="mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            {/* Input Section */}
+            <div className="md:col-span-7">
+              <div className="flex flex-col space-y-4">
+                <Input
+                  placeholder="Enter your presentation topic..."
+                  value={topic}
+                  onChange={(e) => {
+                    setTopic(e.target.value);
+                    if (e.target.value && file) {
+                      setFile(null);
+                    }
+                  }}
+                  disabled={isLoading || !!file}
+                  className="w-full"
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Or upload a Word document (.docx)
+                  </label>
+                  <Input
+                    type="file"
+                    accept=".docx"
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setFile(e.target.files[0]);
+                        setTopic("");
+                      } else {
+                        setFile(null);
+                      }
+                    }}
+                    disabled={isLoading || topic.trim() !== ""}
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Template Selection */}
+            <div className="md:col-span-3">
+              <Select
+                value={selectedTemplate}
+                onValueChange={setSelectedTemplate}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRESENTATION_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      <div className="flex items-center">
+                        <LayoutTemplate className="w-4 h-4 mr-2" />
+                        <div>
+                          <div className="font-medium">{template.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {template.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Submit Button */}
+            <div className="md:col-span-2 flex items-end">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full md:w-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Presentation className="w-4 h-4 mr-2" />
+                    Generate
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          <Select
-            value={selectedTemplate}
-            onValueChange={setSelectedTemplate}
-            disabled={isLoading}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select template" />
-            </SelectTrigger>
-            <SelectContent>
-              {PRESENTATION_TEMPLATES.map(template => (
-                <SelectItem key={template.id} value={template.id}>
-                  <div className="flex items-center">
-                    <LayoutTemplate className="w-4 h-4 mr-2" />
-                    <div>
-                      <div className="font-medium">{template.name}</div>
-                      <div className="text-xs text-gray-500">{template.description}</div>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Presentation className="w-4 h-4 mr-2" />
-                Generate
-              </>
-            )}
-          </Button>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">Or upload a Word document (.docx)</label>
-          <Input
-            type="file"
-            accept=".docx"
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              if (e.target.files && e.target.files[0]) {
-                setFile(e.target.files[0]);
-                setTopic('');
-              } else {
-                setFile(null);
-              }
-            }}
-            disabled={isLoading || topic.trim() !== ''}
-          />
-        </div>
-        {isLoading && (
-          <div className="mt-4">
-            <Progress value={progress} className="h-2" />
-            <p className="text-sm text-gray-500 mt-2">Generating your presentation...</p>
+          {isLoading && (
+            <div className="mt-4">
+              <Progress value={progress} className="h-2" />
+              <p className="text-sm text-gray-500 mt-2">
+                Generating your presentation...
+              </p>
+            </div>
+          )}
+        </form>
+
+        {error && (
+          <div className="mt-4 p-4 text-red-500 bg-red-50 rounded-lg">
+            {error}
           </div>
         )}
-      </form>
 
-      {error && (
-        <div className="p-4 text-red-500 bg-red-50 rounded-lg">
-          {error}
-        </div>
-      )}
+        {currentSlide && (
+          <div className="relative mt-10">
+            <div className="flex justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlideIndex}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full md:w-3/4 lg:w-1/2"
+                >
+                  <Card className="p-8 min-h-[400px] relative">
+                    <div className="absolute top-4 right-4 text-sm text-gray-500">
+                      Slide {currentSlideIndex + 1} of {slides.length}
+                    </div>
+                    <div className="space-y-4">
+                      <h2 className="text-2xl font-bold mb-4 text-center">
+                        {currentSlide.title}
+                      </h2>
+                      {Array.isArray(currentSlide.content) ? (
+                        <ul className="space-y-2 list-disc pl-6">
+                          {currentSlide.content.map((item, index) => (
+                            <motion.li
+                              key={index}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                            >
+                              {item}
+                            </motion.li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-700 text-center">
+                          {currentSlide.content}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-      {currentSlide && (
-        <div className="relative mt-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlideIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="p-8 min-h-[400px] relative">
-                <div className="absolute top-4 right-4 text-sm text-gray-500">
-                  Slide {currentSlideIndex + 1} of {slides.length}
+            <div className="absolute top-1/2 -translate-y-1/2 left-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={previousSlide}
+                disabled={currentSlideIndex === 0}
+                className="transition-opacity opacity-75 hover:opacity-100"
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </Button>
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={nextSlide}
+                disabled={currentSlideIndex === slides.length - 1}
+                className="transition-opacity opacity-75 hover:opacity-100"
+              >
+                <ChevronRight className="h-8 w-8" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {slides.length > 0 && (
+          <div className="flex flex-col md:flex-row justify-between items-center mt-8 space-y-4 md:space-y-0">
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentSlideIndex(0)}
+                disabled={currentSlideIndex === 0}
+              >
+                First Slide
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentSlideIndex(slides.length - 1)}
+                disabled={currentSlideIndex === slides.length - 1}
+              >
+                Last Slide
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy All
+              </Button>
+              <Button variant="outline" size="sm" onClick={generatePowerPoint}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Download PPTX
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" onClick={clearForm}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              New Presentation
+            </Button>
+          </div>
+        )}
+
+        {slides.length > 0 && (
+          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {slides.map((slide, index) => (
+              <Card
+                key={index}
+                className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
+                  index === currentSlideIndex ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setCurrentSlideIndex(index)}
+              >
+                <div className="text-xs font-medium mb-2">
+                  Slide {index + 1}
                 </div>
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold mb-4">{currentSlide.title}</h2>
-                  {Array.isArray(currentSlide.content) ? (
-                    <ul className="space-y-2 list-disc pl-6">
-                      {currentSlide.content.map((item, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                        >
-                          {item}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-700">{currentSlide.content}</p>
-                  )}
+                <h3 className="text-sm font-medium truncate">
+                  {slide.title}
+                </h3>
+                <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                  {Array.isArray(slide.content)
+                    ? slide.content[0] +
+                      (slide.content.length > 1 ? "..." : "")
+                    : slide.content}
                 </div>
               </Card>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="absolute top-1/2 -translate-y-1/2 flex justify-between w-full px-4 pointer-events-none">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={previousSlide}
-              disabled={currentSlideIndex === 0}
-              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={nextSlide}
-              disabled={currentSlideIndex === slides.length - 1}
-              className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            ))}
           </div>
-        </div>
-      )}
-
-      {slides.length > 0 && (
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentSlideIndex(0)}
-              disabled={currentSlideIndex === 0}
-            >
-              First Slide
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentSlideIndex(slides.length - 1)}
-              disabled={currentSlideIndex === slides.length - 1}
-            >
-              Last Slide
-            </Button>
-          </div>
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copyToClipboard}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy All
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generatePowerPoint}
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Download PPTX
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearForm}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            New Presentation
-          </Button>
-        </div>
-      )}
-
-      {slides.length > 0 && (
-        <div className="grid grid-cols-4 gap-4 mt-8">
-          {slides.map((slide, index) => (
-            <Card
-              key={index}
-              className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
-                index === currentSlideIndex ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setCurrentSlideIndex(index)}
-            >
-              <div className="text-xs font-medium mb-2">Slide {index + 1}</div>
-              <h3 className="text-sm font-medium truncate">{slide.title}</h3>
-              <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                {Array.isArray(slide.content)
-                  ? slide.content[0] + (slide.content.length > 1 ? '...' : '')
-                  : slide.content}
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </ToolPage>
   );
 }
