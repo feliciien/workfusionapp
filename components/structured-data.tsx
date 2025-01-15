@@ -6,8 +6,9 @@ export function OrganizationStructuredData() {
     "@type": "Organization",
     name: "WorkFusion App",
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    logo: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`,
-    description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
+    logo: `https://www.workfusionapp.com/logo.png`,
+    description:
+      "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
     sameAs: [
       "https://twitter.com/workfusion",
       // Add other social media profiles here
@@ -54,7 +55,7 @@ export function PageStructuredData({
       name: "WorkFusion App",
       logo: {
         "@type": "ImageObject",
-        url: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`,
+        url: `https://www.workfusionapp.com/logo.png`,
       },
     },
     ...(image && { image }),
