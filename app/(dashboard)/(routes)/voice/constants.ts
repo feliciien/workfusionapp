@@ -1,8 +1,8 @@
 import * as z from "zod";
 
 export const formSchema = z.object({
-  prompt: z.string().min(1, {
-    message: "Prompt is required."
+  text: z.string().min(1, {
+    message: "Text is required."
   }),
   voice: z.string().min(1),
   emotion: z.string().min(1),
@@ -12,16 +12,40 @@ export const formSchema = z.object({
 
 export const voiceOptions = [
   {
-    value: "male",
-    label: "Male Voice"
+    value: "alloy",
+    label: "Alloy (Male Voice)"
   },
   {
-    value: "female",
-    label: "Female Voice"
+    value: "ash",
+    label: "Ash (Female Voice)"
   },
   {
-    value: "child",
-    label: "Child Voice"
+    value: "fable",
+    label: "Fable (Child Voice)"
+  },
+  {
+    value: "nova",
+    label: "Nova"
+  },
+  {
+    value: "shimmer",
+    label: "Shimmer"
+  },
+  {
+    value: "echo",
+    label: "Echo"
+  },
+  {
+    value: "onyx",
+    label: "Onyx"
+  },
+  {
+    value: "sage",
+    label: "Sage"
+  },
+  {
+    value: "coral",
+    label: "Coral"
   }
 ];
 
