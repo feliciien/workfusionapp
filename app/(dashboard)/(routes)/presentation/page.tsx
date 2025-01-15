@@ -6,7 +6,7 @@ import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import api from "@/lib/api-client";
+import api, { Slide } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { 
   Loader2, 
@@ -19,7 +19,6 @@ import {
   Presentation,
   Upload
 } from "lucide-react";
-import { Slide } from "@/lib/api-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -138,7 +137,11 @@ export default function PresentationPage() {
           body: formData,
         }).then(res => res.json());
       } else {
-        response = await api.generatePresentation(topic, selectedTemplate);
+        const apiResponse = await api.generatePresentation(topic, selectedTemplate);
+        if (!apiResponse.success || !apiResponse.data?.slides) {
+          throw new Error(apiResponse.error || 'Failed to generate presentation');
+        }
+        response = apiResponse.data;
       }
 
       clearInterval(progressInterval);
