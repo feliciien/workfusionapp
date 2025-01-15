@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+export const runtime = 'nodejs';
+
 import OpenAI from 'openai';
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
+import * as mammoth from 'mammoth';
+import { Buffer, Blob } from 'buffer';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -71,8 +75,6 @@ const formatSlides = (content: string): Slide[] => {
 
 export async function POST(req: Request) {
   try {
-    const { topic, template = 'business' } = await req.json();
-
     const freeTrial = await checkApiLimit();
     const isPro = await checkSubscription();
 
@@ -80,8 +82,51 @@ export async function POST(req: Request) {
       return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
     }
 
-    if (!topic) {
-      return new NextResponse("Topic is required", { status: 400 });
+    const contentType = req.headers.get('content-type') || '';
+    let template = 'business';
+    let documentText = '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle form data (file upload)
+      const formData = await req.formData();
+
+      const file = formData.get('file');
+      const templateField = formData.get('template');
+      if (templateField && typeof templateField === 'string') {
+        template = templateField;
+      }
+
+      if (!file || !(file instanceof Blob)) {
+        return new NextResponse("No file uploaded", { status: 400 });
+      }
+
+      const arrayBuffer = await (file as Blob).arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Convert Word document to text
+      const result = await mammoth.extractRawText({ buffer });
+      documentText = result.value;
+
+      if (!documentText || documentText.trim().length === 0) {
+        return new NextResponse("Uploaded document is empty", { status: 400 });
+      }
+
+    } else if (contentType.includes('application/json')) {
+      // Handle JSON input
+      const { topic, template: templateFromBody } = await req.json();
+
+      if (!topic) {
+        return new NextResponse("Topic is required", { status: 400 });
+      }
+
+      if (templateFromBody) {
+        template = templateFromBody;
+      }
+
+      documentText = topic;
+      
+    } else {
+      return new NextResponse("Invalid Content-Type", { status: 400 });
     }
 
     if (!TEMPLATE_PROMPTS[template as keyof typeof TEMPLATE_PROMPTS]) {
@@ -96,6 +141,7 @@ export async function POST(req: Request) {
         {
           role: "system",
           content: `You are a professional presentation creator. ${templatePrompt} 
+          Analyze the provided content and create a presentation based on it.
           Format the response as a JSON object with a 'slides' array. Each slide should have:
           - type: 'title' | 'intro' | 'content' | 'conclusion'
           - title: string
@@ -120,14 +166,14 @@ export async function POST(req: Request) {
         },
         {
           role: "user",
-          content: `Create a presentation about: ${topic}`
+          content: `Create a presentation based on the following content: \n\n${documentText}`
         }
       ],
       temperature: 0.7,
       max_tokens: 2500,
     });
 
-    if (!response.choices[0].message.content) {
+    if (!response.choices[0].message?.content) {
       throw new Error("Failed to generate presentation content");
     }
 

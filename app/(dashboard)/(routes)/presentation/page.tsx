@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,12 @@ import {
   Loader2, 
   ChevronRight, 
   ChevronLeft, 
-  Download, 
   Copy, 
   RefreshCw, 
   FileDown,
-  Layout,
   LayoutTemplate,
-  Presentation
+  Presentation,
+  Upload
 } from "lucide-react";
 import { Slide } from "@/lib/api-client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,7 +40,8 @@ export default function PresentationPage() {
   // Form states
   const [topic, setTopic] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState('business');
-  
+  const [file, setFile] = useState<File | null>(null);
+
   // Presentation states
   const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -97,18 +97,23 @@ export default function PresentationPage() {
     );
   }
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setProgress(0);
     
-    if (!topic.trim()) {
-      toast.error("Please enter a topic");
+    if (!topic.trim() && !file) {
+      toast.error("Please enter a topic or upload a document");
       return;
     }
 
     if (topic.length > 1000) {
       toast.error("Topic is too long. Maximum length is 1000 characters");
+      return;
+    }
+
+    if (file && file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      toast.error("Please upload a valid Word (.docx) document");
       return;
     }
 
@@ -122,20 +127,28 @@ export default function PresentationPage() {
         setProgress(prev => Math.min(prev + 5, 90));
       }, 500);
 
-      const response = await api.generatePresentation(topic, selectedTemplate);
+      let response;
+      if (file) {
+        const formData = new FormData();
+        formData.append('template', selectedTemplate);
+        formData.append('file', file);
+
+        response = await fetch('/api/presentation', {
+          method: 'POST',
+          body: formData,
+        }).then(res => res.json());
+      } else {
+        response = await api.generatePresentation(topic, selectedTemplate);
+      }
 
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (!response?.data) {
-        throw new Error('Failed to generate presentation');
-      }
-
-      if (!response.data.slides || response.data.slides.length === 0) {
+      if (!response?.slides || response.slides.length === 0) {
         throw new Error('No slides generated. Please try again.');
       }
 
-      setSlides(response.data.slides);
+      setSlides(response.slides);
       toast.success("Presentation generated successfully!");
     } catch (err: any) {
       console.error("Error generating presentation:", err);
@@ -146,17 +159,9 @@ export default function PresentationPage() {
     }
   };
 
-  const exampleTopics = [
-    "Digital Marketing Trends 2024",
-    "Climate Change Solutions",
-    "Remote Work Best Practices",
-    "AI in Healthcare",
-    "Personal Finance Essentials",
-    "Effective Leadership Skills"
-  ];
-
   const clearForm = () => {
     setTopic("");
+    setFile(null);
     setSlides([]);
     setError(null);
     setCurrentSlideIndex(0);
@@ -189,8 +194,8 @@ export default function PresentationPage() {
       pres.author = 'WorkFusion';
       pres.company = 'WorkFusion';
       pres.revision = '1';
-      pres.subject = topic;
-      pres.title = topic;
+      pres.subject = topic || "Generated Presentation";
+      pres.title = topic || "Generated Presentation";
 
       // Add slides
       slides.forEach((slide) => {
@@ -250,7 +255,7 @@ export default function PresentationPage() {
       });
 
       // Save the presentation
-      const fileName = `${topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.pptx`;
+      const fileName = `${(topic || "presentation").replace(/[^a-z0-9]/gi, '_').toLowerCase()}_presentation.pptx`;
       await pres.writeFile({ fileName });
       toast.success("PowerPoint presentation downloaded!");
     } catch (error) {
@@ -288,8 +293,13 @@ export default function PresentationPage() {
             <Input
               placeholder="Enter your presentation topic..."
               value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              disabled={isLoading}
+              onChange={(e) => {
+                setTopic(e.target.value);
+                if (e.target.value && file) {
+                  setFile(null);
+                }
+              }}
+              disabled={isLoading || !!file}
               className="w-full"
             />
           </div>
@@ -329,6 +339,22 @@ export default function PresentationPage() {
             )}
           </Button>
         </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700">Or upload a Word document (.docx)</label>
+          <Input
+            type="file"
+            accept=".docx"
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              if (e.target.files && e.target.files[0]) {
+                setFile(e.target.files[0]);
+                setTopic('');
+              } else {
+                setFile(null);
+              }
+            }}
+            disabled={isLoading || topic.trim() !== ''}
+          />
+        </div>
         {isLoading && (
           <div className="mt-4">
             <Progress value={progress} className="h-2" />
@@ -344,7 +370,7 @@ export default function PresentationPage() {
       )}
 
       {currentSlide && (
-        <div className="relative">
+        <div className="relative mt-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlideIndex}
@@ -384,7 +410,7 @@ export default function PresentationPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentSlideIndex(i => Math.max(0, i - 1))}
+              onClick={previousSlide}
               disabled={currentSlideIndex === 0}
               className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
             >
@@ -393,7 +419,7 @@ export default function PresentationPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentSlideIndex(i => Math.min(slides.length - 1, i + 1))}
+              onClick={nextSlide}
               disabled={currentSlideIndex === slides.length - 1}
               className="pointer-events-auto transition-opacity opacity-75 hover:opacity-100"
             >
