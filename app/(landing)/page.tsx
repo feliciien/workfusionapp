@@ -7,6 +7,7 @@ import {
   PageSEO,
   generateMetadata as baseGenerateMetadata,
 } from "@/components/seo/page-seo";
+import Footer from "@/components/footer"; // Added Footer import
 
 export const metadata: Metadata = baseGenerateMetadata({
   title: "Advanced AI Platform for Business Automation",
@@ -41,7 +42,7 @@ function LandingPage() {
         <LandingContent />
       </section>
 
-      {/* Removed duplicate footer */}
+      <Footer /> {/* Added Footer component */}
 
       <Analytics />
     </main>

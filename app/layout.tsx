@@ -6,7 +6,6 @@ import { OrganizationStructuredData } from "@/components/structured-data";
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
-import Footer from "@/components/footer"; // New import
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -98,7 +97,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Analytics />
         </Providers>
-        <Footer /> {/* Inserted Footer component */}
       </body>
     </html>
   );
