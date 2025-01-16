@@ -32,7 +32,7 @@ export default function DocsPage() {
         <h2 className="text-2xl font-semibold mb-4">Support</h2>
         <p className="mb-4">
           If you have any questions or need assistance, please contact our support team at{" "}
-          <a href="mailto:support@ourplatform.com" className="text-blue-600 underline">
+          <a href="workfusionapp@gmail.com" className="text-blue-600 underline">
             support@ourplatform.com
           </a>.
         </p>
