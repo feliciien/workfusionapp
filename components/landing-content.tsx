@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Analytics } from "@vercel/analytics/react";
 import Image from "next/image";
 
@@ -90,7 +89,65 @@ export const LandingContent = () => {
             with our AI platform
           </p>
 
-          {/* Testimonials would go here */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Testimonial 1 */}
+            <div className="p-6 rounded-xl bg-white shadow-lg">
+              <p className="text-gray-600 mb-4">
+                {"\""}This service transformed our business! Highly recommended.{"\""}
+              </p>
+              <div className="flex items-center">
+                <Image
+                  src="https://randomuser.me/api/portraits/women/68.jpg"
+                  alt="Alice Smith"
+                  width={50}
+                  height={50}
+                  className="rounded-full mr-4"
+                />
+                <div>
+                  <h4 className="text-gray-900 font-bold">Alice Smith</h4>
+                  <p className="text-gray-600 text-sm">Founder, Tech Innovators</p>
+                </div>
+              </div>
+            </div>
+            {/* Testimonial 2 */}
+            <div className="p-6 rounded-xl bg-white shadow-lg">
+              <p className="text-gray-600 mb-4">
+                {"\""}An essential tool that has boosted our productivity tenfold.{"\""}
+              </p>
+              <div className="flex items-center">
+                <Image
+                  src="https://randomuser.me/api/portraits/men/32.jpg"
+                  alt="Bob Johnson"
+                  width={50}
+                  height={50}
+                  className="rounded-full mr-4"
+                />
+                <div>
+                  <h4 className="text-gray-900 font-bold">Bob Johnson</h4>
+                  <p className="text-gray-600 text-sm">CEO, Business Solutions</p>
+                </div>
+              </div>
+            </div>
+            {/* Testimonial 3 */}
+            <div className="p-6 rounded-xl bg-white shadow-lg">
+              <p className="text-gray-600 mb-4">
+                {"\""}Exceptional service and support. A game-changer for our operations.{"\""}
+              </p>
+              <div className="flex items-center">
+                <Image
+                  src="https://randomuser.me/api/portraits/women/65.jpg"
+                  alt="Emma Davis"
+                  width={50}
+                  height={50}
+                  className="rounded-full mr-4"
+                />
+                <div>
+                  <h4 className="text-gray-900 font-bold">Emma Davis</h4>
+                  <p className="text-gray-600 text-sm">CTO, Innovate LLC</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       <Analytics />

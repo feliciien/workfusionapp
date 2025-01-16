@@ -8,6 +8,8 @@ const nextConfig = {
     domains: [
       'oaidalleapiprodscus.blob.core.windows.net',
       'lh3.googleusercontent.com', // Added Google user content domain
+      'via.placeholder.com',
+      'randomuser.me', // Added randomuser.me for profile images
     ],
     remotePatterns: [
       {
@@ -17,6 +19,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'oaidalleapiprodscus.blob.core.windows.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'randomuser.me',
       },
     ],
   },

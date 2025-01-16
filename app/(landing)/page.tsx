@@ -2,12 +2,16 @@ import { Metadata } from "next";
 import LandingContent from "@/components/landing-content";
 import { LandingHero } from "@/components/landing-hero";
 import { LandingNavbar } from "@/components/landing-navbar";
-import { Analytics } from '@vercel/analytics/react';
-import { PageSEO, generateMetadata as baseGenerateMetadata } from "@/components/seo/page-seo";
+import { Analytics } from "@vercel/analytics/react";
+import {
+  PageSEO,
+  generateMetadata as baseGenerateMetadata,
+} from "@/components/seo/page-seo";
 
 export const metadata: Metadata = baseGenerateMetadata({
   title: "Advanced AI Platform for Business Automation",
-  description: "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
+  description:
+    "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
   keywords: [
     "AI platform",
     "business automation",
@@ -18,7 +22,7 @@ export const metadata: Metadata = baseGenerateMetadata({
     "workflow automation",
     "AI solutions",
     "enterprise AI",
-    "digital transformation"
+    "digital transformation",
   ],
 });
 
@@ -33,20 +37,11 @@ function LandingPage() {
         <LandingHero />
       </section>
 
-      <section 
-        aria-label="Features and Benefits"
-        className="py-16"
-      >
+      <section aria-label="Features and Benefits" className="py-16">
         <LandingContent />
       </section>
 
-      <footer className="bg-gray-50 py-8">
-        <div className="container mx-auto px-4">
-          <p className="text-center text-gray-600">
-            {new Date().getFullYear()} WorkFusion App. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      {/* Removed duplicate footer */}
 
       <Analytics />
     </main>
