@@ -2,35 +2,37 @@ import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkSubscription } from "@/lib/subscription";
-import { Redis } from '@upstash/redis';
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
 
-// Initialize Redis client for caching
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
-});
+// Commented out Redis imports and initialization
+// import { Redis } from '@upstash/redis';
 
-// Verify Redis connection
-const verifyRedisConnection = async () => {
-  try {
-    // Try to set and get a test value
-    const testKey = 'test-connection';
-    await redis.set(testKey, 'test-value');
-    const testValue = await redis.get(testKey);
-    await redis.del(testKey);
-    return testValue === 'test-value';
-  } catch (error: any) {
-    console.error('[REDIS_CONNECTION_ERROR]:', {
-      error: error?.message || 'Unknown error',
-      stack: error?.stack || '',
-      url: !!process.env.UPSTASH_REDIS_REST_URL,
-      token: !!process.env.UPSTASH_REDIS_REST_TOKEN
-    });
-    return false;
-  }
-};
+// // Initialize Redis client for caching
+// const redis = new Redis({
+//   url: process.env.UPSTASH_REDIS_REST_URL || '',
+//   token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
+// });
+
+// // Verify Redis connection
+// const verifyRedisConnection = async () => {
+//   try {
+//     // Try to set and get a test value
+//     const testKey = 'test-connection';
+//     await redis.set(testKey, 'test-value');
+//     const testValue = await redis.get(testKey);
+//     await redis.del(testKey);
+//     return testValue === 'test-value';
+//   } catch (error: any) {
+//     console.error('[REDIS_CONNECTION_ERROR]:', {
+//       error: error?.message || 'Unknown error',
+//       stack: error?.stack || '',
+//       url: !!process.env.UPSTASH_REDIS_REST_URL,
+//       token: !!process.env.UPSTASH_REDIS_REST_TOKEN
+//     });
+//     return false;
+//   }
+// };
 
 // Style enhancements for different image types
 const stylePrompts = {
@@ -58,16 +60,16 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
 
     // Get style enhancement
     const styleEnhancement = stylePrompts[style as keyof typeof stylePrompts] || stylePrompts.realistic;
-    
+
     // Add composition and lighting improvements
     const compositionBoost = "perfect composition, professional lighting, golden ratio";
-    
+
     // Add technical quality improvements
     const qualityBoost = "best quality, highly detailed, sharp focus, 8K UHD, high resolution";
-    
+
     // Combine all enhancements
     processedPrompt = `${processedPrompt}, ${styleEnhancement}, ${compositionBoost}, ${qualityBoost}. 
-    Negative prompt: ${globalNegativePrompt}`;
+Negative prompt: ${globalNegativePrompt}`;
 
     return processedPrompt;
   } catch (error) {
@@ -76,10 +78,10 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
   }
 };
 
-// Helper function to generate cache key
-const generateCacheKey = (prompt: string, style: string, resolution: string) => {
-  return `image:${prompt}:${style}:${resolution}`.toLowerCase();
-};
+// Commented out cache key generation function
+// const generateCacheKey = (enhancedPrompt: string) => {
+//   return `image:${enhancedPrompt}`.toLowerCase();
+// };
 
 // Retry mechanism for API calls
 const retryWithExponentialBackoff = async (
@@ -130,7 +132,8 @@ const retryWithExponentialBackoff = async (
   throw lastError;
 };
 
-const CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
+// Commented out CACHE_TTL
+// const CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
 
 // Enhanced error handling for OpenAI API
 const handleOpenAIError = (error: any) => {
@@ -159,7 +162,7 @@ export async function POST(req: Request) {
     const session = await getAuthSession();
     const userId = session?.user?.id;
     const body = await req.json();
-    const { prompt, amount = 1, resolution = "1024x1024", style = "realistic" } = body;
+    const { prompt, amount = 1, style = "realistic" } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -169,33 +172,32 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt is required", { status: 400 });
     }
 
-    if (!resolution) {
-      return new NextResponse("Resolution is required", { status: 400 });
-    }
+    // Generate enhanced prompt
+    const enhancedPrompt = processPrompt(prompt, style);
 
-    // Verify Redis connection early
-    const redisConnected = await verifyRedisConnection();
-    if (!redisConnected) {
-      console.warn('[REDIS_WARNING] Redis connection failed, proceeding without caching');
-    }
+    // Disabled Redis caching
+    // const redisConnected = await verifyRedisConnection();
+    // if (!redisConnected) {
+    //   console.warn('[REDIS_WARNING] Redis connection failed, proceeding without caching');
+    // }
 
-    // Check for cached result
-    const cacheKey = generateCacheKey(prompt, style, resolution);
-    let cachedResult = null;
+    // Commented out cache checking
+    // const cacheKey = generateCacheKey(enhancedPrompt);
+    // let cachedResult = null;
     
-    if (redisConnected) {
-      try {
-        cachedResult = await redis.get(cacheKey);
-      } catch (error: any) {
-        console.error('[REDIS_CACHE_ERROR]:', error?.message || 'Unknown error');
-        // Continue without cache on error
-      }
-    }
+    // if (redisConnected) {
+    //   try {
+    //     cachedResult = await redis.get(cacheKey);
+    //   } catch (error: any) {
+    //     console.error('[REDIS_CACHE_ERROR]:', error?.message || 'Unknown error');
+    //     // Continue without cache on error
+    //   }
+    // }
     
-    if (cachedResult) {
-      console.log('[CACHE_HIT] Returning cached result');
-      return new NextResponse(JSON.stringify(cachedResult));
-    }
+    // if (cachedResult) {
+    //   console.log('[CACHE_HIT] Returning cached result');
+    //   return new NextResponse(JSON.stringify(cachedResult));
+    // }
 
     const isPro = await checkSubscription();
     const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.IMAGE_GENERATION);
@@ -211,14 +213,10 @@ export async function POST(req: Request) {
           apiKey: process.env.OPENAI_API_KEY,
         });
 
-        const enhancedPrompt = processPrompt(prompt, style);
         const response = await openai.images.generate({
           model: "dall-e-3",
-          prompt: `${prompt}. Style: ${style}.`,
+          prompt: enhancedPrompt,
           n: Number(amount),
-          size: resolution === "1024x1024" ? "1024x1024" : 
-                resolution === "1792x1024" ? "1792x1024" :
-                "1024x1024", // Default to square if unsupported size
           quality: "standard",
         });
 
@@ -232,17 +230,17 @@ export async function POST(req: Request) {
       await incrementFeatureUsage(FEATURE_TYPES.IMAGE_GENERATION);
     }
 
-    // Cache the successful result
-    if (redisConnected) {
-      try {
-        await redis.set(cacheKey, JSON.stringify(result.data), {
-          ex: CACHE_TTL
-        });
-      } catch (error: any) {
-        console.error('[REDIS_CACHE_SET_ERROR]:', error?.message || 'Unknown error');
-        // Continue without caching on error
-      }
-    }
+    // Commented out cache saving
+    // if (redisConnected) {
+    //   try {
+    //     await redis.set(cacheKey, JSON.stringify(result.data), {
+    //       ex: CACHE_TTL
+    //     });
+    //   } catch (error: any) {
+    //     console.error('[REDIS_CACHE_SET_ERROR]:', error?.message || 'Unknown error');
+    //     // Continue without caching on error
+    //   }
+    // }
 
     return new NextResponse(JSON.stringify(result.data));
   } catch (error: any) {

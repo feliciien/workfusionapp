@@ -2,24 +2,35 @@
 
 import * as z from "zod";
 import axios from "axios";
-import { Download, ImageIcon, Wand2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Empty } from "@/components/empty";
-import { Heading } from "@/components/heading";
 import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardFooter } from "@/components/ui/card";
 import useProModal from "@/hooks/use-pro-modal";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 import { formSchema } from "./constants";
-import { cn } from "@/lib/utils";
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 
@@ -43,7 +54,6 @@ const ImagePage = () => {
     defaultValues: {
       prompt: "",
       amount: "1",
-      resolution: "1024x1024",
       style: "realistic",
     },
   });
@@ -137,7 +147,7 @@ const ImagePage = () => {
               control={form.control}
               name="style"
               render={({ field }) => (
-                <FormItem className="col-span-12 lg:col-span-6">
+                <FormItem className="col-span-12">
                   <FormLabel>Style</FormLabel>
                   <Select
                     disabled={isLoading}
@@ -153,37 +163,12 @@ const ImagePage = () => {
                     <SelectContent>
                       <SelectItem value="realistic">Realistic</SelectItem>
                       <SelectItem value="artistic">Artistic</SelectItem>
-                      <SelectItem value="anime">Anime</SelectItem>
-                      <SelectItem value="digital-art">Digital Art</SelectItem>
-                      <SelectItem value="illustration">Illustration</SelectItem>
+                      <SelectItem value="digital">Digital Art</SelectItem>
+                      <SelectItem value="vintage">Vintage</SelectItem>
                       <SelectItem value="minimalist">Minimalist</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="resolution"
-              render={({ field }) => (
-                <FormItem className="col-span-12 lg:col-span-6">
-                  <FormLabel>Resolution</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue defaultValue={field.value} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="256x256">256x256</SelectItem>
-                      <SelectItem value="512x512">512x512</SelectItem>
-                      <SelectItem value="1024x1024">1024x1024</SelectItem>
+                      <SelectItem value="fantasy">Fantasy</SelectItem>
+                      <SelectItem value="comic">Comic</SelectItem>
+                      <SelectItem value="cinematic">Cinematic</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -200,7 +185,9 @@ const ImagePage = () => {
             <Loader />
           </div>
         )}
-        {images.length === 0 && !isLoading && <Empty label="No images generated." />}
+        {images.length === 0 && !isLoading && (
+          <Empty label="No images generated." />
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
           {images.map((src) => (
             <Card key={src} className="rounded-lg overflow-hidden">

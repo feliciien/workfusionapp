@@ -5,12 +5,21 @@ export const formSchema = z.object({
     message: "Image prompt is required",
   }),
   amount: z.string().min(1),
-  resolution: z.enum(["1024x1024", "1792x1024", "1024x1792"], {
-    required_error: "Please select a resolution",
-  }),
-  style: z.enum(["realistic", "artistic", "digital", "vintage", "minimalist", "fantasy", "comic", "cinematic"], {
-    required_error: "Please select a style",
-  }),
+  style: z.enum(
+    [
+      "realistic",
+      "artistic",
+      "digital",
+      "vintage",
+      "minimalist",
+      "fantasy",
+      "comic",
+      "cinematic",
+    ],
+    {
+      required_error: "Please select a style",
+    }
+  ),
 });
 
 export const amountOptions = [
@@ -36,20 +45,7 @@ export const amountOptions = [
   },
 ];
 
-export const resolutionOptions = [
-  {
-    value: "256x256",
-    label: "256x256",
-  },
-  {
-    value: "512x512",
-    label: "512x512",
-  },
-  {
-    value: "1024x1024",
-    label: "1024x1024",
-  },
-];
+// Removed resolutionOptions since resolutions are no longer supported
 
 export const styleOptions = [
   {
