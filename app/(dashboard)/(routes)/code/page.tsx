@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Code, Copy, Check, RefreshCw, Maximize2, Minimize2, Download, Share2, Bookmark, BookmarkCheck, RotateCcw } from "lucide-react";
+import {
+  Code,
+  Copy,
+  Check,
+  RefreshCw,
+  Download,
+  Share2,
+  Bookmark,
+  RotateCcw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import ReactMarkdown from "react-markdown";
@@ -15,13 +24,24 @@ import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import useProModal from "@/hooks/use-pro-modal";
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tools } from "@/app/(dashboard)/(routes)/dashboard/config";
 import { ToolPage } from "@/components/tool-page";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { sql } from "@codemirror/lang-sql";
+import { githubDark } from "@uiw/codemirror-theme-github";
+import { langs } from "@uiw/codemirror-extensions-langs";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -44,24 +64,27 @@ const formSchema = z.object({
 });
 
 const LANGUAGES = {
-  typescript: { name: 'TypeScript', mode: 'text/typescript', icon: '📘' },
-  javascript: { name: 'JavaScript', mode: 'text/javascript', icon: '📒' },
-  python: { name: 'Python', mode: 'text/x-python', icon: '🐍' },
-  html: { name: 'HTML', mode: 'text/html', icon: '🌐' },
-  css: { name: 'CSS', mode: 'text/css', icon: '🎨' },
-  sql: { name: 'SQL', mode: 'text/x-sql', icon: '📊' },
+  typescript: {
+    name: "TypeScript",
+    extension: javascript({ typescript: true }),
+    icon: "📘",
+  },
+  javascript: { name: "JavaScript", extension: javascript(), icon: "📒" },
+  python: { name: "Python", extension: python(), icon: "🐍" },
+  html: { name: "HTML", extension: html(), icon: "🌐" },
+  css: { name: "CSS", extension: css(), icon: "🎨" },
+  sql: { name: "SQL", extension: sql(), icon: "📊" },
 };
+
+type LanguageKey = keyof typeof LANGUAGES;
 
 const CodePage = () => {
   const proModal = useProModal();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [previewCode, setPreviewCode] = useState("");
-  const [language, setLanguage] = useState("typescript");
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const [codeContent, setCodeContent] = useState("");
+  const [language, setLanguage] = useState<LanguageKey>("typescript");
   const [isLoading, setIsLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [savedCodes, setSavedCodes] = useState<SavedCode[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -70,7 +93,7 @@ const CodePage = () => {
 
   useEffect(() => {
     const loadSavedCodes = () => {
-      const saved = localStorage.getItem('savedCodes');
+      const saved = localStorage.getItem("savedCodes");
       if (saved) {
         setSavedCodes(JSON.parse(saved));
       }
@@ -79,7 +102,7 @@ const CodePage = () => {
   }, []);
 
   const saveCode = () => {
-    if (!previewCode) {
+    if (!codeContent) {
       toast.error("No code to save");
       return;
     }
@@ -95,42 +118,40 @@ const CodePage = () => {
     const newCode: SavedCode = {
       id: Date.now().toString(),
       title: codeTitle,
-      code: previewCode,
+      code: codeContent,
       language,
       timestamp: new Date(),
     };
 
     const updatedCodes = [...savedCodes, newCode];
     setSavedCodes(updatedCodes);
-    localStorage.setItem('savedCodes', JSON.stringify(updatedCodes));
+    localStorage.setItem("savedCodes", JSON.stringify(updatedCodes));
     setShowSaveDialog(false);
     setCodeTitle("");
     toast.success("Code saved successfully");
   };
 
   const loadSavedCode = (code: SavedCode) => {
-    setPreviewCode(code.code);
-    setLanguage(code.language);
-    updatePreview(code.code);
-    setShowHistory(false);
+    setCodeContent(code.code);
+    setLanguage(code.language as LanguageKey);
     toast.success("Code loaded successfully");
   };
 
   const deleteSavedCode = (id: string) => {
-    const updatedCodes = savedCodes.filter(code => code.id !== id);
+    const updatedCodes = savedCodes.filter((code) => code.id !== id);
     setSavedCodes(updatedCodes);
-    localStorage.setItem('savedCodes', JSON.stringify(updatedCodes));
+    localStorage.setItem("savedCodes", JSON.stringify(updatedCodes));
     toast.success("Code deleted successfully");
   };
 
   const shareCode = async () => {
-    if (!previewCode) {
+    if (!codeContent) {
       toast.error("No code to share");
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(previewCode);
+      await navigator.clipboard.writeText(codeContent);
       toast.success("Code copied to clipboard for sharing");
     } catch (error) {
       toast.error("Failed to copy code");
@@ -138,14 +159,14 @@ const CodePage = () => {
   };
 
   const downloadCode = () => {
-    if (!previewCode) {
+    if (!codeContent) {
       toast.error("No code to download");
       return;
     }
 
-    const blob = new Blob([previewCode], { type: 'text/plain' });
+    const blob = new Blob([codeContent], { type: "text/plain" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `code.${language}`;
     document.body.appendChild(a);
@@ -160,14 +181,15 @@ const CodePage = () => {
     const newMessages = messages.slice(0, -2); // Remove last user and assistant message
     setMessages(newMessages);
     if (newMessages.length === 0) {
-      setPreviewCode("");
+      setCodeContent("");
     } else {
-      const lastAssistantMessage = newMessages.findLast(m => m.role === "assistant");
+      const lastAssistantMessage = [...newMessages]
+        .reverse()
+        .find((m) => m.role === "assistant");
       if (lastAssistantMessage) {
         const code = extractCode(lastAssistantMessage.content);
         if (code) {
-          setPreviewCode(code);
-          updatePreview(code);
+          setCodeContent(code);
         }
       }
     }
@@ -180,16 +202,7 @@ const CodePage = () => {
     },
   });
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  const codeTool = tools.find(t => t.href === '/code');
+  const codeTool = tools.find((t) => t.href === "/code");
 
   if (!codeTool) {
     return (
@@ -206,11 +219,11 @@ const CodePage = () => {
 
       const userMessage: Message = {
         role: "user",
-        content: `Generate ${LANGUAGES[language as keyof typeof LANGUAGES].name} code for: ${values.prompt}`,
+        content: `Generate ${LANGUAGES[language].name} code for: ${values.prompt}`,
       };
 
       const newMessages = [...messages, userMessage];
-      
+
       const response = await axios.post("/api/code", {
         messages: newMessages,
         language,
@@ -219,16 +232,14 @@ const CodePage = () => {
       if (response.data) {
         const assistantMessage = response.data;
         setMessages((current) => [...current, userMessage, assistantMessage]);
-        
+
         const code = extractCode(assistantMessage.content);
         if (code) {
-          setPreviewCode(code);
-          updatePreview(code);
+          setCodeContent(code);
         }
       }
 
       form.reset();
-
     } catch (error: any) {
       if (error?.response?.status === 403) {
         proModal.onOpen();
@@ -241,138 +252,35 @@ const CodePage = () => {
   };
 
   const extractCode = (content: string): string => {
-    const codeBlockRegex = /```(?:\w+)?\n([\s\S]*?)\n```/g;
+    const codeBlockRegex = new RegExp(
+      `\`\`\`${language}\n([\\s\\S]*?)\n\`\`\``,
+      "g"
+    );
     const matches = Array.from(content.matchAll(codeBlockRegex));
-    return matches.length > 0 ? matches.map(match => match[1].trim()).join('\n\n') : '';
-  };
-
-  const updatePreview = (code: string) => {
-    try {
-      const iframe = iframeRef.current;
-      if (!iframe) return;
-
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) return;
-
-      iframeDoc.open();
-      
-      if (language === 'html' || code.includes('<!DOCTYPE html>') || code.includes('<html>')) {
-        iframeDoc.write(code);
-      } else {
-        iframeDoc.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
-              <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"><\/script>
-              <style>
-                body { 
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                  padding: 20px;
-                  line-height: 1.6;
-                  color: #333;
-                  background: #1a1a1a;
-                  color: #fff;
-                }
-                pre {
-                  background: #2d2d2d;
-                  padding: 15px;
-                  border-radius: 8px;
-                  overflow-x: auto;
-                  margin: 20px 0;
-                }
-                code {
-                  font-family: 'Fira Code', 'Consolas', monospace;
-                }
-                .error { 
-                  color: #ff4444;
-                  background: rgba(255,68,68,0.1);
-                  padding: 12px;
-                  border-radius: 6px;
-                  border-left: 4px solid #ff4444;
-                  margin: 10px 0;
-                }
-                .output {
-                  background: #2d2d2d;
-                  padding: 15px;
-                  border-radius: 8px;
-                  margin-top: 20px;
-                  border: 1px solid #444;
-                }
-                .success {
-                  color: #00ff00;
-                  background: rgba(0,255,0,0.1);
-                  padding: 12px;
-                  border-radius: 6px;
-                  border-left: 4px solid #00ff00;
-                  margin: 10px 0;
-                }
-              </style>
-            </head>
-            <body>
-              <pre><code class="language-${language}">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-              <div id="output" class="output"></div>
-              <script>
-                hljs.highlightAll();
-                try {
-                  const result = eval(\`${code}\`);
-                  if (result !== undefined) {
-                    document.getElementById('output').innerHTML = 
-                      '<div class="success">Output:</div><pre>' + 
-                      JSON.stringify(result, null, 2) + '</pre>';
-                  }
-                } catch (error) {
-                  document.getElementById('output').innerHTML = 
-                    '<div class="error">Error: ' + error.message + '</div>';
-                }
-              </script>
-            </body>
-          </html>
-        `);
-      }
-      
-      iframeDoc.close();
-    } catch (error) {
-      console.error('Preview error:', error);
-      toast.error('Error updating preview');
-    }
+    return matches.length > 0
+      ? matches.map((match) => match[1].trim()).join("\n\n")
+      : "";
   };
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(previewCode);
+      await navigator.clipboard.writeText(codeContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('Code copied to clipboard');
+      toast.success("Code copied to clipboard");
     } catch (error) {
-      toast.error('Failed to copy code');
+      toast.error("Failed to copy code");
     }
-  };
-
-  const toggleFullscreen = () => {
-    if (!previewRef.current) return;
-
-    if (!isFullscreen) {
-      if (previewRef.current.requestFullscreen) {
-        previewRef.current.requestFullscreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    }
-    setIsFullscreen(!isFullscreen);
   };
 
   return (
     <ToolPage tool={codeTool} isLoading={isLoading}>
       <div className="flex h-full">
-        <div className="flex flex-col flex-1 h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-900 to-black relative overflow-hidden">
+        <div className="flex flex-col flex-1 h-full bg-gradient-to-b from-gray-900 via-gray-900 to-black relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-purple-500/5 pointer-events-none" />
-            
+
+          {/* Header */}
           <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 z-10">
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -382,8 +290,12 @@ const CodePage = () => {
                 </div>
               </div>
               <div>
-                <h1 className="text-xl font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Code Generator</h1>
-                <p className="text-sm text-white/40">Generate code in multiple languages</p>
+                <h1 className="text-xl font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                  Code Generator
+                </h1>
+                <p className="text-sm text-white/40">
+                  Generate and edit code with ease
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -406,31 +318,24 @@ const CodePage = () => {
                 <Bookmark className="w-4 h-4 mr-2" />
                 History
               </Button>
-              <Select
+              <select
+                aria-label="Select language"
                 value={language}
-                onValueChange={setLanguage}
+                onChange={(e) =>
+                  setLanguage(e.target.value as LanguageKey)
+                }
+                className="bg-black/40 border-white/10 text-white/80 hover:bg-black/60 transition-colors rounded-md px-3 py-2 focus:outline-none"
               >
-                <SelectTrigger className="w-[180px] bg-black/40 border-white/10 text-white/80 hover:bg-black/60 transition-colors">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent className="bg-black/90 border-white/10">
-                  {Object.entries(LANGUAGES).map(([key, value]) => (
-                    <SelectItem 
-                      key={key} 
-                      value={key} 
-                      className="text-white/80 hover:bg-white/5 focus:bg-white/5 focus:text-white"
-                    >
-                      <div className="flex items-center">
-                        <span className="mr-2">{value.icon}</span>
-                        {value.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {Object.entries(LANGUAGES).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.icon} {value.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
+          {/* Message List */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
@@ -443,9 +348,12 @@ const CodePage = () => {
                         <Code className="w-12 h-12 text-blue-400" />
                       </div>
                     </div>
-                    <h3 className="text-2xl font-semibold mt-6 mb-3 bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">Start Coding</h3>
+                    <h3 className="text-2xl font-semibold mt-6 mb-3 bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">
+                      Start Coding
+                    </h3>
                     <p className="text-white/40 max-w-sm mb-8">
-                      Generate code in your preferred programming language. Just describe what you want to create.
+                      Generate and edit code in your preferred programming
+                      language.
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center">
                       {Object.entries(LANGUAGES).map(([key, value]) => (
@@ -453,10 +361,11 @@ const CodePage = () => {
                           key={key}
                           variant="ghost"
                           size="sm"
-                          onClick={() => setLanguage(key)}
+                          onClick={() => setLanguage(key as LanguageKey)}
                           className={cn(
                             "hover:bg-white/5 text-white/60 hover:text-white transition-all duration-200",
-                            language === key && "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                            language === key &&
+                              "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
                           )}
                         >
                           {value.name}
@@ -471,26 +380,33 @@ const CodePage = () => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={cn(
-                      "relative group",
-                      "animate-in slide-in-from-bottom-5",
-                    )}
+                    className="relative group animate-in slide-in-from-bottom-5"
                   >
-                    <div className={cn(
-                      "absolute -inset-1 rounded-2xl blur opacity-20 transition duration-200",
-                      message.role === "user" 
-                        ? "bg-gradient-to-r from-blue-500 to-purple-500 group-hover:opacity-30" 
-                        : "bg-gradient-to-r from-gray-500 to-gray-400 group-hover:opacity-30"
-                    )} />
+                    <div
+                      className={cn(
+                        "absolute -inset-1 rounded-2xl blur opacity-20 transition duration-200",
+                        message.role === "user"
+                          ? "bg-gradient-to-r from-blue-500 to-purple-500 group-hover:opacity-30"
+                          : "bg-gradient-to-r from-gray-500 to-gray-400 group-hover:opacity-30"
+                      )}
+                    />
                     <div className="relative p-6 bg-black/40 backdrop-blur-xl rounded-2xl ring-1 ring-white/10">
                       <div className="flex items-center space-x-4 mb-4">
-                        <div className={cn(
-                          "relative",
-                          message.role === "user" ? "bg-gradient-to-r from-blue-500 to-purple-500" : "bg-gradient-to-r from-gray-500 to-gray-400"
-                        )}>
+                        <div
+                          className={cn(
+                            "relative",
+                            message.role === "user"
+                              ? "bg-gradient-to-r from-blue-500 to-purple-500"
+                              : "bg-gradient-to-r from-gray-500 to-gray-400"
+                          )}
+                        >
                           <div className="absolute -inset-0.5 rounded-lg blur opacity-50"></div>
                           <div className="relative p-1 bg-black/40 rounded-lg ring-1 ring-white/10">
-                            {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+                            {message.role === "user" ? (
+                              <UserAvatar />
+                            ) : (
+                              <BotAvatar />
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -502,33 +418,32 @@ const CodePage = () => {
                           </span>
                         </div>
                       </div>
-                      <ReactMarkdown 
-                        className="text-sm prose prose-invert max-w-full break-words whitespace-pre-wrap prose-pre:my-0"
+                      <ReactMarkdown
+                        className="text-sm prose max-w-full break-words whitespace-pre-wrap prose-pre:my-0 text-gray-200"
                         components={{
-                          pre: ({ node, ...props }) => (
-                            <div className="relative my-3 group">
-                              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur opacity-30 group-hover:opacity-40 transition duration-200"></div>
-                              <pre 
-                                {...props} 
-                                className="relative bg-black/40 backdrop-blur-xl rounded-xl p-4 overflow-x-auto whitespace-pre-wrap ring-1 ring-white/10"
-                              />
-                              <Button
-                                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  const code = props.children?.toString() || "";
-                                  navigator.clipboard.writeText(code);
-                                  toast.success("Code copied to clipboard");
-                                }}
+                          code: ({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) => {
+                            return inline ? (
+                              <code
+                                {...props}
+                                className="bg-black/40 rounded-md px-1.5 py-0.5 whitespace-pre-wrap text-white/80 ring-1 ring-white/10"
                               >
-                                <Copy className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ),
-                          code: ({ node, ...props }) => (
-                            <code {...props} className="bg-black/40 rounded-md px-1.5 py-0.5 whitespace-pre-wrap text-white/80 ring-1 ring-white/10" />
-                          ),
+                                {children}
+                              </code>
+                            ) : (
+                              <CodeMirror
+                                value={codeContent}
+                                extensions={[LANGUAGES[language].extension]}
+                                theme={githubDark}
+                                readOnly
+                              />
+                            );
+                          },
                         }}
                       >
                         {message.content}
@@ -540,6 +455,7 @@ const CodePage = () => {
             )}
           </div>
 
+          {/* Input Form */}
           <div className="border-t border-white/5 bg-black/20 backdrop-blur-xl px-8 py-6">
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <div className="flex items-center space-x-4">
@@ -548,11 +464,11 @@ const CodePage = () => {
                   <div className="relative">
                     <Input
                       disabled={isLoading}
-                      placeholder={`Generate ${LANGUAGES[language as keyof typeof LANGUAGES].name} code for...`}
+                      placeholder={`Generate ${LANGUAGES[language].name} code for...`}
                       {...form.register("prompt")}
                       className="w-full bg-black/40 border-white/10 text-white/80 placeholder:text-white/20 focus:border-blue-500/50 focus:ring-blue-500/20 pr-24"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           form.handleSubmit(onSubmit)();
                         }
@@ -565,8 +481,8 @@ const CodePage = () => {
                     )}
                   </div>
                 </div>
-                <Button 
-                  disabled={isLoading} 
+                <Button
+                  disabled={isLoading}
                   type="submit"
                   className="relative group"
                 >
@@ -585,15 +501,12 @@ const CodePage = () => {
           </div>
         </div>
 
-        <div 
-          ref={previewRef}
-          className={cn(
-            "border-l border-white/5 bg-black",
-            isFullscreen ? "w-screen h-screen fixed inset-0 z-50" : "w-[50%]"
-          )}
-        >
+        {/* Code Editor */}
+        <div className="w-[50%] border-l border-white/5 bg-black">
           <div className="flex items-center justify-between p-6 border-b border-white/5 bg-black/40 backdrop-blur-xl">
-            <h2 className="text-lg font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Preview</h2>
+            <h2 className="text-lg font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+              Code Editor
+            </h2>
             <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
@@ -625,35 +538,25 @@ const CodePage = () => {
                 onClick={copyToClipboard}
                 className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
               >
-                {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleFullscreen}
-                className="h-8 w-8 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-400" />
                 ) : (
-                  <Maximize2 className="h-4 w-4" />
+                  <Copy className="h-4 w-4" />
                 )}
               </Button>
             </div>
           </div>
-          <div className={cn(
-            "h-[calc(100%-4rem)]",
-            isFullscreen ? "w-full" : ""
-          )}>
-            <iframe
-              ref={iframeRef}
-              className="w-full h-full bg-white"
-              title="Code Preview"
-              sandbox="allow-scripts allow-same-origin"
+          <div className="h-[calc(100%-4rem)] p-4">
+            <CodeMirror
+              value={codeContent}
+              extensions={[LANGUAGES[language].extension]}
+              theme={githubDark}
+              onChange={(value) => setCodeContent(value)}
             />
           </div>
         </div>
 
+        {/* Save Dialog */}
         <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
           <DialogContent className="bg-gray-900 border border-white/10">
             <DialogHeader>
@@ -664,7 +567,9 @@ const CodePage = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-white">Title</Label>
+                <Label htmlFor="title" className="text-white">
+                  Title
+                </Label>
                 <Input
                   id="title"
                   placeholder="Enter a title for your code"
@@ -682,10 +587,7 @@ const CodePage = () => {
               >
                 Cancel
               </Button>
-              <Button
-                onClick={handleSaveCode}
-                className="relative group"
-              >
+              <Button onClick={handleSaveCode} className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition"></div>
                 <span className="relative px-4 py-1.5 bg-black rounded-lg text-white ring-1 ring-white/10 font-medium">
                   Save
@@ -695,6 +597,7 @@ const CodePage = () => {
           </DialogContent>
         </Dialog>
 
+        {/* History Dialog */}
         <Dialog open={showHistory} onOpenChange={setShowHistory}>
           <DialogContent className="bg-gray-900 border border-white/10 max-w-2xl">
             <DialogHeader>
@@ -705,7 +608,9 @@ const CodePage = () => {
             </DialogHeader>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
               {savedCodes.length === 0 ? (
-                <p className="text-white/40 text-center py-4">No saved codes yet</p>
+                <p className="text-white/40 text-center py-4">
+                  No saved codes yet
+                </p>
               ) : (
                 savedCodes.map((code) => (
                   <div
@@ -716,7 +621,9 @@ const CodePage = () => {
                       <div>
                         <h3 className="text-white font-medium">{code.title}</h3>
                         <p className="text-white/40 text-sm">
-                          {LANGUAGES[code.language as keyof typeof LANGUAGES].icon} {LANGUAGES[code.language as keyof typeof LANGUAGES].name} • {new Date(code.timestamp).toLocaleDateString()}
+                          {LANGUAGES[code.language as LanguageKey].icon}{" "}
+                          {LANGUAGES[code.language as LanguageKey].name} •{" "}
+                          {new Date(code.timestamp).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -759,7 +666,7 @@ const CodePage = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.2);
         }
-        
+
         @keyframes slide-in-from-bottom-5 {
           from {
             transform: translateY(5%);
@@ -770,9 +677,10 @@ const CodePage = () => {
             opacity: 1;
           }
         }
-        
+
         .animate-in {
-          animation: slide-in-from-bottom-5 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+          animation: slide-in-from-bottom-5 0.4s
+            cubic-bezier(0.2, 0.8, 0.2, 1);
         }
       `}</style>
     </ToolPage>
