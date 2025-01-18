@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import {
@@ -41,7 +41,6 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { sql } from "@codemirror/lang-sql";
 import { githubDark } from "@uiw/codemirror-theme-github";
-import { langs } from "@uiw/codemirror-extensions-langs";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -101,15 +100,29 @@ const CodePage = () => {
     loadSavedCodes();
   }, []);
 
-  const saveCode = () => {
+  const extractCode = useCallback(
+    (content: string): string => {
+      const codeBlockRegex = new RegExp(
+        `\`\`\`${language}\n([\\s\\S]*?)\n\`\`\``,
+        "g"
+      );
+      const matches = Array.from(content.matchAll(codeBlockRegex));
+      return matches.length > 0
+        ? matches.map((match) => match[1].trim()).join("\n\n")
+        : "";
+    },
+    [language]
+  );
+
+  const saveCode = useCallback(() => {
     if (!codeContent) {
       toast.error("No code to save");
       return;
     }
     setShowSaveDialog(true);
-  };
+  }, [codeContent]);
 
-  const handleSaveCode = () => {
+  const handleSaveCode = useCallback(() => {
     if (!codeTitle.trim()) {
       toast.error("Please enter a title");
       return;
@@ -129,22 +142,25 @@ const CodePage = () => {
     setShowSaveDialog(false);
     setCodeTitle("");
     toast.success("Code saved successfully");
-  };
+  }, [codeTitle, codeContent, language, savedCodes]);
 
-  const loadSavedCode = (code: SavedCode) => {
+  const loadSavedCode = useCallback((code: SavedCode) => {
     setCodeContent(code.code);
     setLanguage(code.language as LanguageKey);
     toast.success("Code loaded successfully");
-  };
+  }, []);
 
-  const deleteSavedCode = (id: string) => {
-    const updatedCodes = savedCodes.filter((code) => code.id !== id);
-    setSavedCodes(updatedCodes);
-    localStorage.setItem("savedCodes", JSON.stringify(updatedCodes));
-    toast.success("Code deleted successfully");
-  };
+  const deleteSavedCode = useCallback(
+    (id: string) => {
+      const updatedCodes = savedCodes.filter((code) => code.id !== id);
+      setSavedCodes(updatedCodes);
+      localStorage.setItem("savedCodes", JSON.stringify(updatedCodes));
+      toast.success("Code deleted successfully");
+    },
+    [savedCodes]
+  );
 
-  const shareCode = async () => {
+  const shareCode = useCallback(async () => {
     if (!codeContent) {
       toast.error("No code to share");
       return;
@@ -156,9 +172,9 @@ const CodePage = () => {
     } catch (error) {
       toast.error("Failed to copy code");
     }
-  };
+  }, [codeContent]);
 
-  const downloadCode = () => {
+  const downloadCode = useCallback(() => {
     if (!codeContent) {
       toast.error("No code to download");
       return;
@@ -174,9 +190,9 @@ const CodePage = () => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     toast.success("Code downloaded successfully");
-  };
+  }, [codeContent, language]);
 
-  const undoLastMessage = () => {
+  const undoLastMessage = useCallback(() => {
     if (messages.length === 0) return;
     const newMessages = messages.slice(0, -2); // Remove last user and assistant message
     setMessages(newMessages);
@@ -193,7 +209,18 @@ const CodePage = () => {
         }
       }
     }
-  };
+  }, [messages, extractCode]);
+
+  const copyToClipboard = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(codeContent);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Code copied to clipboard");
+    } catch (error) {
+      toast.error("Failed to copy code");
+    }
+  }, [codeContent]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -201,17 +228,6 @@ const CodePage = () => {
       prompt: "",
     },
   });
-
-  const codeTool = tools.find((t) => t.href === "/code");
-
-  if (!codeTool) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-red-500">Error</h2>
-        <p>Code tool configuration not found</p>
-      </div>
-    );
-  }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -251,30 +267,13 @@ const CodePage = () => {
     }
   };
 
-  const extractCode = (content: string): string => {
-    const codeBlockRegex = new RegExp(
-      `\`\`\`${language}\n([\\s\\S]*?)\n\`\`\``,
-      "g"
-    );
-    const matches = Array.from(content.matchAll(codeBlockRegex));
-    return matches.length > 0
-      ? matches.map((match) => match[1].trim()).join("\n\n")
-      : "";
-  };
+  const codeTool = tools.find((t) => t.href === "/code");
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(codeContent);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Code copied to clipboard");
-    } catch (error) {
-      toast.error("Failed to copy code");
-    }
-  };
-
-  return (
+  return codeTool ? (
     <ToolPage tool={codeTool} isLoading={isLoading}>
+      {/* Full JSX content goes here */}
+
+      {/* Header */}
       <div className="flex h-full">
         <div className="flex flex-col flex-1 h-full bg-gradient-to-b from-gray-900 via-gray-900 to-black relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] pointer-events-none" />
@@ -321,9 +320,7 @@ const CodePage = () => {
               <select
                 aria-label="Select language"
                 value={language}
-                onChange={(e) =>
-                  setLanguage(e.target.value as LanguageKey)
-                }
+                onChange={(e) => setLanguage(e.target.value as LanguageKey)}
                 className="bg-black/40 border-white/10 text-white/80 hover:bg-black/60 transition-colors rounded-md px-3 py-2 focus:outline-none"
               >
                 {Object.entries(LANGUAGES).map(([key, value]) => (
@@ -414,7 +411,9 @@ const CodePage = () => {
                             {message.role === "user" ? "You" : "Assistant"}
                           </span>
                           <span className="text-xs text-white/30">
-                            {new Date().toLocaleTimeString()}
+                            {message.timestamp
+                              ? message.timestamp.toLocaleTimeString()
+                              : new Date().toLocaleTimeString()}
                           </span>
                         </div>
                       </div>
@@ -601,7 +600,9 @@ const CodePage = () => {
         <Dialog open={showHistory} onOpenChange={setShowHistory}>
           <DialogContent className="bg-gray-900 border border-white/10 max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-white">Saved Code History</DialogTitle>
+              <DialogTitle className="text-white">
+                Saved Code History
+              </DialogTitle>
               <DialogDescription className="text-white/60">
                 View and manage your saved code snippets.
               </DialogDescription>
@@ -619,7 +620,9 @@ const CodePage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-white font-medium">{code.title}</h3>
+                        <h3 className="text-white font-medium">
+                          {code.title}
+                        </h3>
                         <p className="text-white/40 text-sm">
                           {LANGUAGES[code.language as LanguageKey].icon}{" "}
                           {LANGUAGES[code.language as LanguageKey].name} •{" "}
@@ -652,6 +655,8 @@ const CodePage = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Styles */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -684,6 +689,11 @@ const CodePage = () => {
         }
       `}</style>
     </ToolPage>
+  ) : (
+    <div className="p-8 text-center">
+      <h2 className="text-2xl font-bold text-red-500">Error</h2>
+      <p>Code tool configuration not found</p>
+    </div>
   );
 };
 
