@@ -5,12 +5,6 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: [
-      'oaidalleapiprodscus.blob.core.windows.net',
-      'lh3.googleusercontent.com', // Added Google user content domain
-      'via.placeholder.com',
-      'randomuser.me', // Added randomuser.me for profile images
-    ],
     remotePatterns: [
       {
         protocol: 'https',
@@ -23,6 +17,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'randomuser.me',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
       },
     ],
   },
@@ -60,5 +58,7 @@ const nextConfig = {
     ];
   },
 };
+
+module.exports = withBundleAnalyzer(nextConfig);
 
 module.exports = withBundleAnalyzer(nextConfig);

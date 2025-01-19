@@ -1,3 +1,5 @@
+// app/(dashboard)/(routes)/image/page.tsx
+
 "use client";
 
 import * as z from "zod";
@@ -5,15 +7,13 @@ import axios from "axios";
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
   FormControl,
-  FormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -42,6 +42,7 @@ const ImagePage = () => {
     Array<{
       prompt: string;
       style: string;
+      amount: number;
       url: string;
     }>
   >([]);
@@ -53,12 +54,14 @@ const ImagePage = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: "",
-      amount: "1",
+      amount: 1,
       style: "realistic",
     },
   });
 
-  const isLoading = form.formState.isSubmitting;
+  const { handleSubmit, formState, control } = form;
+
+  const isLoading = formState.isSubmitting;
 
   useEffect(() => {
     const checkProStatus = async () => {
@@ -83,12 +86,13 @@ const ImagePage = () => {
   }, [imageTool, isPro, router, proModal]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("Form submitted", values); // Existing logging
     try {
       setImages([]);
 
       const response = await axios.post("/api/image", values);
 
-      const urls = response.data.map((image: { url: string }) => image.url);
+      const urls = response.data.data.map((image: { url: string }) => image.url);
 
       setImages(urls);
       setImageHistory((prev) => [
@@ -96,6 +100,7 @@ const ImagePage = () => {
         ...urls.map((url: string) => ({
           prompt: values.prompt,
           style: values.style,
+          amount: values.amount,
           url,
         })),
       ]);
@@ -110,6 +115,11 @@ const ImagePage = () => {
     }
   };
 
+  // Added onError handler to log validation errors
+  const onError = (errors: any) => {
+    console.log("Form errors", errors);
+  };
+
   if (!imageTool) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -121,65 +131,96 @@ const ImagePage = () => {
   return (
     <ToolPage tool={imageTool}>
       <div>
-        <Form {...form}>
+        <FormProvider {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(onSubmit, onError)}
             className="rounded-lg border w-full p-4 px-3 md:px-6 focus-within:shadow-sm grid grid-cols-12 gap-2"
           >
-            <FormField
-              name="prompt"
-              render={({ field }) => (
-                <FormItem className="col-span-12">
-                  <FormLabel>Prompt</FormLabel>
-                  <FormControl className="m-0 p-0">
+            {/* Updated Prompt field */}
+            <FormItem className="col-span-12">
+              <FormLabel>Prompt</FormLabel>
+              <FormControl className="m-0 p-0">
+                <Controller
+                  name="prompt"
+                  control={control}
+                  render={({ field }) => (
                     <Input
                       className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                       disabled={isLoading}
                       placeholder="A picture of a horse in Swiss alps"
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="style"
-              render={({ field }) => (
-                <FormItem className="col-span-12">
-                  <FormLabel>Style</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
+                  )}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+
+            {/* Updated Style field */}
+            <FormItem className="col-span-12">
+              <FormLabel>Style</FormLabel>
+              <FormControl>
+                <Controller
+                  name="style"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      disabled={isLoading}
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      defaultValue={field.value}
+                    >
                       <SelectTrigger>
                         <SelectValue defaultValue={field.value} />
                       </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="realistic">Realistic</SelectItem>
-                      <SelectItem value="artistic">Artistic</SelectItem>
-                      <SelectItem value="digital">Digital Art</SelectItem>
-                      <SelectItem value="vintage">Vintage</SelectItem>
-                      <SelectItem value="minimalist">Minimalist</SelectItem>
-                      <SelectItem value="fantasy">Fantasy</SelectItem>
-                      <SelectItem value="comic">Comic</SelectItem>
-                      <SelectItem value="cinematic">Cinematic</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button className="col-span-12" type="submit" disabled={isLoading}>
+                      <SelectContent>
+                        <SelectItem value="realistic">Realistic</SelectItem>
+                        <SelectItem value="artistic">Artistic</SelectItem>
+                        <SelectItem value="digital">Digital Art</SelectItem>
+                        <SelectItem value="vintage">Vintage</SelectItem>
+                        <SelectItem value="minimalist">Minimalist</SelectItem>
+                        <SelectItem value="fantasy">Fantasy</SelectItem>
+                        <SelectItem value="comic">Comic</SelectItem>
+                        <SelectItem value="cinematic">Cinematic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+
+            {/* Updated Amount field */}
+            <FormItem className="col-span-12">
+              <FormLabel>Amount</FormLabel>
+              <FormControl>
+                <Controller
+                  name="amount"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      disabled={isLoading}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+
+            <button
+              className="col-span-12 bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 disabled:opacity-50"
+              type="submit"
+              disabled={isLoading}
+            >
               {isLoading ? "Generating..." : "Generate"}
-            </Button>
+            </button>
           </form>
-        </Form>
+        </FormProvider>
         {isLoading && (
           <div className="p-20">
             <Loader />
@@ -196,7 +237,9 @@ const ImagePage = () => {
                   fill
                   alt="Generated"
                   src={src}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  sizes="(max-width: 768px) 100vw,
+                      (max-width: 1200px) 50vw,
+                      33vw"
                 />
               </div>
               <CardFooter className="p-2">

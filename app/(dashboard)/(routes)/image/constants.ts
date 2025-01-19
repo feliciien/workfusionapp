@@ -4,7 +4,7 @@ export const formSchema = z.object({
   prompt: z.string().min(1, {
     message: "Image prompt is required",
   }),
-  amount: z.string().min(1),
+  amount: z.coerce.number().min(1).max(10),
   style: z.enum(
     [
       "realistic",
