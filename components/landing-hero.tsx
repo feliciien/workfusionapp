@@ -44,7 +44,7 @@ export const LandingHero = () => {
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight max-w-4xl mx-auto animate-fade-in-up">
             {isSignedIn && user?.name
               ? `Welcome back, ${user.name}!`
-              : "Unleash Your Creativity with Advanced AI Tools"}
+              : "Transform Your Business with AI-Driven Solutions"}
           </h1>
 
           {/* Modified Video Section */}
@@ -81,7 +81,7 @@ export const LandingHero = () => {
           </div>
 
           <p className="text-2xl font-semibold mt-4">
-            Empower Yourself with Cutting-Edge AI Solutions
+            Boost Efficiency and Innovation with Our Platform
           </p>
 
           <div className="text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black animate-fade-in-up-delayed">
@@ -116,7 +116,7 @@ export const LandingHero = () => {
               variant="premium"
               className="w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
-              {isSignedIn ? "Go to Dashboard" : "Get Started Now"}
+              {isSignedIn ? "Go to Dashboard" : "Join the Revolution"}
             </Button>
           </Link>
 
