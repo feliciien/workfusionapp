@@ -52,12 +52,9 @@ export async function POST(req: Request) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "o1-preview",
       messages,
-      temperature: 0.7,
       stream: false,
-      presence_penalty: 0.6,
-      frequency_penalty: 0.5,
     });
 
     if (!isPro) {
@@ -67,7 +64,7 @@ export async function POST(req: Request) {
     // Track the event
     await trackEvent(userId, featureType, {
       messageCount: messages.length,
-      model: "gpt-4",
+      model: "o1-preview",
       status: "success"
     });
 
