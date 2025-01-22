@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Code, AlertTriangle, Zap } from "lucide-react";
 import { analyzeCode, CodeAnalysis } from '@/lib/code-analyzer';
+import { O1Optimization } from './o1-optimization';
 
 interface CodeAnalysisProps {
   onAnalysis?: (analysis: CodeAnalysis) => void;
@@ -214,6 +215,15 @@ export function CodeAnalysisCard({ onAnalysis }: CodeAnalysisProps) {
           )}
         </div>
       </CardContent>
+      <CardFooter>
+        <O1Optimization 
+          code={code} 
+          onOptimizedCode={(optimizedCode) => {
+            setCode(optimizedCode);
+            handleAnalyze();
+          }} 
+        />
+      </CardFooter>
     </Card>
   );
 }
