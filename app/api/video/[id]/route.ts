@@ -1,6 +1,9 @@
-import { getAuthSession } from "@/lib/auth";
+// app/api/video/[id]/route.ts
+
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN ?? (() => {
@@ -13,7 +16,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

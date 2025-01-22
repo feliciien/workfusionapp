@@ -1,7 +1,10 @@
+// app/api/paypal/create-subscription/route.ts
+
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
@@ -91,7 +94,7 @@ async function createSubscription(plan: PlanType, user: any) {
 
 export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const user = session?.user;
 
     if (!user) {

@@ -1,11 +1,14 @@
+// app/api/network-metrics/route.ts
+
 import { NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import prismadb from "@/lib/prismadb";
 import { checkApiLimit } from "@/lib/api-limit";
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const body = await req.json();
     const { latency, bandwidth, packetLoss, status, metadata } = body;
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { searchParams } = new URL(req.url);
     const timeframe = (searchParams.get("timeframe") as "day" | "week" | "month") || "day";

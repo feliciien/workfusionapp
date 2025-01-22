@@ -1,9 +1,12 @@
-import { getAuthSession } from "@/lib/auth";
+// app/api/image/route.ts
+
 import { NextResponse } from "next/server";
 import axios from "axios";
 import { checkSubscription } from "@/lib/subscription";
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 // Style enhancements for different image types
 const stylePrompts = {
@@ -64,7 +67,7 @@ Negative prompt: ${globalNegativePrompt}`;
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const body = await req.json();
     const { prompt, amount = 1, style = "realistic" } = body;

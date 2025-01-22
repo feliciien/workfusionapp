@@ -1,6 +1,9 @@
-import { getAuthSession } from "@/lib/auth";
+// app/api/voice/route.ts
+
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 const voiceMapping: { [key: string]: string } = {
   male: "alloy",
@@ -11,7 +14,7 @@ const voiceMapping: { [key: string]: string } = {
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const isPro = await checkSubscription();
 
@@ -37,8 +40,8 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "audio/mp3",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Accept: "audio/mp3",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "tts-1",

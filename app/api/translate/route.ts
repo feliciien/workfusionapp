@@ -1,7 +1,10 @@
-import { getAuthSession } from "@/lib/auth";
+// app/api/translate/route.ts
+
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
 import OpenAI from "openai";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -9,7 +12,7 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const isPro = await checkSubscription();
 
@@ -32,17 +35,17 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style.`
+          content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style.`,
         },
         {
           role: "user",
-          content: text
-        }
-      ]
+          content: text,
+        },
+      ],
     });
 
     return NextResponse.json({
-      translation: response.choices[0].message.content
+      translation: response.choices[0].message.content,
     });
   } catch (error) {
     console.log("[TRANSLATE_ERROR]", error);

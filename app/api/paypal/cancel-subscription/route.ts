@@ -1,5 +1,8 @@
+// app/api/paypal/cancel-subscription/route.ts
+
 import { NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/auth"; // Migrated from Clerk to NextAuth
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { headers } from "next/headers";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE;
@@ -16,7 +19,7 @@ export async function POST(req: Request) {
   try {
     // Initialize headers first
     headers();
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

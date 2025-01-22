@@ -2,12 +2,20 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 
-export default function SignInPage() {
+export default function SignInPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPage />
+    </Suspense>
+  );
+}
+
+function SignInPage() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();

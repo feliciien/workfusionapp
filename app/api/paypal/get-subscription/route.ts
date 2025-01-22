@@ -1,6 +1,9 @@
+// app/api/paypal/get-subscription/route.ts
+
 export const dynamic = "force-dynamic";
 
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
@@ -18,7 +21,7 @@ async function getUserSubscriptionId(userId: string): Promise<string | null> {
 
 export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

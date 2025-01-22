@@ -1,10 +1,13 @@
-import { getAuthSession } from "@/lib/auth";
+// app/api/video/route.ts
+
 import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const isPro = await checkSubscription();
 

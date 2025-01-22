@@ -1,11 +1,14 @@
+// app/api/user/route.ts
+
 export const dynamic = "force-dynamic";
 
-import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 export async function GET() {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const user = session?.user;
 
     if (!user) {

@@ -1,5 +1,8 @@
+// app/api/paypal/capture-subscription/route.ts
+
 import { NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import prismadb from "@/lib/prismadb";
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE!;
@@ -25,7 +28,7 @@ async function associateSubscriptionWithUser(userId: string, subscriptionId: str
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const user = session?.user;
 
     if (!user) {
