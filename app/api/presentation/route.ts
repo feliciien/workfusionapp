@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 export const runtime = 'nodejs';
 
 import OpenAI from 'openai';
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 import * as mammoth from 'mammoth';
 import { Buffer, Blob } from 'buffer';
 
@@ -75,11 +76,16 @@ const formatSlides = (content: string): Slide[] => {
 
 export async function POST(req: Request) {
   try {
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.PRESENTATION),
+      checkSubscription()
+    ]);
 
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     const contentType = req.headers.get('content-type') || '';
@@ -184,7 +190,7 @@ export async function POST(req: Request) {
     }
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.PRESENTATION);
     }
 
     // Return slides directly in the expected format

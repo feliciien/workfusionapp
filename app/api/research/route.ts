@@ -3,9 +3,10 @@
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { checkSubscription } from "@/lib/subscription";
-import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { FEATURE_TYPES } from "@/constants";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -42,12 +43,14 @@ export async function POST(req: Request) {
       return new NextResponse("Messages are required", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.RESEARCH_ASSISTANT),
+      checkSubscription()
+    ]);
 
-    if (!freeTrial && !isPro) {
+    if (!hasAvailableUsage && !isPro) {
       return new NextResponse(
-        "Free trial has expired. Please upgrade to pro.",
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
         { status: 403 }
       );
     }
@@ -68,7 +71,7 @@ export async function POST(req: Request) {
     });
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.RESEARCH_ASSISTANT);
     }
 
     return NextResponse.json(response.choices[0].message);

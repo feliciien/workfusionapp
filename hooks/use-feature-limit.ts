@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { FREE_LIMITS, FEATURE_TYPES } from '@/constants';
+import { FREE_DAILY_LIMIT, FEATURE_TYPES } from '@/constants';
 
 type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];
 
@@ -30,13 +30,11 @@ export const useFeatureLimit = create<FeatureLimitStore>()(
       },
       hasReachedLimit: (featureType: FeatureType) => {
         const currentUsage = get().featureUsage[featureType] || 0;
-        const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 0;
-        return currentUsage >= limit;
+        return currentUsage >= FREE_DAILY_LIMIT;
       },
       getRemainingUsage: (featureType: FeatureType) => {
         const currentUsage = get().featureUsage[featureType] || 0;
-        const limit = FREE_LIMITS[featureType.toUpperCase() as keyof typeof FREE_LIMITS] || 0;
-        return Math.max(0, limit - currentUsage);
+        return Math.max(0, FREE_DAILY_LIMIT - currentUsage);
       },
       resetUsage: () => {
         set({ featureUsage: {} });

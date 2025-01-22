@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from 'openai';
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -69,13 +70,15 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.CONTENT_WRITER),
+      checkSubscription()
+    ]);
 
-    if (!freeTrial && !isPro) {
+    if (!hasAvailableUsage && !isPro) {
       return NextResponse.json({
         success: false,
-        error: "Free trial has expired. Please upgrade to pro."
+        error: "Free usage limit reached. Please upgrade to pro for unlimited access."
       }, { status: 403 });
     }
 
@@ -118,7 +121,7 @@ Format your response in proper markdown for optimal readability.`;
     }
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.CONTENT_WRITER);
     }
 
     return NextResponse.json({

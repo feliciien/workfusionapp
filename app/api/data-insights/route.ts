@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from 'openai';
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -27,21 +28,16 @@ export async function POST(req: Request) {
       return new NextResponse("Data is required and must be a valid JSON object", { status: 400 });
     }
 
-    let freeTrial = true;
-    let isPro = false;
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.DATA_INSIGHTS),
+      checkSubscription()
+    ]);
 
-    try {
-      freeTrial = await checkApiLimit();
-      isPro = await checkSubscription();
-    } catch (error) {
-      console.error("Error checking API limits:", error);
-      // Continue with free trial if there's an error checking limits
-      freeTrial = true;
-      isPro = false;
-    }
-
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     const response = await openai.chat.completions.create({
@@ -107,14 +103,8 @@ Return ONLY valid JSON, no additional text.`
       return NextResponse.json({ error: "Failed to parse analysis results" }, { status: 500 });
     }
 
-    // Only try to increase API limit if we successfully checked it
     if (!isPro) {
-      try {
-        await increaseApiLimit();
-      } catch (error) {
-        console.error("Error increasing API limit:", error);
-        // Continue anyway since we've already generated the content
-      }
+      await incrementFeatureUsage(FEATURE_TYPES.DATA_INSIGHTS);
     }
 
     return NextResponse.json({

@@ -63,7 +63,7 @@ const DashboardPage = () => {
     };
 
     checkStatus();
-  }, [status]);
+  }, [status, session?.user?.name]);
 
   const getFreeProgress = () => {
     return Math.min((apiLimitCount / FREE_DAILY_LIMIT) * 100, 100);

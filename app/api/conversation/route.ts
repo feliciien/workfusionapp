@@ -2,10 +2,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { trackEvent } from "@/lib/analytics";
 import { prisma } from "@/lib/prisma";
+import { FEATURE_TYPES } from "@/constants";
 
 export const runtime = 'nodejs';
 
@@ -37,12 +38,14 @@ export async function POST(req: Request) {
       return new NextResponse("Messages are required", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
-    const isPro = await checkSubscription();
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.CONTENT_WRITER),
+      checkSubscription()
+    ]);
 
-    if (!freeTrial && !isPro) {
+    if (!hasAvailableUsage && !isPro) {
       return new NextResponse(
-        JSON.stringify({ error: "Free trial has expired. Please upgrade to pro." }),
+        JSON.stringify({ error: "Free usage limit reached. Please upgrade to pro for unlimited access." }),
         { 
           status: 403,
           headers: { 
@@ -59,7 +62,7 @@ export async function POST(req: Request) {
     });
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.CONTENT_WRITER);
     }
 
     // Track the event

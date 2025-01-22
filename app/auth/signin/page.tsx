@@ -45,7 +45,7 @@ function SignInPage() {
         console.error("Sign in error:", err);
       });
     }
-  }, [status, signingIn]);
+  }, [status, signingIn, router, searchParams]);
 
   if (error) {
     return (

@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import prismadb from "@/lib/prismadb";
-import { checkApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
+import { checkSubscription } from "@/lib/subscription";
+import { FEATURE_TYPES } from "@/constants";
 
 export async function POST(req: Request) {
   try {
@@ -21,10 +23,16 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    // Optional: Check if user has available API calls
-    const hasApiLimit = await checkApiLimit();
-    if (!hasApiLimit) {
-      return new NextResponse("Free tier limit reached", { status: 403 });
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.NETWORK_ANALYSIS),
+      checkSubscription()
+    ]);
+
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     // Create network metrics entry
@@ -38,6 +46,10 @@ export async function POST(req: Request) {
         metadata: metadata || {},
       },
     });
+
+    if (!isPro) {
+      await incrementFeatureUsage(FEATURE_TYPES.NETWORK_ANALYSIS);
+    }
 
     return NextResponse.json(metrics);
   } catch (error) {

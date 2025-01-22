@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from 'next/server';
 import { checkSubscription } from "@/lib/subscription";
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
+import { FEATURE_TYPES } from "@/constants";
 
 const HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-small";
 const MAX_RETRIES = 3;          // Number of times to retry if model is busy
@@ -34,16 +35,18 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const isPro = await checkSubscription();
-    console.log("[MUSIC_API] Pro status:", { userId, isPro });
+    const [hasAvailableUsage, isPro] = await Promise.all([
+      checkFeatureLimit(FEATURE_TYPES.MUSIC_CREATION),
+      checkSubscription()
+    ]);
 
-    if (!isPro) {
-      const hasApiLimit = await checkApiLimit();
-      console.log("[MUSIC_API] API limit check:", { userId, hasApiLimit });
-      
-      if (!hasApiLimit) {
-        return new NextResponse("Free tier limit reached", { status: 403 });
-      }
+    console.log("[MUSIC_API] Access check:", { userId, isPro, hasAvailableUsage });
+
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     const { prompt } = await req.json();
@@ -82,9 +85,9 @@ export async function POST(req: Request) {
           const arrayBuffer = await response.arrayBuffer();
           const base64Audio = bufferToBase64(arrayBuffer);
 
-          // Only increase the API limit count for free users
+          // Only increment usage for free users
           if (!isPro) {
-            await increaseApiLimit();
+            await incrementFeatureUsage(FEATURE_TYPES.MUSIC_CREATION);
           }
 
           return new NextResponse(JSON.stringify({ audio: base64Audio }));
