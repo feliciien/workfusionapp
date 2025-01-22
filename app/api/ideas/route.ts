@@ -2,11 +2,12 @@
 
 import { NextResponse } from "next/server";
 import OpenAI from 'openai';
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { headers } from "next/headers";
+import { FEATURE_TYPES } from "@/constants";
 
 export const runtime = 'nodejs';
 
@@ -59,11 +60,14 @@ export async function POST(req: Request) {
       return new NextResponse("Topic is too long. Maximum length is 1000 characters", { status: 400 });
     }
 
-    const freeTrial = await checkApiLimit();
+    const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.IDEA_GENERATOR);
     const isPro = await checkSubscription();
 
-    if (!freeTrial && !isPro) {
-      return new NextResponse("Free trial has expired. Please upgrade to pro.", { status: 403 });
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     const response = await openai.chat.completions.create({
@@ -104,7 +108,7 @@ export async function POST(req: Request) {
     console.log("Formatted ideas:", ideas);
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.IDEA_GENERATOR);
     }
 
     return NextResponse.json({

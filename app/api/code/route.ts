@@ -1,9 +1,10 @@
-import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { FEATURE_TYPES } from "@/constants";
 
 interface CodeRequestBody {
   messages: OpenAI.Chat.ChatCompletionMessageParam[];
@@ -41,13 +42,14 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const [isPro, hasApiLimit] = await Promise.all([
-      checkSubscription(),
-      checkApiLimit(),
-    ]);
+    const isPro = await checkSubscription();
+    const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.CODE_GENERATION);
 
-    if (!isPro && !hasApiLimit) {
-      return new NextResponse("Free tier limit reached", { status: 403 });
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     const body: CodeRequestBody = await req.json();
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
     });
 
     if (!isPro) {
-      await increaseApiLimit();
+      await incrementFeatureUsage(FEATURE_TYPES.CODE_GENERATION);
     }
 
     const aiMessage = response.choices[0]?.message;

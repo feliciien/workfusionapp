@@ -16,19 +16,7 @@ import {
   Lightbulb
 } from "lucide-react";
 
-export const FREE_LIMITS = {
-  IMAGE_GENERATION: 100,
-  CODE_GENERATION: 100,
-  VOICE_SYNTHESIS: 100,
-  CONTENT_WORD_LIMIT: 500,
-  PRESENTATION_SLIDES: 100,
-  IDEA_LIMIT: 30
-};
-
-export const MAX_FREE_COUNTS = Object.values(FREE_LIMITS).reduce((a, b) => a + b, 0);
-
-export const FREE_CONTENT_WORD_LIMIT = FREE_LIMITS.CONTENT_WORD_LIMIT;
-export const FREE_IDEA_LIMIT = FREE_LIMITS.IDEA_LIMIT;
+export const FREE_DAILY_LIMIT = 20;  // Daily quota for free users
 
 export const FEATURE_TYPES = {
   IMAGE_GENERATION: 'image',
@@ -95,10 +83,10 @@ export const tools = [
     href: '/image',
     color: "text-pink-700",
     bgColor: "bg-pink-700/10",
-    description: "Generate stunning images with 100 free generations.",
+    description: "Generate stunning images with 20 free generations per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.IMAGE_GENERATION
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Code Generation',
@@ -106,10 +94,10 @@ export const tools = [
     href: '/code',
     color: "text-green-700",
     bgColor: "bg-green-700/10",
-    description: "Generate code using basic templates.",
+    description: "Generate code with 20 free generations per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.CODE_GENERATION
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Voice Synthesis',
@@ -117,10 +105,10 @@ export const tools = [
     href: '/voice',
     color: "text-purple-700",
     bgColor: "bg-purple-700/10",
-    description: "Convert text to speech with basic voices.",
+    description: "Convert text to speech with 20 free requests per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.VOICE_SYNTHESIS
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Art Generation',
@@ -128,9 +116,10 @@ export const tools = [
     href: '/art',
     color: "text-orange-500",
     bgColor: "bg-orange-500/10",
-    description: "Create artwork with basic styles.",
+    description: "Create artwork with 20 free generations per day.",
     free: true,
-    limitedFree: true
+    limitedFree: true,
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Content Writer',
@@ -138,10 +127,10 @@ export const tools = [
     href: '/writer',
     color: "text-blue-700",
     bgColor: "bg-blue-700/10",
-    description: "Generate content up to 500 words.",
+    description: "Generate content with 20 free requests per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.CONTENT_WORD_LIMIT
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Presentation Creator',
@@ -149,10 +138,10 @@ export const tools = [
     href: '/presentation',
     color: "text-yellow-700",
     bgColor: "bg-yellow-700/10",
-    description: "Create presentations with basic templates.",
+    description: "Create presentations with 20 free generations per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.PRESENTATION_SLIDES
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Idea Generator',
@@ -160,10 +149,10 @@ export const tools = [
     href: '/ideas',
     color: "text-purple-500",
     bgColor: "bg-purple-500/10",
-    description: "Generate up to 30 ideas per request.",
+    description: "Generate ideas with 20 free requests per day.",
     free: true,
     limitedFree: true,
-    freeLimit: FREE_LIMITS.IDEA_LIMIT
+    freeLimit: FREE_DAILY_LIMIT
   },
   {
     label: 'Video Creation',

@@ -16,7 +16,7 @@ import {
   BookOpen,
   Search
 } from "lucide-react";
-import { FEATURE_TYPES, FREE_LIMITS } from "@/constants";
+import { FEATURE_TYPES, FREE_DAILY_LIMIT } from "@/constants";
 
 export interface Tool {
   label: string;
@@ -40,7 +40,7 @@ export const tools: Tool[] = [
     bgColor: "bg-pink-700/10",
     description: "Generate stunning images from text descriptions.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.IMAGE_GENERATION,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "IMAGE_GENERATION"
   },
   {
@@ -51,7 +51,7 @@ export const tools: Tool[] = [
     href: '/code',
     description: "Generate code and get programming help.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.CODE_GENERATION,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "CODE_GENERATION"
   },
   {
@@ -62,7 +62,7 @@ export const tools: Tool[] = [
     bgColor: "bg-violet-500/10",
     description: "Convert text to natural-sounding speech.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.VOICE_SYNTHESIS,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "VOICE_SYNTHESIS"
   },
   {
@@ -73,7 +73,7 @@ export const tools: Tool[] = [
     bgColor: "bg-orange-700/10",
     description: "Generate articles, blogs, and marketing copy.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.CONTENT_WORD_LIMIT,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "CONTENT_WRITER"
   },
   {
@@ -84,7 +84,7 @@ export const tools: Tool[] = [
     bgColor: "bg-blue-700/10",
     description: "Create professional presentations.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.PRESENTATION_SLIDES,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "PRESENTATION"
   },
   {
@@ -95,11 +95,11 @@ export const tools: Tool[] = [
     bgColor: "bg-yellow-500/10",
     description: "Generate creative ideas and solutions.",
     limitedFree: true,
-    freeLimit: FREE_LIMITS.IDEA_LIMIT,
+    freeLimit: FREE_DAILY_LIMIT,
     featureType: "IDEA_GENERATOR"
   },
   {
-    label: 'Video Generation',
+    label: 'Video Creation',
     icon: VideoIcon,
     color: "text-orange-700",
     bgColor: "bg-orange-700/10",

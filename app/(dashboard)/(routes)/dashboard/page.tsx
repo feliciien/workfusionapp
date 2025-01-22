@@ -12,7 +12,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { tools, routeCategories } from "./config";
-import { MAX_FREE_COUNTS } from "@/constants";
+import { FREE_DAILY_LIMIT } from "@/constants";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -66,7 +66,7 @@ const DashboardPage = () => {
   }, [status]);
 
   const getFreeProgress = () => {
-    return Math.min((apiLimitCount / MAX_FREE_COUNTS) * 100, 100);
+    return Math.min((apiLimitCount / FREE_DAILY_LIMIT) * 100, 100);
   };
 
   if (isLoading || status === "loading") {
@@ -80,8 +80,7 @@ const DashboardPage = () => {
     );
   }
 
-  const usedGenerations = apiLimitCount;
-  const remainingGenerations = Math.max(MAX_FREE_COUNTS - usedGenerations, 0);
+  const remainingGenerations = Math.max(FREE_DAILY_LIMIT - apiLimitCount, 0);
 
   return (
     <div className="px-4 lg:px-8 space-y-8">
@@ -155,13 +154,7 @@ const DashboardPage = () => {
                     {tool.limitedFree && !isPro && remainingGenerations > 0 ? (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Star className="w-4 h-4" />
-                        <span>
-                          {Math.min(
-                            tool.freeLimit || 0,
-                            remainingGenerations
-                          )}{" "}
-                          available
-                        </span>
+                        <span>{remainingGenerations} daily credits</span>
                       </div>
                     ) : (
                       <ArrowRight className="w-6 h-6 text-muted-foreground" />

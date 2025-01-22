@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { checkSubscription } from "@/lib/subscription";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
+import { FEATURE_TYPES } from "@/constants";
 
 const voiceMapping: { [key: string]: string } = {
   male: "alloy",
@@ -16,20 +18,25 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
-    const isPro = await checkSubscription();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    if (!isPro) {
-      return new NextResponse("Pro subscription required", { status: 403 });
     }
 
     const { text, voice } = await req.json();
 
     if (!text) {
       return new NextResponse("Text is required", { status: 400 });
+    }
+
+    const isPro = await checkSubscription();
+    const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.VOICE_SYNTHESIS);
+
+    if (!hasAvailableUsage && !isPro) {
+      return new NextResponse(
+        "Free usage limit reached. Please upgrade to pro for unlimited access.",
+        { status: 403 }
+      );
     }
 
     // Map the voice parameter to the accepted values
@@ -53,6 +60,10 @@ export async function POST(req: Request) {
     if (!response.ok) {
       console.log("[VOICE_ERROR]", await response.text());
       return new NextResponse("Voice generation failed", { status: 500 });
+    }
+
+    if (!isPro) {
+      await incrementFeatureUsage(FEATURE_TYPES.VOICE_SYNTHESIS);
     }
 
     const audioBuffer = await response.arrayBuffer();

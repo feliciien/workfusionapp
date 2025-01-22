@@ -4,7 +4,7 @@
 
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
-import { FREE_LIMITS, FEATURE_TYPES } from "@/constants";
+import { FREE_DAILY_LIMIT, FEATURE_TYPES } from "@/constants";
 import { getFeatureUsage } from "@/lib/feature-limit";
 import { cn } from "@/lib/utils";
 import {
@@ -82,7 +82,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate high-quality articles and blog posts.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.CONTENT_WORD_LIMIT
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.CONTENT_WRITER
       },
       {
         label: 'Translation',
@@ -106,7 +107,8 @@ const routeCategories: RouteCategory[] = [
         description: "Create stunning images from text descriptions.",
         free: false,
         limitedFree: true,
-        freeLimit: 5
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.IMAGE_GENERATION
       },
       {
         label: 'Music Creation',
@@ -148,7 +150,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate code snippets and entire functions.",
         free: false,
         limitedFree: true,
-        freeLimit: 10
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.CODE_GENERATION
       },
       {
         label: 'Code Analysis',
@@ -181,7 +184,8 @@ const routeCategories: RouteCategory[] = [
         description: "Create professional presentations instantly.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.PRESENTATION_SLIDES
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.PRESENTATION
       },
       {
         label: 'Network Analysis',
@@ -214,7 +218,8 @@ const routeCategories: RouteCategory[] = [
         description: "Generate creative ideas for any project.",
         free: false,
         limitedFree: true,
-        freeLimit: FREE_LIMITS.IDEA_LIMIT
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.IDEA_GENERATOR
       }
     ]
   },
@@ -344,7 +349,7 @@ const Sidebar = ({
                         )}
                         {route.limitedFree && !route.proOnly && !isPro && (
                           <div className="ml-auto text-xs">
-                            {featureUsage[route.href] || 0}/{apiLimits[route.href] || route.freeLimit}
+                            {featureUsage[route.href] || 0}/{FREE_DAILY_LIMIT}
                           </div>
                         )}
                       </div>

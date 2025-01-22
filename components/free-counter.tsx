@@ -2,7 +2,7 @@
 
 import { FC, useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { MAX_FREE_COUNTS } from "@/constants";
+import { FREE_DAILY_LIMIT } from "@/constants";
 import { Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -22,6 +22,7 @@ interface ApiLimitData {
   limits: {
     [key: string]: number;
   };
+  remaining: number;
 }
 
 interface FreeCounterProps {
@@ -38,8 +39,9 @@ export const FreeCounter: FC<FreeCounterProps> = ({
   const [mounted, setMounted] = useState(false);
   const [apiData, setApiData] = useState<ApiLimitData>({
     count: 0,
-    limit: MAX_FREE_COUNTS,
+    limit: FREE_DAILY_LIMIT,
     limits: apiLimits,
+    remaining: FREE_DAILY_LIMIT,
   });
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -75,17 +77,19 @@ export const FreeCounter: FC<FreeCounterProps> = ({
     return null;
   }
 
+  const usagePercentage = ((FREE_DAILY_LIMIT - apiData.remaining) / FREE_DAILY_LIMIT) * 100;
+
   return (
     <div className="px-3">
       <Card className="bg-white/10 border-0">
         <CardContent className="py-6">
           <div className="text-sm text-center text-white mb-4 space-y-2">
             <p>
-              {apiData.count} / {apiData.limit} Free Credits Used
+              {apiData.remaining} / {FREE_DAILY_LIMIT} Generations Remaining Today
             </p>
             <Progress
               className="h-3"
-              value={(apiData.count / apiData.limit) * 100}
+              value={usagePercentage}
             />
           </div>
           <TooltipProvider>
@@ -104,7 +108,7 @@ export const FreeCounter: FC<FreeCounterProps> = ({
                 <div className="text-sm">
                   <p>Upgrade to WorkFusion Pro to:</p>
                   <ul className="list-disc list-inside mt-2">
-                    <li>Remove all usage limits</li>
+                    <li>Get unlimited generations</li>
                     <li>Access premium features</li>
                     <li>Priority support</li>
                   </ul>
