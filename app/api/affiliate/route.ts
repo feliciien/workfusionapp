@@ -1,9 +1,10 @@
+// app/api/affiliate/route.ts
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET() {
@@ -15,25 +16,21 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const conversations = await prisma.conversation.findMany({
-      where: {
-        userId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    // Fetch affiliate data along with commissions
+    const affiliate = await prisma.affiliate.findUnique({
+      where: { userId },
       include: {
-        messages: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        commissions: true,
       },
     });
 
-    return NextResponse.json(conversations);
+    if (!affiliate) {
+      return new NextResponse("Affiliate data not found", { status: 404 });
+    }
+
+    return NextResponse.json(affiliate);
   } catch (error) {
-    console.error("[CONVERSATION_HISTORY_ERROR]", error);
+    console.error("[AFFILIATE_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

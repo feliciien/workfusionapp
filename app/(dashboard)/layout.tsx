@@ -1,6 +1,10 @@
+// app/(dashboard)/layout.tsx
+
 import { getApiLimitCount } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { getAuthSession } from "@/lib/auth";
+// Removed: import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../lib/auth-options";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -14,7 +18,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getAuthSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {

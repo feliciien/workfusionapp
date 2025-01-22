@@ -1,14 +1,14 @@
-export const dynamic = "force-dynamic";
-
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
-import prismadb from "@/lib/prismadb";
+import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const user = session?.user;
 
@@ -17,14 +17,14 @@ export async function GET() {
     }
 
     // Get subscription info
-    const subscription = await prismadb.userSubscription.findUnique({
+    const subscription = await prisma.userSubscription.findUnique({
       where: {
         userId: userId,
       }
     });
 
     // Get all subscriptions for comparison
-    const allSubscriptions = await prismadb.userSubscription.findMany();
+    const allSubscriptions = await prisma.userSubscription.findMany();
 
     return NextResponse.json({
       userId: userId,

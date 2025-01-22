@@ -1,4 +1,5 @@
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import { getApiLimitCount } from "@/lib/api-limit";
 
@@ -7,7 +8,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

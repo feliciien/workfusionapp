@@ -1,4 +1,7 @@
-import { getAuthSession } from "@/lib/auth";
+// lib/subscription.ts
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "./auth-options";
 import { db } from "@/lib/db";
 import { prismaEdge } from "@/lib/prisma-edge";
 
@@ -9,7 +12,7 @@ const DAY_IN_MS = 86_400_000;
 export const checkSubscription = async (_userId?: string): Promise<boolean> => {
   const start = Date.now();
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = _userId || session?.user?.id;
 
     console.log("[SUBSCRIPTION_CHECK] Starting check:", {

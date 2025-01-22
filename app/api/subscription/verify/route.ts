@@ -1,26 +1,25 @@
-import { getAuthSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
-    const userId = session?.user?.id;
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const subscriptionId = searchParams.get("subscriptionId");
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!userId || !subscriptionId) {
+      return new NextResponse("Missing parameters", { status: 400 });
     }
 
-    const { subscriptionId } = await req.json();
-
-    if (!subscriptionId) {
-      return new NextResponse("Subscription ID is required", { status: 400 });
-    }
-
-    // Get subscription from database
-    const subscription = await prisma.userSubscription.findUnique({
+    const subscription = await prisma.userSubscription.findFirst({
       where: {
-        userId,
+        userId: userId,
+        paypalSubscriptionId: subscriptionId,
+      },
+      select: {
+        paypalSubscriptionId: true,
+        paypalCurrentPeriodEnd: true,
+        paypalStatus: true,
       },
     });
 
@@ -28,16 +27,12 @@ export async function POST(req: Request) {
       return new NextResponse("Subscription not found", { status: 404 });
     }
 
-    // Verify subscription status
-    const isValid = ['ACTIVE', 'APPROVED'].includes(subscription.paypalStatus || '');
+    const isValid = subscription.paypalStatus === "ACTIVE" && 
+      subscription.paypalCurrentPeriodEnd?.getTime()! + 24 * 60 * 60 * 1000 > Date.now();
 
-    return NextResponse.json({ 
-      success: true, 
-      isValid,
-      subscription 
-    });
+    return NextResponse.json({ isValid });
   } catch (error) {
-    console.error("[VERIFY_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[VERIFY_SUBSCRIPTION]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -32,7 +33,7 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

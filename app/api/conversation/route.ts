@@ -1,10 +1,11 @@
-import { getAuthSession } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
 import { checkSubscription } from "@/lib/subscription";
 import { trackEvent } from "@/lib/analytics";
-import prismadb from "@/lib/prismadb";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = 'nodejs';
 
@@ -22,7 +23,7 @@ interface ConversationMessage {
 
 export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
     const messageContent = response.choices[0].message?.content || "";
     if (conversationId) {
       try {
-        await prismadb.conversation.update({
+        await prisma.conversation.update({
           where: {
             id: conversationId,
           },
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
     } else {
       try {
         // Create new conversation
-        await prismadb.conversation.create({
+        await prisma.conversation.create({
           data: {
             userId,
             title: "New Conversation",
@@ -139,7 +140,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -153,7 +154,7 @@ export async function GET(req: Request) {
       return new NextResponse("Conversation ID required", { status: 400 });
     }
 
-    const conversation = await prismadb.conversation.findUnique({
+    const conversation = await prisma.conversation.findUnique({
       where: {
         id: conversationId,
         userId: userId,

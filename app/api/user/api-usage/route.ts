@@ -1,49 +1,42 @@
-// /app/api/user/api-usage/route.ts
-
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
+import { FEATURE_TYPES } from "@/constants";
 
-export const dynamic = "force-dynamic";
-// Remove edge runtime
-// export const runtime = "edge";
-
-const FREE_CREDITS = 5;
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { userId } = auth();
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
 
     if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return new NextResponse("User ID is required", { status: 400 });
     }
 
-    // Fetch user data from the database using regular Prisma client
-    const userApiLimit = await prisma.userApiLimit.findUnique({
+    const headersList = headers();
+    const path = headersList.get("x-pathname");
+
+    const usage = await prisma.userFeatureUsage.findUnique({
       where: {
-        userId: userId
-      }
+        userId_featureType: {
+          userId: userId,
+          featureType: FEATURE_TYPES.API_USAGE,
+        },
+      },
+      select: {
+        count: true,
+      },
     });
 
-    if (!userApiLimit) {
-      return new NextResponse(
-        JSON.stringify({
-          apiLimitCount: 0,
-          apiLimitRemaining: FREE_CREDITS
-        })
-      );
-    }
+    console.log("[API_USAGE] User status:", {
+      userId,
+      usage,
+      path,
+      timestamp: new Date().toISOString(),
+    });
 
-    return new NextResponse(
-      JSON.stringify({
-        apiLimitCount: userApiLimit.count,
-        apiLimitRemaining: Math.max(FREE_CREDITS - userApiLimit.count, 0)
-      })
-    );
-
+    return NextResponse.json(usage || { count: 0 });
   } catch (error) {
-    console.error("[API_LIMIT_ERROR]", error);
+    console.error("[API_USAGE_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

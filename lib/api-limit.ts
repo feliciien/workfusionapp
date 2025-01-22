@@ -1,4 +1,7 @@
-import { getAuthSession } from "@/lib/auth";
+// lib/api-limit.ts
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "./auth-options";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { MAX_FREE_COUNTS, FREE_LIMITS, FEATURE_TYPES } from "@/constants";
@@ -7,7 +10,7 @@ const FREE_CREDITS = MAX_FREE_COUNTS;
 
 export const increaseFeatureUsage = async (featureType: string) => {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -41,7 +44,7 @@ export const increaseFeatureUsage = async (featureType: string) => {
 
 export const checkFeatureLimit = async (featureType: string) => {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -80,7 +83,7 @@ export const checkFeatureLimit = async (featureType: string) => {
 
 export const getFeatureUsage = async (featureType: string) => {
   try {
-    const session = await getAuthSession();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -129,7 +132,7 @@ export const getApiLimitCount = async () => {
   const { count, limit } = await getFeatureUsage(FEATURE_TYPES.API_USAGE);
 
   // Get all feature usage
-  const session = await getAuthSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   let limits: { [key: string]: number } = {};

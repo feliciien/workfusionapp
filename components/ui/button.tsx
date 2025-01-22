@@ -1,9 +1,11 @@
 // components/ui/button.tsx
 
+'use client';
+
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Analytics } from "@vercel/analytics/react";
+// Removed unused import of Analytics
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(

@@ -1,24 +1,37 @@
-export const dynamic = "force-dynamic";
-
-import { getAuthSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function POST(req: Request) {
   try {
-    const session = await getAuthSession();
-    const userId = session?.user?.id;
-    const user = session?.user;
+    const { userId, status } = await req.json();
 
-    console.log("[SUBSCRIPTION_API] Check started:", {
-      userId,
-      userExists: !!user,
-      timestamp: new Date().toISOString(),
+    if (!userId || !status) {
+      return new NextResponse("Missing required fields", { status: 400 });
+    }
+
+    await prisma.userSubscription.update({
+      where: {
+        userId: userId,
+      },
+      data: {
+        paypalStatus: status,
+      },
     });
 
-    if (!userId || !user) {
-      console.log("[SUBSCRIPTION_API] Unauthorized - no user");
-      return new NextResponse("Unauthorized", { status: 401 });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[SUBSCRIPTION_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return new NextResponse("User ID is required", { status: 400 });
     }
 
     const userSubscription = await prisma.userSubscription.findUnique({
@@ -27,26 +40,9 @@ export async function GET() {
       },
     });
 
-    console.log("[SUBSCRIPTION_API] Subscription found:", {
-      userId,
-      subscriptionExists: !!userSubscription,
-      status: userSubscription?.paypalStatus,
-      endDate: userSubscription?.paypalCurrentPeriodEnd,
-      timestamp: new Date().toISOString(),
-    });
-
-    const isPro =
-      userSubscription?.paypalStatus === "ACTIVE" &&
-      userSubscription?.paypalCurrentPeriodEnd
-        ? userSubscription.paypalCurrentPeriodEnd.getTime() > Date.now()
-        : false;
-
-    return NextResponse.json({
-      ...userSubscription,
-      isPro,
-    });
+    return NextResponse.json(userSubscription);
   } catch (error) {
-    console.error("[SUBSCRIPTION_API] Error:", error);
+    console.error("[SUBSCRIPTION_GET_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

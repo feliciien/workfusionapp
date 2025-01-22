@@ -1,53 +1,33 @@
-import { getAuthSession } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifySubscription } from "@/lib/paypal";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
-    const session = await getAuthSession();
-    const userId = session?.user?.id;
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const subscriptionId = searchParams.get("subscriptionId");
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!userId || !subscriptionId) {
+      return new NextResponse("Missing parameters", { status: 400 });
     }
 
-    const { subscriptionId } = await req.json();
-
-    if (!subscriptionId) {
-      return new NextResponse("Subscription ID is required", { status: 400 });
-    }
-
-    // Verify subscription with PayPal
-    const { isValid, status, planId, nextBillingTime } = await verifySubscription(subscriptionId);
-
-    if (!isValid) {
-      return new NextResponse("Invalid subscription", { status: 400 });
-    }
-
-    // Update subscription in database
-    const subscription = await prisma.userSubscription.upsert({
+    const subscription = await prisma.userSubscription.findFirst({
       where: {
-        userId,
-      },
-      update: {
+        userId: userId,
         paypalSubscriptionId: subscriptionId,
-        paypalStatus: status,
-        paypalPlanId: planId,
-        paypalCurrentPeriodEnd: nextBillingTime ? new Date(nextBillingTime) : null,
-      },
-      create: {
-        userId,
-        paypalSubscriptionId: subscriptionId,
-        paypalStatus: status,
-        paypalPlanId: planId,
-        paypalCurrentPeriodEnd: nextBillingTime ? new Date(nextBillingTime) : null,
       },
     });
 
-    return NextResponse.json({ success: true, subscription });
+    if (!subscription) {
+      return new NextResponse("Subscription not found", { status: 404 });
+    }
+
+    const isValid = await verifySubscription(subscriptionId);
+
+    return NextResponse.json({ isValid });
   } catch (error) {
-    console.error("[PAYPAL_VERIFY_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[VERIFY_SUBSCRIPTION]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }

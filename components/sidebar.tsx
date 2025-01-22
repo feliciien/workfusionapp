@@ -1,3 +1,5 @@
+// components/sidebar.tsx
+
 "use client";
 
 import { FreeCounter } from "@/components/free-counter";
@@ -23,7 +25,8 @@ import {
   PresentationIcon,
   Search,
   Settings,
-  VideoIcon
+  VideoIcon,
+  Users
 } from "lucide-react";
 import { Montserrat } from 'next/font/google';
 import Image from "next/image";
@@ -232,6 +235,14 @@ const routeCategories: RouteCategory[] = [
         href: '/history',
         color: "text-gray-500",
         description: "View your conversation history.",
+        free: true
+      },
+      {
+        label: 'Affiliate',
+        icon: Users,
+        href: '/affiliate',
+        color: "text-blue-500",
+        description: "Access your affiliate dashboard.",
         free: true
       }
     ]
