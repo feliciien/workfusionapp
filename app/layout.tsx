@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import type { Metadata, Viewport } from "next";
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { Providers } from "@/components/providers";
-import { Toaster } from "react-hot-toast"; // Import Toaster component
+import { Toaster } from "@/components/ui/toaster"; // Import Toaster component
 
 import "./globals.css";
 
@@ -97,7 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <Providers>
           {children}
-          <Toaster /> {/* Include Toaster component for toast notifications */}
+          <Toaster />
           <Analytics />
         </Providers>
       </body>
