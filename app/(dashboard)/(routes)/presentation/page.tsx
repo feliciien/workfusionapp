@@ -17,6 +17,7 @@ import {
   FileDown,
   LayoutTemplate,
   Presentation,
+  Palette, // Added icon for color scheme
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -50,17 +51,82 @@ const PRESENTATION_TEMPLATES = [
     name: "Minimal",
     description: "Clean and simple design",
   },
+  {
+    id: "modern",
+    name: "Modern",
+    description: "Sleek and contemporary design",
+  },
+  {
+    id: "illustrative",
+    name: "Illustrative",
+    description: "Rich visuals and illustrations",
+  },
+  {
+    id: "corporate",
+    name: "Corporate",
+    description: "Professional design suited for corporate presentations",
+  },
 ];
+
+// Color schemes for presentations
+const COLOR_SCHEMES = [
+  {
+    id: "default",
+    name: "Default",
+    description: "Standard color scheme",
+  },
+  {
+    id: "light",
+    name: "Light",
+    description: "Light and airy colors",
+  },
+  {
+    id: "dark",
+    name: "Dark",
+    description: "Dark and bold colors",
+  },
+  {
+    id: "colorful",
+    name: "Colorful",
+    description: "Vibrant and diverse colors",
+  },
+];
+
+// Styles for different color schemes
+const colorSchemeStyles: Record<
+  string,
+  { backgroundColor: string; color: string }
+> = {
+  default: {
+    backgroundColor: "#FFFFFF",
+    color: "#000000",
+  },
+  light: {
+    backgroundColor: "#F9F9F9",
+    color: "#000000",
+  },
+  dark: {
+    backgroundColor: "#1F1F1F",
+    color: "#FFFFFF",
+  },
+  colorful: {
+    backgroundColor: "#FFD700",
+    color: "#000000",
+  },
+};
 
 export default function PresentationPage() {
   // Tool loading state
   const [isLoadingTool, setIsLoadingTool] = useState(true);
-  const [tool, setTool] = useState(tools.find((t) => t.href === "/presentation"));
+  const [tool, setTool] = useState(
+    tools.find((t) => t.href === "/presentation")
+  );
 
   // Form states
   const [topic, setTopic] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("business");
   const [file, setFile] = useState<File | null>(null);
+  const [colorScheme, setColorScheme] = useState("default");
 
   // Presentation states
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -161,6 +227,7 @@ export default function PresentationPage() {
       if (file) {
         const formData = new FormData();
         formData.append("template", selectedTemplate);
+        formData.append("colorScheme", colorScheme);
         formData.append("file", file);
 
         response = await fetch("/api/presentation", {
@@ -170,7 +237,8 @@ export default function PresentationPage() {
       } else {
         const apiResponse = await api.generatePresentation(
           topic,
-          selectedTemplate
+          selectedTemplate,
+          colorScheme
         );
         if (!apiResponse.success || !apiResponse.data?.slides) {
           throw new Error(apiResponse.error || "Failed to generate presentation");
@@ -203,6 +271,8 @@ export default function PresentationPage() {
     setError(null);
     setCurrentSlideIndex(0);
     setCurrentSlide(null);
+    setColorScheme("default");
+    setSelectedTemplate("business");
   };
 
   const nextSlide = () => {
@@ -238,6 +308,10 @@ export default function PresentationPage() {
       slides.forEach((slide) => {
         const pptSlide = pres.addSlide();
 
+        // Apply color scheme
+        let backgroundColor = colorSchemeStyles[colorScheme]?.backgroundColor || "#FFFFFF";
+        pptSlide.background = { fill: backgroundColor };
+
         // Add title to all slides
         pptSlide.addText(slide.title, {
           x: "5%",
@@ -247,7 +321,7 @@ export default function PresentationPage() {
           fontSize: slide.type === "title" ? 44 : 32,
           bold: true,
           align: "center",
-          color: "363636",
+          color: colorSchemeStyles[colorScheme]?.color || "363636",
         });
 
         // Add content based on slide type
@@ -260,7 +334,7 @@ export default function PresentationPage() {
             h: "40%",
             fontSize: 28,
             align: "center",
-            color: "666666",
+            color: colorSchemeStyles[colorScheme]?.color || "666666",
           });
         } else {
           // Bullet points for other slides
@@ -272,7 +346,7 @@ export default function PresentationPage() {
             h: "70%",
             fontSize: 24,
             bullet: { type: "bullet" },
-            color: "363636",
+            color: colorSchemeStyles[colorScheme]?.color || "363636",
             lineSpacing: 32,
           });
         }
@@ -285,7 +359,7 @@ export default function PresentationPage() {
             w: "10%",
             h: "5%",
             fontSize: 12,
-            color: "666666",
+            color: colorSchemeStyles[colorScheme]?.color || "666666",
             align: "right",
           });
         }
@@ -328,7 +402,7 @@ export default function PresentationPage() {
         <form onSubmit={onSubmit} className="mt-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             {/* Input Section */}
-            <div className="md:col-span-7">
+            <div className="md:col-span-6">
               <div className="flex flex-col space-y-4">
                 <Input
                   placeholder="Enter your presentation topic..."
@@ -389,8 +463,35 @@ export default function PresentationPage() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Color Scheme Selection */}
+            <div className="md:col-span-3">
+              <Select
+                value={colorScheme}
+                onValueChange={setColorScheme}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select color scheme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_SCHEMES.map((scheme) => (
+                    <SelectItem key={scheme.id} value={scheme.id}>
+                      <div className="flex items-center">
+                        <Palette className="w-4 h-4 mr-2" />
+                        <div>
+                          <div className="font-medium">{scheme.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {scheme.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {/* Submit Button */}
-            <div className="md:col-span-2 flex items-end">
+            <div className="md:col-span-12 flex items-end">
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -438,12 +539,25 @@ export default function PresentationPage() {
                   transition={{ duration: 0.3 }}
                   className="w-full md:w-3/4 lg:w-1/2"
                 >
-                  <Card className="p-8 min-h-[400px] relative">
-                    <div className="absolute top-4 right-4 text-sm text-gray-500">
+                  <Card
+                    className="p-8 min-h-[400px] relative"
+                    style={{
+                      backgroundColor:
+                        colorSchemeStyles[colorScheme]?.backgroundColor,
+                      color: colorSchemeStyles[colorScheme]?.color,
+                    }}
+                  >
+                    <div
+                      className="absolute top-4 right-4 text-sm"
+                      style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                    >
                       Slide {currentSlideIndex + 1} of {slides.length}
                     </div>
                     <div className="space-y-4">
-                      <h2 className="text-2xl font-bold mb-4 text-center">
+                      <h2
+                        className="text-2xl font-bold mb-4 text-center"
+                        style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                      >
                         {currentSlide.title}
                       </h2>
                       {Array.isArray(currentSlide.content) ? (
@@ -454,13 +568,19 @@ export default function PresentationPage() {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.1 }}
+                              style={{
+                                color: colorSchemeStyles[colorScheme]?.color,
+                              }}
                             >
                               {item}
                             </motion.li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-gray-700 text-center">
+                        <p
+                          className="text-center"
+                          style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                        >
                           {currentSlide.content}
                         </p>
                       )}
@@ -541,14 +661,27 @@ export default function PresentationPage() {
                   index === currentSlideIndex ? "ring-2 ring-primary" : ""
                 }`}
                 onClick={() => setCurrentSlideIndex(index)}
+                style={{
+                  backgroundColor: colorSchemeStyles[colorScheme]?.backgroundColor,
+                  color: colorSchemeStyles[colorScheme]?.color,
+                }}
               >
-                <div className="text-xs font-medium mb-2">
+                <div
+                  className="text-xs font-medium mb-2"
+                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                >
                   Slide {index + 1}
                 </div>
-                <h3 className="text-sm font-medium truncate">
+                <h3
+                  className="text-sm font-medium truncate"
+                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                >
                   {slide.title}
                 </h3>
-                <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                <div
+                  className="text-xs mt-1 line-clamp-2"
+                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
+                >
                   {Array.isArray(slide.content)
                     ? slide.content[0] +
                       (slide.content.length > 1 ? "..." : "")

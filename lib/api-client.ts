@@ -77,12 +77,12 @@ export const api = {
       console.log('Sending code analysis request');
       const response = await apiClient.post('/code-analysis', { code });
       console.log('Code analysis response:', response);
-      
+
       if (!response.data?.data) {
         console.error('Invalid response structure:', response.data);
         throw new Error('Invalid response structure from server');
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('Code analysis error:', error);
@@ -96,17 +96,21 @@ export const api = {
     return response.data;
   },
 
-  async generatePresentation(topic: string, template: string = 'business'): Promise<ApiResponse<PresentationResponse>> {
+  async generatePresentation(
+    topic: string,
+    template: string = 'business',
+    colorScheme: string = 'default'
+  ): Promise<ApiResponse<PresentationResponse>> {
     try {
-      const response = await apiClient.post('/presentation', { topic, template });
-      
+      const response = await apiClient.post('/presentation', { topic, template, colorScheme });
+
       // Add logging to debug response
       console.log('API Response:', response.data);
-      
+
       if (!response.data?.slides) {
         throw new Error('Invalid response structure: missing slides');
       }
-      
+
       return {
         success: true,
         data: {
