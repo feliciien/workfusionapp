@@ -23,6 +23,7 @@ const nextConfig = {
         hostname: 'via.placeholder.com',
       },
     ],
+    formats: ['image/avif', 'image/webp'], // Added this line
   },
   experimental: {
     serverActions: {
