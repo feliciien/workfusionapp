@@ -17,9 +17,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ReactMarkdown from 'react-markdown';
-import { Loader2, Copy, RefreshCw, Type, Wand2, Sparkles } from "lucide-react";
+import { Loader2, Copy, RefreshCw, Type, Wand2, Sparkles, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const convertMarkdownToPlainText = (markdownText: string): string => {
+  return markdownText
+    .replace(/(\*\*|\*|__|_|~~|`|#)/g, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]+)\]\(.*?\)/g, '$1');
+};
 
 const contentTypes = [
   { value: "blog", label: "Blog Post", icon: Type },
@@ -71,7 +78,8 @@ export default function ContentPage() {
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(content);
+    const plainTextContent = convertMarkdownToPlainText(content);
+    navigator.clipboard.writeText(plainTextContent);
     toast.success("Copied to clipboard!");
   };
 
@@ -79,6 +87,14 @@ export default function ContentPage() {
     if (prompt) {
       onSubmit(new Event("submit") as any);
     }
+  };
+
+  const shareOnLinkedIn = () => {
+    const plainTextContent = convertMarkdownToPlainText(content);
+    navigator.clipboard.writeText(plainTextContent);
+    const url = `https://www.linkedin.com/shareArticle?mini=true&url=`;
+    window.open(url, "_blank");
+    toast.success("Content copied to clipboard! Paste it into your LinkedIn post.");
   };
 
   return (
@@ -188,6 +204,14 @@ export default function ContentPage() {
                   >
                     <Copy className="h-4 w-4 mr-2" />
                     Copy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={shareOnLinkedIn}
+                  >
+                    <Linkedin className="h-4 w-4 mr-2" />
+                    Share
                   </Button>
                 </div>
               </div>
