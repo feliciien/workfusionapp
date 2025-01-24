@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Script from "next/script"; // Import Script
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +66,45 @@ export default function StudyPage() {
       setHistory(JSON.parse(savedHistory));
     }
   }, []);
+
+  const categories = [
+    {
+      id: "science",
+      label: "Science",
+      topics: [
+        "Explain quantum mechanics in simple terms",
+        "How does photosynthesis work?",
+        "Explain how the human immune system works",
+      ],
+    },
+    {
+      id: "history",
+      label: "History",
+      topics: [
+        "Summarize the key events of the French Revolution",
+        "Explain the significance of the Industrial Revolution",
+        "What led to the fall of the Roman Empire?",
+      ],
+    },
+    {
+      id: "technology",
+      label: "Technology",
+      topics: [
+        "Explain machine learning for beginners",
+        "How does blockchain technology work?",
+        "What is cloud computing?",
+      ],
+    },
+    {
+      id: "economics",
+      label: "Economics",
+      topics: [
+        "What are the fundamental principles of economics?",
+        "Explain supply and demand",
+        "How do interest rates affect the economy?",
+      ],
+    },
+  ];
 
   if (!studyTool) {
     return (
@@ -186,45 +226,6 @@ export default function StudyPage() {
     }
   };
 
-  const categories = [
-    {
-      id: "science",
-      label: "Science",
-      topics: [
-        "Explain quantum mechanics in simple terms",
-        "How does photosynthesis work?",
-        "Explain how the human immune system works",
-      ],
-    },
-    {
-      id: "history",
-      label: "History",
-      topics: [
-        "Summarize the key events of the French Revolution",
-        "Explain the significance of the Industrial Revolution",
-        "What led to the fall of the Roman Empire?",
-      ],
-    },
-    {
-      id: "technology",
-      label: "Technology",
-      topics: [
-        "Explain machine learning for beginners",
-        "How does blockchain technology work?",
-        "What is cloud computing?",
-      ],
-    },
-    {
-      id: "economics",
-      label: "Economics",
-      topics: [
-        "What are the fundamental principles of economics?",
-        "Explain supply and demand",
-        "How do interest rates affect the economy?",
-      ],
-    },
-  ];
-
   const clearForm = () => {
     setQuery("");
     setAnswer("");
@@ -253,259 +254,276 @@ export default function StudyPage() {
   };
 
   return (
-    <ToolPage tool={studyTool} isLoading={isLoading || isQuizLoading}>
-      <div className="space-y-6">
-        {/* Category Selection */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant={selectedCategory === category.id ? "default" : "outline"}
-              className={cn(
-                "text-sm h-auto whitespace-normal p-2",
-                selectedCategory === category.id &&
-                  "bg-primary text-primary-foreground"
-              )}
-              onClick={() => setSelectedCategory(category.id)}
-            >
-              {category.label}
-            </Button>
-          ))}
-        </div>
+    <>
+      {/* Google Tag */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-6RZH54WYJJ"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
 
-        {/* Topic Suggestions */}
-        {selectedCategory && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {categories
-              .find((c) => c.id === selectedCategory)
-              ?.topics.map((topic) => (
-                <Button
-                  key={topic}
-                  variant="outline"
-                  className="text-xs md:text-sm text-left h-auto whitespace-normal p-2"
-                  onClick={() => {
-                    setQuery(topic);
+          gtag('config', 'G-6RZH54WYJJ');
+        `}
+      </Script>
+
+      <ToolPage tool={studyTool} isLoading={isLoading || isQuizLoading}>
+        <div className="space-y-6">
+          {/* Category Selection */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? "default" : "outline"}
+                className={cn(
+                  "text-sm h-auto whitespace-normal p-2",
+                  selectedCategory === category.id &&
+                    "bg-primary text-primary-foreground"
+                )}
+                onClick={() => setSelectedCategory(category.id)}
+              >
+                {category.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Topic Suggestions */}
+          {selectedCategory && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {categories
+                .find((c) => c.id === selectedCategory)
+                ?.topics.map((topic) => (
+                  <Button
+                    key={topic}
+                    variant="outline"
+                    className="text-xs md:text-sm text-left h-auto whitespace-normal p-2"
+                    onClick={() => {
+                      setQuery(topic);
+                      setError(null);
+                    }}
+                    disabled={isLoading}
+                  >
+                    {topic}
+                  </Button>
+                ))}
+            </div>
+          )}
+
+          {/* Quiz Section */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={fetchQuizQuestions}
+              disabled={isQuizLoading}
+            >
+              {isQuizLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Starting Quiz...
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="w-4 h-4 mr-2" />
+                  Start Quiz
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Quiz Display */}
+          {quizQuestions.length > 0 && !showQuizResults && (
+            <Card className="p-4 space-y-4">
+              <h3 className="text-lg font-semibold">
+                Quiz: Question {currentQuestionIndex + 1} of {quizQuestions.length}
+              </h3>
+              <p>{quizQuestions[currentQuestionIndex].question}</p>
+              <div className="space-y-2">
+                {quizQuestions[currentQuestionIndex].options.map(
+                  (option, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => handleAnswerSelect(option)}
+                    >
+                      {option}
+                    </Button>
+                  )
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Quiz Results */}
+          {showQuizResults && (
+            <Card className="p-4 space-y-4">
+              <h3 className="text-lg font-semibold">Quiz Results</h3>
+              <p>
+                You scored {calculateScore()} out of {quizQuestions.length}
+              </p>
+              <Button onClick={saveQuizResults}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Results
+              </Button>
+            </Card>
+          )}
+
+          {/* Main Form */}
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">
+                    What would you like to learn about?
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHistory(!showHistory)}
+                    className="flex items-center gap-2"
+                  >
+                    <History className="w-4 h-4" />
+                    {showHistory ? "Hide History" : "Show History"}
+                  </Button>
+                </div>
+                <Textarea
+                  placeholder="Ask any question or topic you'd like to understand better..."
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
                     setError(null);
                   }}
+                  className="h-24"
                   disabled={isLoading}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
                 >
-                  {topic}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Get Answer
+                    </>
+                  )}
                 </Button>
-              ))}
-          </div>
-        )}
-
-        {/* Quiz Section */}
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            onClick={fetchQuizQuestions}
-            disabled={isQuizLoading}
-          >
-            {isQuizLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Starting Quiz...
-              </>
-            ) : (
-              <>
-                <PlayCircle className="w-4 h-4 mr-2" />
-                Start Quiz
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Quiz Display */}
-        {quizQuestions.length > 0 && !showQuizResults && (
-          <Card className="p-4 space-y-4">
-            <h3 className="text-lg font-semibold">
-              Quiz: Question {currentQuestionIndex + 1} of {quizQuestions.length}
-            </h3>
-            <p>{quizQuestions[currentQuestionIndex].question}</p>
-            <div className="space-y-2">
-              {quizQuestions[currentQuestionIndex].options.map(
-                (option, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => handleAnswerSelect(option)}
-                  >
-                    {option}
-                  </Button>
-                )
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* Quiz Results */}
-        {showQuizResults && (
-          <Card className="p-4 space-y-4">
-            <h3 className="text-lg font-semibold">Quiz Results</h3>
-            <p>
-              You scored {calculateScore()} out of {quizQuestions.length}
-            </p>
-            <Button onClick={saveQuizResults}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Results
-            </Button>
-          </Card>
-        )}
-
-        {/* Main Form */}
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
-                  What would you like to learn about?
-                </label>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="flex items-center gap-2"
+                  variant="outline"
+                  onClick={clearForm}
+                  disabled={isLoading || (!query && !answer)}
                 >
-                  <History className="w-4 h-4" />
-                  {showHistory ? "Hide History" : "Show History"}
+                  <RefreshCw className="w-4 h-4" />
                 </Button>
               </div>
-              <Textarea
-                placeholder="Ask any question or topic you'd like to understand better..."
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setError(null);
-                }}
-                className="h-24"
-                disabled={isLoading}
-              />
             </div>
+          </form>
 
-            <div className="flex items-center gap-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full sm:w-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Get Answer
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearForm}
-                disabled={isLoading || (!query && !answer)}
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </form>
+          {/* Answer Display */}
+          {answer && (
+            <Card className="p-4 space-y-4">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-semibold">Answer</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(answer);
+                    toast.success("Copied to clipboard!");
+                  }}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{answer}</ReactMarkdown>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Your Notes</label>
+                <Textarea
+                  placeholder="Add your notes here..."
+                  value={activeNote}
+                  onChange={(e) => setActiveNote(e.target.value)}
+                  className="h-24"
+                />
+                <Button
+                  onClick={() => {
+                    if (history[0]) {
+                      saveNote(history[0].id, activeNote);
+                    }
+                  }}
+                  disabled={!activeNote}
+                  size="sm"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Notes
+                </Button>
+              </div>
+            </Card>
+          )}
 
-        {/* Answer Display */}
-        {answer && (
-          <Card className="p-4 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-semibold">Answer</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(answer);
-                  toast.success("Copied to clipboard!");
-                }}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{answer}</ReactMarkdown>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Your Notes</label>
-              <Textarea
-                placeholder="Add your notes here..."
-                value={activeNote}
-                onChange={(e) => setActiveNote(e.target.value)}
-                className="h-24"
-              />
-              <Button
-                onClick={() => {
-                  if (history[0]) {
-                    saveNote(history[0].id, activeNote);
-                  }
-                }}
-                disabled={!activeNote}
-                size="sm"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Notes
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Study History */}
-        {showHistory && history.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Study History</h3>
+          {/* Study History */}
+          {showHistory && history.length > 0 && (
             <div className="space-y-4">
-              {history.map((item) => (
-                <Card key={item.id} className="p-4 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-medium">{item.query}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </p>
+              <h3 className="text-lg font-semibold">Study History</h3>
+              <div className="space-y-4">
+                {history.map((item) => (
+                  <Card key={item.id} className="p-4 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium">{item.query}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setQuery(item.query);
+                            setAnswer(item.answer);
+                            setActiveNote(item.notes || "");
+                            setShowHistory(false);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          <BookOpen className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteHistoryItem(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setQuery(item.query);
-                          setAnswer(item.answer);
-                          setActiveNote(item.notes || "");
-                          setShowHistory(false);
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
-                      >
-                        <BookOpen className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteHistoryItem(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {item.notes && (
-                    <div className="bg-muted p-2 rounded-md">
-                      <p className="text-sm">{item.notes}</p>
-                    </div>
-                  )}
-                </Card>
-              ))}
+                    {item.notes && (
+                      <div className="bg-muted p-2 rounded-md">
+                        <p className="text-sm">{item.notes}</p>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    </ToolPage>
+          )}
+        </div>
+      </ToolPage>
+    </>
   );
 }

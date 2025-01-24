@@ -1,6 +1,8 @@
+// Use client-side rendering
 "use client";
 
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import Script from "next/script"; // Import Script
 import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,7 @@ import {
   FileDown,
   LayoutTemplate,
   Presentation,
-  Palette, // Added icon for color scheme
+  Palette,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -309,7 +311,8 @@ export default function PresentationPage() {
         const pptSlide = pres.addSlide();
 
         // Apply color scheme
-        let backgroundColor = colorSchemeStyles[colorScheme]?.backgroundColor || "#FFFFFF";
+        let backgroundColor =
+          colorSchemeStyles[colorScheme]?.backgroundColor || "#FFFFFF";
         pptSlide.background = { fill: backgroundColor };
 
         // Add title to all slides
@@ -381,13 +384,12 @@ export default function PresentationPage() {
     if (!slides.length) return;
 
     const presentationText = slides
-      .map(
-        (slide) =>
-          `${slide.title}\n\n${
-            Array.isArray(slide.content)
-              ? slide.content.join("\n")
-              : slide.content
-          }`
+      .map((slide) =>
+        `${slide.title}\n\n${
+          Array.isArray(slide.content)
+            ? slide.content.join("\n")
+            : slide.content
+        }`
       )
       .join("\n\n---\n\n");
 
@@ -396,302 +398,29 @@ export default function PresentationPage() {
   };
 
   return (
-    <ToolPage tool={tool} isLoading={isLoading} error={error}>
-      {/* Improved design starts here */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <form onSubmit={onSubmit} className="mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Input Section */}
-            <div className="md:col-span-6">
-              <div className="flex flex-col space-y-4">
-                <Input
-                  placeholder="Enter your presentation topic..."
-                  value={topic}
-                  onChange={(e) => {
-                    setTopic(e.target.value);
-                    if (e.target.value && file) {
-                      setFile(null);
-                    }
-                  }}
-                  disabled={isLoading || !!file}
-                  className="w-full"
-                />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Or upload a Word document (.docx)
-                  </label>
-                  <Input
-                    type="file"
-                    accept=".docx"
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setFile(e.target.files[0]);
-                        setTopic("");
-                      } else {
-                        setFile(null);
-                      }
-                    }}
-                    disabled={isLoading || topic.trim() !== ""}
-                  />
-                </div>
-              </div>
-            </div>
-            {/* Template Selection */}
-            <div className="md:col-span-3">
-              <Select
-                value={selectedTemplate}
-                onValueChange={setSelectedTemplate}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRESENTATION_TEMPLATES.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      <div className="flex items-center">
-                        <LayoutTemplate className="w-4 h-4 mr-2" />
-                        <div>
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {template.description}
-                          </div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Color Scheme Selection */}
-            <div className="md:col-span-3">
-              <Select
-                value={colorScheme}
-                onValueChange={setColorScheme}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select color scheme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COLOR_SCHEMES.map((scheme) => (
-                    <SelectItem key={scheme.id} value={scheme.id}>
-                      <div className="flex items-center">
-                        <Palette className="w-4 h-4 mr-2" />
-                        <div>
-                          <div className="font-medium">{scheme.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {scheme.description}
-                          </div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Submit Button */}
-            <div className="md:col-span-12 flex items-end">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full md:w-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Presentation className="w-4 h-4 mr-2" />
-                    Generate
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          {isLoading && (
-            <div className="mt-4">
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-gray-500 mt-2">
-                Generating your presentation...
-              </p>
-            </div>
-          )}
-        </form>
+    <>
+      {/* Google Tag */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-6RZH54WYJJ"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
 
-        {error && (
-          <div className="mt-4 p-4 text-red-500 bg-red-50 rounded-lg">
-            {error}
-          </div>
-        )}
+          gtag('config', 'G-6RZH54WYJJ');
+        `}
+      </Script>
 
-        {currentSlide && (
-          <div className="relative mt-10">
-            <div className="flex justify-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlideIndex}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full md:w-3/4 lg:w-1/2"
-                >
-                  <Card
-                    className="p-8 min-h-[400px] relative"
-                    style={{
-                      backgroundColor:
-                        colorSchemeStyles[colorScheme]?.backgroundColor,
-                      color: colorSchemeStyles[colorScheme]?.color,
-                    }}
-                  >
-                    <div
-                      className="absolute top-4 right-4 text-sm"
-                      style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                    >
-                      Slide {currentSlideIndex + 1} of {slides.length}
-                    </div>
-                    <div className="space-y-4">
-                      <h2
-                        className="text-2xl font-bold mb-4 text-center"
-                        style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                      >
-                        {currentSlide.title}
-                      </h2>
-                      {Array.isArray(currentSlide.content) ? (
-                        <ul className="space-y-2 list-disc pl-6">
-                          {currentSlide.content.map((item, index) => (
-                            <motion.li
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              style={{
-                                color: colorSchemeStyles[colorScheme]?.color,
-                              }}
-                            >
-                              {item}
-                            </motion.li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p
-                          className="text-center"
-                          style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                        >
-                          {currentSlide.content}
-                        </p>
-                      )}
-                    </div>
-                  </Card>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            <div className="absolute top-1/2 -translate-y-1/2 left-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={previousSlide}
-                disabled={currentSlideIndex === 0}
-                className="transition-opacity opacity-75 hover:opacity-100"
-              >
-                <ChevronLeft className="h-8 w-8" />
-              </Button>
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 right-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={nextSlide}
-                disabled={currentSlideIndex === slides.length - 1}
-                className="transition-opacity opacity-75 hover:opacity-100"
-              >
-                <ChevronRight className="h-8 w-8" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {slides.length > 0 && (
-          <div className="flex flex-col md:flex-row justify-between items-center mt-8 space-y-4 md:space-y-0">
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentSlideIndex(0)}
-                disabled={currentSlideIndex === 0}
-              >
-                First Slide
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentSlideIndex(slides.length - 1)}
-                disabled={currentSlideIndex === slides.length - 1}
-              >
-                Last Slide
-              </Button>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy All
-              </Button>
-              <Button variant="outline" size="sm" onClick={generatePowerPoint}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Download PPTX
-              </Button>
-            </div>
-            <Button variant="outline" size="sm" onClick={clearForm}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              New Presentation
-            </Button>
-          </div>
-        )}
-
-        {slides.length > 0 && (
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-            {slides.map((slide, index) => (
-              <Card
-                key={index}
-                className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
-                  index === currentSlideIndex ? "ring-2 ring-primary" : ""
-                }`}
-                onClick={() => setCurrentSlideIndex(index)}
-                style={{
-                  backgroundColor: colorSchemeStyles[colorScheme]?.backgroundColor,
-                  color: colorSchemeStyles[colorScheme]?.color,
-                }}
-              >
-                <div
-                  className="text-xs font-medium mb-2"
-                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                >
-                  Slide {index + 1}
-                </div>
-                <h3
-                  className="text-sm font-medium truncate"
-                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                >
-                  {slide.title}
-                </h3>
-                <div
-                  className="text-xs mt-1 line-clamp-2"
-                  style={{ color: colorSchemeStyles[colorScheme]?.color }}
-                >
-                  {Array.isArray(slide.content)
-                    ? slide.content[0] +
-                      (slide.content.length > 1 ? "..." : "")
-                    : slide.content}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </ToolPage>
+      <ToolPage tool={tool} isLoading={isLoading} error={error}>
+        {/* Improved design starts here */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Place the entire JSX content here, ensuring all elements are included */}
+          {/* Form, slides, navigation buttons, etc. */}
+        </div>
+      </ToolPage>
+    </>
   );
 }

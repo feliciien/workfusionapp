@@ -1,11 +1,11 @@
-
-
+// Import statements
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { Providers } from "@/components/providers";
-import { Toaster } from "@/components/ui/toaster"; // Import Toaster component
+import { Toaster } from "@/components/ui/toaster";
+import Script from "next/script"; // Import Script for Google Analytics
 
 import "./globals.css";
 
@@ -16,9 +16,12 @@ export const metadata: Metadata = {
   description:
     "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
   manifest: "/manifest.json",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3003"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3003"
+  ),
   icons: {
     apple: "/apple-touch-icon.png",
+    icon: "/favicon.ico",
   },
   openGraph: {
     title: "WorkFusion App - Advanced AI Platform for Business Automation",
@@ -39,7 +42,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "WorkFusion App - Advanced AI Platform",
-    description: "Transform your business with WorkFusion App's powerful AI tools.",
+    description:
+      "Transform your business with WorkFusion App's powerful AI tools.",
     images: ["/twitter-image.jpg"],
     creator: "@workfusion",
   },
@@ -56,18 +60,17 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <OrganizationStructuredData />
+        <meta name="theme-color" content="#ffffff" />
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -87,15 +90,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }),
           }}
         />
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#ffffff" />
       </head>
       <body
         className={`${inter.className} h-full overflow-x-hidden overscroll-none`}
         suppressHydrationWarning
       >
         <Providers>
+          {/* Google Analytics */}
+          <Script
+            src="https://www.googletagmanager.com/gtag/js?id=G-6RZH54WYJJ"
+            strategy="afterInteractive"
+          />
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+      
+              gtag('config', 'G-6RZH54WYJJ');
+            `}
+          </Script>
+
           {children}
           <Toaster />
           <Analytics />
