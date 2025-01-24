@@ -1,3 +1,4 @@
+// Import necessary packages
 import { NextResponse } from "next/server";
 import OpenAI from 'openai';
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
@@ -8,18 +9,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+if (!openai.apiKey) {
+  throw new Error('OpenAI API key not configured');
+}
+
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    // Validate OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({
-        success: false,
-        error: "OpenAI API key not configured"
-      }, { status: 500 });
-    }
-
     // Parse and validate request body
     const body = await req.json().catch(() => ({}));
     const { query } = body;
@@ -51,17 +48,14 @@ export async function POST(req: Request) {
       }, { status: 403 });
     }
 
-    // Set timeout for OpenAI request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert tutor specializing in breaking down complex topics into clear, understandable explanations.
+      const response = await openai.chat.completions.create(
+        {
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert tutor specializing in breaking down complex topics into clear, understandable explanations.
 
 Your responses should follow this structure:
 
@@ -80,20 +74,28 @@ Guidelines for your explanations:
 - Highlight important terms or concepts using bold or italics
 
 Format your response in proper markdown for optimal readability.`
-          },
-          {
-            role: "user",
-            content: query
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }, { signal: controller.signal });
+            },
+            {
+              role: "user",
+              content: query
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        },
+        {
+          timeout: 30000, // Set timeout in milliseconds
+        }
+      );
 
-      clearTimeout(timeoutId);
+      const responseText = response.choices[0]?.message?.content?.trim();
 
-      if (!response.choices[0].message?.content) {
-        throw new Error("No content in response");
+      if (!responseText) {
+        console.error('OpenAI response is empty');
+        return NextResponse.json(
+          { success: false, error: 'Failed to generate response' },
+          { status: 500 }
+        );
       }
 
       // Increment feature usage for non-pro users
@@ -104,12 +106,12 @@ Format your response in proper markdown for optimal readability.`
       return NextResponse.json({
         success: true,
         data: {
-          answer: response.choices[0].message.content
+          answer: responseText
         }
       });
 
     } catch (error: any) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'APIUserAbortError' || error.name === 'AbortError') {
         return NextResponse.json({
           success: false,
           error: "Request timed out"

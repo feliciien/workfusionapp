@@ -1,3 +1,4 @@
+// Use client-side rendering
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,8 +9,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
-import { Loader2, Copy, RefreshCw, BookOpen, History, Save, Trash2 } from "lucide-react";
-import ReactMarkdown from 'react-markdown';
+import {
+  Loader2,
+  Copy,
+  RefreshCw,
+  BookOpen,
+  History,
+  Save,
+  Trash2,
+  PlayCircle,
+} from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 
 interface StudyHistory {
@@ -24,6 +34,12 @@ interface StudyResponse {
   answer: string;
 }
 
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+}
+
 export default function StudyPage() {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
@@ -34,7 +50,14 @@ export default function StudyPage() {
   const [activeNote, setActiveNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const studyTool = tools.find(t => t.label === "Study Assistant");
+  // New state variables for quiz
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [showQuizResults, setShowQuizResults] = useState(false);
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
+
+  const studyTool = tools.find((t) => t.label === "Study Assistant");
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("studyHistory");
@@ -51,6 +74,70 @@ export default function StudyPage() {
     );
   }
 
+  const fetchQuizQuestions = async () => {
+    const subject = query.trim() || selectedCategory;
+
+    if (!subject) {
+      toast.error("Please enter a subject or select a category for the quiz");
+      return;
+    }
+
+    try {
+      setIsQuizLoading(true);
+      const response = await fetch(
+        `/api/quiz?subject=${encodeURIComponent(subject)}`
+      );
+      const data = await response.json();
+
+      if (!data.success || !data.questions) {
+        throw new Error("Failed to fetch quiz questions");
+      }
+
+      setQuizQuestions(data.questions);
+      setCurrentQuestionIndex(0);
+      setUserAnswers([]);
+      setShowQuizResults(false);
+      toast.success("Quiz started!");
+    } catch (error: any) {
+      console.error("Quiz error:", error);
+      toast.error(error.message || "Something went wrong");
+    } finally {
+      setIsQuizLoading(false);
+    }
+  };
+
+  const handleAnswerSelect = (answer: string) => {
+    setUserAnswers([...userAnswers, answer]);
+    if (currentQuestionIndex + 1 < quizQuestions.length) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      setShowQuizResults(true);
+    }
+  };
+
+  const calculateScore = () => {
+    let score = 0;
+    quizQuestions.forEach((q, index) => {
+      if (q.correctAnswer === userAnswers[index]) {
+        score += 1;
+      }
+    });
+    return score;
+  };
+
+  const saveQuizResults = () => {
+    const result = {
+      id: Date.now().toString(),
+      query: `Quiz Results for ${query.trim() || selectedCategory}`,
+      answer: `Score: ${calculateScore()} out of ${quizQuestions.length}`,
+      timestamp: Date.now(),
+      notes: "Quiz taken on " + new Date().toLocaleString(),
+    };
+    const updatedHistory = [result, ...history].slice(0, 10);
+    setHistory(updatedHistory);
+    localStorage.setItem("studyHistory", JSON.stringify(updatedHistory));
+  };
+
   const saveToHistory = (query: string, answer: string) => {
     const newHistory: StudyHistory = {
       id: Date.now().toString(),
@@ -66,7 +153,7 @@ export default function StudyPage() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!query.trim()) {
       toast.error("Please enter a question");
       return;
@@ -81,7 +168,7 @@ export default function StudyPage() {
       setIsLoading(true);
       setAnswer("");
       const response = await api.getStudyHelp(query);
-      
+
       if (!response.success || !response.data?.answer) {
         throw new Error(response.error || "Failed to generate response");
       }
@@ -100,26 +187,42 @@ export default function StudyPage() {
   };
 
   const categories = [
-    { id: "science", label: "Science", topics: [
-      "Explain quantum mechanics in simple terms",
-      "How does photosynthesis work?",
-      "Explain how the human immune system works"
-    ]},
-    { id: "history", label: "History", topics: [
-      "Summarize the key events of the French Revolution",
-      "Explain the significance of the Industrial Revolution",
-      "What led to the fall of the Roman Empire?"
-    ]},
-    { id: "technology", label: "Technology", topics: [
-      "Explain machine learning for beginners",
-      "How does blockchain technology work?",
-      "What is cloud computing?"
-    ]},
-    { id: "economics", label: "Economics", topics: [
-      "What are the fundamental principles of economics?",
-      "Explain supply and demand",
-      "How do interest rates affect the economy?"
-    ]}
+    {
+      id: "science",
+      label: "Science",
+      topics: [
+        "Explain quantum mechanics in simple terms",
+        "How does photosynthesis work?",
+        "Explain how the human immune system works",
+      ],
+    },
+    {
+      id: "history",
+      label: "History",
+      topics: [
+        "Summarize the key events of the French Revolution",
+        "Explain the significance of the Industrial Revolution",
+        "What led to the fall of the Roman Empire?",
+      ],
+    },
+    {
+      id: "technology",
+      label: "Technology",
+      topics: [
+        "Explain machine learning for beginners",
+        "How does blockchain technology work?",
+        "What is cloud computing?",
+      ],
+    },
+    {
+      id: "economics",
+      label: "Economics",
+      topics: [
+        "What are the fundamental principles of economics?",
+        "Explain supply and demand",
+        "How do interest rates affect the economy?",
+      ],
+    },
   ];
 
   const clearForm = () => {
@@ -127,17 +230,21 @@ export default function StudyPage() {
     setAnswer("");
     setError(null);
     setActiveNote("");
+    setQuizQuestions([]);
+    setCurrentQuestionIndex(0);
+    setUserAnswers([]);
+    setShowQuizResults(false);
   };
 
   const deleteHistoryItem = (id: string) => {
-    const updatedHistory = history.filter(item => item.id !== id);
+    const updatedHistory = history.filter((item) => item.id !== id);
     setHistory(updatedHistory);
     localStorage.setItem("studyHistory", JSON.stringify(updatedHistory));
     toast.success("Item deleted from history");
   };
 
   const saveNote = (id: string, note: string) => {
-    const updatedHistory = history.map(item => 
+    const updatedHistory = history.map((item) =>
       item.id === id ? { ...item, notes: note } : item
     );
     setHistory(updatedHistory);
@@ -146,7 +253,7 @@ export default function StudyPage() {
   };
 
   return (
-    <ToolPage tool={studyTool} isLoading={isLoading}>
+    <ToolPage tool={studyTool} isLoading={isLoading || isQuizLoading}>
       <div className="space-y-6">
         {/* Category Selection */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -156,7 +263,8 @@ export default function StudyPage() {
               variant={selectedCategory === category.id ? "default" : "outline"}
               className={cn(
                 "text-sm h-auto whitespace-normal p-2",
-                selectedCategory === category.id && "bg-primary text-primary-foreground"
+                selectedCategory === category.id &&
+                  "bg-primary text-primary-foreground"
               )}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -168,21 +276,82 @@ export default function StudyPage() {
         {/* Topic Suggestions */}
         {selectedCategory && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {categories.find(c => c.id === selectedCategory)?.topics.map((topic) => (
-              <Button
-                key={topic}
-                variant="outline"
-                className="text-xs md:text-sm text-left h-auto whitespace-normal p-2"
-                onClick={() => {
-                  setQuery(topic);
-                  setError(null);
-                }}
-                disabled={isLoading}
-              >
-                {topic}
-              </Button>
-            ))}
+            {categories
+              .find((c) => c.id === selectedCategory)
+              ?.topics.map((topic) => (
+                <Button
+                  key={topic}
+                  variant="outline"
+                  className="text-xs md:text-sm text-left h-auto whitespace-normal p-2"
+                  onClick={() => {
+                    setQuery(topic);
+                    setError(null);
+                  }}
+                  disabled={isLoading}
+                >
+                  {topic}
+                </Button>
+              ))}
           </div>
+        )}
+
+        {/* Quiz Section */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            onClick={fetchQuizQuestions}
+            disabled={isQuizLoading}
+          >
+            {isQuizLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Starting Quiz...
+              </>
+            ) : (
+              <>
+                <PlayCircle className="w-4 h-4 mr-2" />
+                Start Quiz
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Quiz Display */}
+        {quizQuestions.length > 0 && !showQuizResults && (
+          <Card className="p-4 space-y-4">
+            <h3 className="text-lg font-semibold">
+              Quiz: Question {currentQuestionIndex + 1} of {quizQuestions.length}
+            </h3>
+            <p>{quizQuestions[currentQuestionIndex].question}</p>
+            <div className="space-y-2">
+              {quizQuestions[currentQuestionIndex].options.map(
+                (option, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => handleAnswerSelect(option)}
+                  >
+                    {option}
+                  </Button>
+                )
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Quiz Results */}
+        {showQuizResults && (
+          <Card className="p-4 space-y-4">
+            <h3 className="text-lg font-semibold">Quiz Results</h3>
+            <p>
+              You scored {calculateScore()} out of {quizQuestions.length}
+            </p>
+            <Button onClick={saveQuizResults}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Results
+            </Button>
+          </Card>
         )}
 
         {/* Main Form */}
@@ -190,7 +359,9 @@ export default function StudyPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">What would you like to learn about?</label>
+                <label className="text-sm font-medium">
+                  What would you like to learn about?
+                </label>
                 <Button
                   type="button"
                   variant="ghost"
