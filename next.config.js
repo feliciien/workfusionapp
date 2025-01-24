@@ -36,6 +36,7 @@ const nextConfig = {
   },
   reactStrictMode: true,
   swcMinify: true,
+  compress: true,
   async headers() {
     return [
       {
@@ -58,7 +59,5 @@ const nextConfig = {
     ];
   },
 };
-
-module.exports = withBundleAnalyzer(nextConfig);
 
 module.exports = withBundleAnalyzer(nextConfig);
