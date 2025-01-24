@@ -9,6 +9,7 @@ const publicRoutes = [
   "/sign-in",
   "/sign-up",
   "/api/auth",
+  "/api/analytics", // Added this line
 ];
 
 export default withAuth({
