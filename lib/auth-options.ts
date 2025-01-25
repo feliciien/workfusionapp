@@ -29,7 +29,6 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           prompt: "select_account",
-          access_type: "offline",
           scope: "openid email profile",
           response_type: "code",
         },
