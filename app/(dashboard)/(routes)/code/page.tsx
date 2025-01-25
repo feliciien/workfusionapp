@@ -6,26 +6,26 @@ import Script from "next/script";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import {
-  Code,
   Copy,
   Check,
   Download,
   Share2,
   Bookmark,
   RotateCcw,
+  Loader2,
+  Save,
+  FilePlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import ReactMarkdown from "react-markdown";
 import * as z from "zod";
+import ReactMarkdown from "react-markdown";
 import { BotAvatar } from "@/components/bot-avatar";
 import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
-import { cn } from "@/lib/utils";
 import useProModal from "@/hooks/use-pro-modal";
-// Import the tools array and Tool type
 import { tools, Tool } from "@/app/(dashboard)/(routes)/dashboard/config";
 import { ToolPage } from "@/components/tool-page";
 import {
@@ -33,17 +33,23 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import dynamic from "next/dynamic";
-import type { ReactLivePreviewProps } from "@/components/react-live-preview";
+import ReactCodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
+import { html } from "@codemirror/lang-html";
 
 // Dynamically import the ReactLivePreview component
 const ReactLivePreview = dynamic(
   () => import("@/components/react-live-preview"),
   { ssr: false }
 ) as React.ComponentType<ReactLivePreviewProps>;
+
+interface ReactLivePreviewProps {
+  code: string;
+  language: string;
+}
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -55,7 +61,7 @@ interface SavedCode {
   id: string;
   title: string;
   code: string;
-  language: string;
+  language: LanguageKey;
   timestamp: Date;
 }
 
@@ -65,7 +71,6 @@ const formSchema = z.object({
   }),
 });
 
-// Define LANGUAGES without relying on LanguageKey
 const LANGUAGES = {
   typescript: {
     name: "TypeScript",
@@ -84,7 +89,6 @@ const LANGUAGES = {
   },
 } as const;
 
-// Define LanguageKey based on LANGUAGES
 type LanguageKey = keyof typeof LANGUAGES;
 
 const CodePage = () => {
@@ -110,7 +114,6 @@ const CodePage = () => {
     loadSavedCodes();
   }, []);
 
-  // Updated extractCode function
   const extractCode = useCallback((content: string): string => {
     const codeBlockRegex = /```[\s\S]*?```/g;
     const matches = content.match(codeBlockRegex);
@@ -157,7 +160,7 @@ const CodePage = () => {
 
   const loadSavedCode = useCallback((code: SavedCode) => {
     setCodeContent(code.code);
-    setLanguage(code.language as LanguageKey);
+    setLanguage(code.language);
     toast.success("Code loaded successfully");
   }, []);
 
@@ -205,7 +208,7 @@ const CodePage = () => {
 
   const undoLastMessage = useCallback(() => {
     if (messages.length === 0) return;
-    const newMessages = messages.slice(0, -2); // Remove last user and assistant message
+    const newMessages = messages.slice(0, -2);
     setMessages(newMessages);
     if (newMessages.length === 0) {
       setCodeContent("");
@@ -291,7 +294,6 @@ const CodePage = () => {
     }
   };
 
-  // Declare codeTool with an explicit type
   const codeTool: Tool | undefined = tools.find((t) => t.href === "/code");
 
   if (!codeTool) {
@@ -320,12 +322,12 @@ const CodePage = () => {
         `}
       </Script>
 
-      {/* Use a type assertion to assure TypeScript */}
       <ToolPage tool={codeTool as Tool} isLoading={isLoading}>
         {/* Main Container */}
-        <div className="flex h-full">
+        <div className="flex flex-col md:flex-row h-full">
           {/* Left Panel */}
-          <div className="w-1/2 p-4 space-y-4">
+          <div className="md:w-1/2 p-4 space-y-4">
+            {/* Form */}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <Input
                 placeholder="Describe what you want to generate..."
@@ -347,11 +349,19 @@ const CodePage = () => {
                   )}
                 </div>
                 <Button type="submit" disabled={isLoading}>
-                  Generate
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate"
+                  )}
                 </Button>
               </div>
             </form>
-            <div className="space-y-4">
+            {/* Messages */}
+            <div className="space-y-4 max-h-[300px] overflow-auto">
               {messages.map((message, index) => (
                 <div key={index} className="flex items-start space-x-2">
                   {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
@@ -365,11 +375,11 @@ const CodePage = () => {
             </div>
           </div>
           {/* Right Panel */}
-          <div className="w-1/2 p-4 space-y-4">
+          <div className="md:w-1/2 p-4 space-y-4">
             <div className="flex space-x-2">
               <Button variant="outline" onClick={copyToClipboard}>
                 {copied ? <Check className="mr-2" /> : <Copy className="mr-2" />}
-                {copied ? "Copied" : "Copy Code"}
+                {copied ? "Copied" : "Copy"}
               </Button>
               <Button variant="outline" onClick={downloadCode}>
                 <Download className="mr-2" />
@@ -379,6 +389,10 @@ const CodePage = () => {
                 <Bookmark className="mr-2" />
                 Save
               </Button>
+              <Button variant="outline" onClick={() => setShowHistory(true)}>
+                <FilePlus className="mr-2" />
+                History
+              </Button>
               <Button variant="outline" onClick={undoLastMessage}>
                 <RotateCcw className="mr-2" />
                 Undo
@@ -387,10 +401,27 @@ const CodePage = () => {
             <div className="h-full border p-4 rounded-lg overflow-auto">
               {codeContent ? (
                 <>
-                  <ReactLivePreview
-                    code={codeContent}
-                    language={language}
-                  />
+                  <div className="mb-4">
+                    <ReactCodeMirror
+                      value={codeContent}
+                      extensions={
+                        language === "javascript"
+                          ? [javascript()]
+                          : language === "typescript"
+                          ? [javascript({ typescript: true })]
+                          : [html()]
+                      }
+                      theme="dark"
+                      readOnly
+                      height="200px"
+                    />
+                  </div>
+                  <div className="border-t pt-4">
+                    <ReactLivePreview
+                      code={codeContent}
+                      language={language}
+                    />
+                  </div>
                 </>
               ) : (
                 <p className="text-muted-foreground">
@@ -400,6 +431,67 @@ const CodePage = () => {
             </div>
           </div>
         </div>
+
+        {/* Save Code Dialog */}
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save Code</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Label htmlFor="codeTitle">Title</Label>
+              <Input
+                id="codeTitle"
+                value={codeTitle}
+                onChange={(e) => setCodeTitle(e.target.value)}
+                placeholder="Enter a title for your code"
+              />
+              <Button onClick={handleSaveCode}>Save</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Saved Codes History */}
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Saved Codes</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {savedCodes.length > 0 ? (
+                savedCodes.map((code) => (
+                  <div
+                    key={code.id}
+                    className="flex justify-between items-center border-b pb-2 mb-2"
+                  >
+                    <div>
+                      <h4 className="text-lg font-bold">{code.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(code.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => loadSavedCode(code)}
+                      >
+                        Load
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => deleteSavedCode(code.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p>No saved codes found.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </ToolPage>
     </>
   );
