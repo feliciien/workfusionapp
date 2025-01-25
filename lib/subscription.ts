@@ -1,11 +1,12 @@
-// lib/subscription.ts
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth-options";
 import { db } from "@/lib/db";
 import { prismaEdge } from "@/lib/prisma-edge";
 
-const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } = {};
+const SUBSCRIPTION_CHECK_CACHE: { [key: string]: { result: boolean; timestamp: number } } =
+  (globalThis as any).SUBSCRIPTION_CHECK_CACHE ||
+  ((globalThis as any).SUBSCRIPTION_CHECK_CACHE = {});
+
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 const DAY_IN_MS = 86_400_000;
 
