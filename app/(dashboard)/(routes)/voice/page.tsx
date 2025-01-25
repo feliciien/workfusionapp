@@ -25,7 +25,13 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
-import { formSchema, voiceOptions, emotionOptions } from "./constants";
+import {
+  formSchema,
+  voiceOptions,
+  formatOptions,
+  languageOptions,
+  emotionOptions,
+} from "./constants";
 
 const VoicePage = () => {
   const router = useRouter();
@@ -54,6 +60,8 @@ const VoicePage = () => {
     defaultValues: {
       text: "",
       voice: "alloy",
+      format: "mp3",
+      language: "en",
       emotion: "neutral",
       speed: 1.0,
       pitch: 1.0,
@@ -91,7 +99,7 @@ const VoicePage = () => {
 
     const link = document.createElement("a");
     link.href = audioUrl;
-    link.download = `voice_${Date.now()}.mp3`;
+    link.download = `voice_${Date.now()}.${form.getValues("format")}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,6 +172,64 @@ const VoicePage = () => {
                       )}
                     />
                     <FormField
+                      name="language"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Select
+                              disabled={isLoading}
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Language" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {languageOptions.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      name="format"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Select
+                              disabled={isLoading}
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Format" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {formatOptions.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
                       name="emotion"
                       render={({ field }) => (
                         <FormItem>
@@ -204,7 +270,9 @@ const VoicePage = () => {
                             max={4.0}
                             step={0.25}
                             value={[field.value]}
-                            onValueChange={(value) => field.onChange(value[0])}
+                            onValueChange={(value) =>
+                              field.onChange(value[0])
+                            }
                           />
                         </FormControl>
                       </FormItem>
@@ -222,7 +290,9 @@ const VoicePage = () => {
                             max={4.0}
                             step={0.25}
                             value={[field.value]}
-                            onValueChange={(value) => field.onChange(value[0])}
+                            onValueChange={(value) =>
+                              field.onChange(value[0])
+                            }
                           />
                         </FormControl>
                       </FormItem>

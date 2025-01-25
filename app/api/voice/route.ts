@@ -7,13 +7,6 @@ import { authOptions } from "@/lib/auth-options";
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
 
-const voiceMapping: { [key: string]: string } = {
-  male: "alloy",
-  female: "ash",
-  child: "fable",
-  // Include any additional mappings if necessary
-};
-
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,7 +16,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { text, voice } = await req.json();
+    const { text, voice, format, language } = await req.json();
 
     if (!text) {
       return new NextResponse("Text is required", { status: 400 });
@@ -39,21 +32,35 @@ export async function POST(req: Request) {
       );
     }
 
-    // Map the voice parameter to the accepted values
-    const mappedVoice = voiceMapping[voice] || voice || "alloy";
-    console.log("Using voice:", mappedVoice); // Added for debugging
+    const availableVoices = [
+      "alloy",
+      "ash",
+      "coral",
+      "echo",
+      "fable",
+      "onyx",
+      "nova",
+      "sage",
+      "shimmer",
+    ];
+
+    const selectedVoice = availableVoices.includes(voice) ? voice : "alloy";
+    const supportedFormats = ["mp3", "opus", "aac", "flac", "pcm"];
+    const selectedFormat = supportedFormats.includes(format) ? format : "mp3";
+    const languageCode = language || "en";
 
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "audio/mp3",
+        Accept: `audio/${selectedFormat}`,
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "tts-1",
-        voice: mappedVoice,
+        voice: selectedVoice,
         input: text,
+        language: languageCode,
       }),
     });
 
@@ -68,7 +75,9 @@ export async function POST(req: Request) {
 
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString("base64");
-    return NextResponse.json({ audio: `data:audio/mp3;base64,${base64Audio}` });
+    return NextResponse.json({
+      audio: `data:audio/${selectedFormat};base64,${base64Audio}`,
+    });
   } catch (error) {
     console.log("[VOICE_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
