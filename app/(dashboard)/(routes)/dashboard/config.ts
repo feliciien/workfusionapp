@@ -14,7 +14,8 @@ import {
   Languages,
   LineChart,
   BookOpen,
-  Search
+  Search,
+  Monitor
 } from "lucide-react";
 import { FEATURE_TYPES, FREE_DAILY_LIMIT } from "@/constants";
 
@@ -46,114 +47,124 @@ export const tools: Tool[] = [
   {
     label: 'Code Assistant',
     icon: Code,
+    href: '/code',
     color: "text-green-700",
     bgColor: "bg-green-700/10",
-    href: '/code',
-    description: "Generate code and get programming help.",
+    description: "Generate code snippets and get programming help.",
     limitedFree: true,
     freeLimit: FREE_DAILY_LIMIT,
     featureType: "CODE_GENERATION"
   },
   {
-    label: 'Voice Synthesis',
-    icon: Mic2,
-    href: '/voice',
-    color: "text-violet-500",
-    bgColor: "bg-violet-500/10",
-    description: "Convert text to natural-sounding speech.",
-    limitedFree: true,
-    freeLimit: FREE_DAILY_LIMIT,
-    featureType: "VOICE_SYNTHESIS"
-  },
-  {
     label: 'Content Writer',
     icon: FileText,
     href: '/content',
-    color: "text-orange-700",
-    bgColor: "bg-orange-700/10",
-    description: "Generate articles, blogs, and marketing copy.",
+    color: "text-blue-600",
+    bgColor: "bg-blue-600/10",
+    description: "Generate high-quality articles and blog posts.",
     limitedFree: true,
     freeLimit: FREE_DAILY_LIMIT,
     featureType: "CONTENT_WRITER"
   },
   {
-    label: 'Presentation',
-    icon: PresentationIcon,
-    href: '/presentation',
-    color: "text-blue-700",
-    bgColor: "bg-blue-700/10",
-    description: "Create professional presentations.",
-    limitedFree: true,
-    freeLimit: FREE_DAILY_LIMIT,
-    featureType: "PRESENTATION"
-  },
-  {
-    label: 'Idea Generator',
-    icon: Lightbulb,
-    href: '/ideas',
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-    description: "Generate creative ideas and solutions.",
-    limitedFree: true,
-    freeLimit: FREE_DAILY_LIMIT,
-    featureType: "IDEA_GENERATOR"
-  },
-  {
-    label: 'Video Creation',
-    icon: VideoIcon,
-    color: "text-orange-700",
-    bgColor: "bg-orange-700/10",
-    href: '/video',
-    description: "Create videos from text descriptions.",
+    label: 'Translation',
+    icon: Languages,
+    href: '/translate',
+    color: "text-green-600",
+    bgColor: "bg-green-600/10",
+    description: "Translate text between multiple languages accurately.",
     proOnly: true,
-    featureType: "VIDEO_GENERATION"
+    featureType: "TRANSLATION"
+  },
+  {
+    label: 'Image Generation',
+    icon: ImageIcon,
+    href: '/image',
+    color: "text-pink-700",
+    bgColor: "bg-pink-700/10",
+    description: "Create stunning images from text descriptions.",
+    limitedFree: true,
+    freeLimit: FREE_DAILY_LIMIT,
+    featureType: "IMAGE_GENERATION"
   },
   {
     label: 'Music Creation',
     icon: Music,
+    href: '/music',
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
-    href: '/music',
-    description: "Generate original music and melodies.",
+    description: "Compose original music and melodies.",
     proOnly: true,
     featureType: "MUSIC_CREATION"
+  },
+  {
+    label: 'Video Generation',
+    icon: VideoIcon,
+    href: '/video',
+    color: "text-orange-700",
+    bgColor: "bg-orange-700/10",
+    description: "Create and edit videos with AI assistance.",
+    proOnly: true,
+    featureType: "VIDEO_GENERATION"
   },
   {
     label: 'Art Studio',
     icon: Palette,
     href: '/art',
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/10",
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/10",
     description: "Create digital art with AI assistance.",
     proOnly: true,
     featureType: "ART_STUDIO"
   },
   {
-    label: 'Translation',
-    icon: Languages,
-    href: '/translate',
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    description: "Translate text between languages.",
+    label: 'Code Analysis',
+    icon: Search,
+    href: '/code-analysis',
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-600/10",
+    description: "Analyze and improve your code quality.",
     proOnly: true,
-    featureType: "TRANSLATION"
+    featureType: "CODE_ANALYSIS"
+  },
+  {
+    label: 'Website Performance Analyzer',
+    icon: Monitor,
+    href: '/website-performance',
+    color: "text-blue-600",
+    bgColor: "bg-blue-600/10",
+    description: "Analyze website performance and get optimization insights.",
+    limitedFree: true,
+    freeLimit: FREE_DAILY_LIMIT,
+    featureType: "WEBSITE_PERFORMANCE"
   },
   {
     label: 'Data Insights',
     icon: LineChart,
     href: '/data-insights',
-    color: "text-violet-500",
-    bgColor: "bg-violet-500/10",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
     description: "Generate insights from your data.",
     proOnly: true,
     featureType: "DATA_INSIGHTS"
   },
   {
+    label: 'Presentation',
+    icon: PresentationIcon,
+    href: '/presentation',
+    color: "text-orange-600",
+    bgColor: "bg-orange-600/10",
+    description: "Create professional presentations instantly.",
+    limitedFree: true,
+    freeLimit: FREE_DAILY_LIMIT,
+    featureType: "PRESENTATION"
+  },
+  {
     label: 'Network Analysis',
     icon: Network,
     href: '/network',
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
+    color: "text-indigo-500",
+    bgColor: "bg-indigo-500/10",
     description: "Analyze and visualize network data.",
     proOnly: true,
     featureType: "NETWORK_ANALYSIS"
@@ -162,47 +173,54 @@ export const tools: Tool[] = [
     label: 'Study Assistant',
     icon: BookOpen,
     href: '/study',
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-    description: "AI-powered study and learning assistance.",
+    color: "text-purple-600",
+    bgColor: "bg-purple-600/10",
+    description: "Get help with studying and research.",
     proOnly: true,
     featureType: "STUDY_ASSISTANT"
   },
   {
-    label: 'Research Assistant',
-    icon: Search,
-    href: '/research',
-    color: "text-indigo-500",
-    bgColor: "bg-indigo-500/10",
-    description: "AI-powered research assistance.",
-    proOnly: true,
-    featureType: "RESEARCH_ASSISTANT"
+    label: 'Idea Generator',
+    icon: Lightbulb,
+    href: '/ideas',
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-600/10",
+    description: "Generate creative ideas for any project.",
+    limitedFree: true,
+    freeLimit: FREE_DAILY_LIMIT,
+    featureType: "IDEA_GENERATOR"
   }
 ];
 
 export const routeCategories = [
   {
-    name: "Essential Tools",
+    name: "Communication & Writing",
     routes: tools.filter(tool => 
-      ["IMAGE_GENERATION", "CODE_GENERATION", "CONTENT_WRITER"].includes(tool.featureType as string)
+      ["CONTENT_WRITER", "TRANSLATION"].includes(tool.featureType as string)
     )
   },
   {
     name: "Creative Suite",
     routes: tools.filter(tool => 
-      ["VIDEO_GENERATION", "MUSIC_CREATION", "ART_STUDIO", "VOICE_SYNTHESIS"].includes(tool.featureType as string)
+      ["IMAGE_GENERATION", "MUSIC_CREATION", "VIDEO_GENERATION", "ART_STUDIO"].includes(tool.featureType as string)
     )
   },
   {
-    name: "Productivity Tools",
+    name: "Development Tools",
     routes: tools.filter(tool => 
-      ["PRESENTATION", "IDEA_GENERATOR", "TRANSLATION"].includes(tool.featureType as string)
+      ["CODE_GENERATION", "CODE_ANALYSIS", "WEBSITE_PERFORMANCE"].includes(tool.featureType as string)
     )
   },
   {
-    name: "Advanced Tools",
+    name: "Business Tools",
     routes: tools.filter(tool => 
-      ["DATA_INSIGHTS", "NETWORK_ANALYSIS", "STUDY_ASSISTANT", "RESEARCH_ASSISTANT"].includes(tool.featureType as string)
+      ["DATA_INSIGHTS", "PRESENTATION", "NETWORK_ANALYSIS"].includes(tool.featureType as string)
+    )
+  },
+  {
+    name: "Learning & Research",
+    routes: tools.filter(tool => 
+      ["STUDY_ASSISTANT", "IDEA_GENERATOR"].includes(tool.featureType as string)
     )
   }
 ];

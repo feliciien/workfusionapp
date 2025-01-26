@@ -33,7 +33,9 @@ export const FEATURE_TYPES = {
   NETWORK_ANALYSIS: 'network',
   STUDY_ASSISTANT: 'study',
   RESEARCH_ASSISTANT: 'research',
-  API_USAGE: 'api'
+  API_USAGE: 'api',
+  WEBSITE_PERFORMANCE: 'website',  // Previously added feature type
+  CODE_ANALYSIS: 'code_analysis'   // Added new feature type
 } as const;
 
 export const tools = [

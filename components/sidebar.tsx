@@ -1,5 +1,3 @@
-// components/sidebar.tsx
-
 "use client";
 
 import { FreeCounter } from "@/components/free-counter";
@@ -26,7 +24,8 @@ import {
   Search,
   Settings,
   VideoIcon,
-  Users
+  Users,
+  Monitor
 } from "lucide-react";
 import { Montserrat } from 'next/font/google';
 import Image from "next/image";
@@ -161,6 +160,17 @@ const routeCategories: RouteCategory[] = [
         description: "Analyze and improve your code quality.",
         free: false,
         proOnly: true
+      },
+      {
+        label: 'Website Performance Analyzer',
+        icon: Monitor,
+        color: "text-blue-600",
+        href: '/website-performance',
+        description: "Analyze website performance and get optimization insights.",
+        free: false,
+        limitedFree: true,
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.WEBSITE_PERFORMANCE
       }
     ]
   },
@@ -349,7 +359,7 @@ const Sidebar = ({
                         )}
                         {route.limitedFree && !route.proOnly && !isPro && (
                           <div className="ml-auto text-xs">
-                            {featureUsage[route.href] || 0}/{FREE_DAILY_LIMIT}
+                            {featureUsage[route.href] || 0}/{route.freeLimit}
                           </div>
                         )}
                       </div>
