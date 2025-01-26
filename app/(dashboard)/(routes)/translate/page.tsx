@@ -2,20 +2,20 @@
 
 "use client";
 
-import { useState } from "react";
 import { ToolPage } from "@/components/tool-page";
-import { tools } from "../dashboard/config";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
-import { toast } from "react-hot-toast";
+import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api-client";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
+import { tools } from "../dashboard/config";
 
 const languages = [
   { value: "spanish", label: "Spanish" },
@@ -43,10 +43,10 @@ export default function TranslatePage() {
     try {
       setIsLoading(true);
       const response = await api.translate(text, targetLang);
-      if (!response.translation) {
+      if (!response.data?.translation) {
         throw new Error("No translation received from the API");
       }
-      setTranslation(response.translation);
+      setTranslation(response.data.translation);
       toast.success("Translation complete!");
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
