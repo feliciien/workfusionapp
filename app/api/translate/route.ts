@@ -1,13 +1,13 @@
 // app/api/translate/route.ts
 
-import { NextResponse } from "next/server";
-import { checkSubscription } from "@/lib/subscription";
-import OpenAI from "openai";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { checkSubscription } from "@/lib/subscription";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export async function POST(req: Request) {
@@ -27,7 +27,9 @@ export async function POST(req: Request) {
     const { text, targetLanguage } = await req.json();
 
     if (!text || !targetLanguage) {
-      return new NextResponse("Text and target language are required", { status: 400 });
+      return new NextResponse("Text and target language are required", {
+        status: 400
+      });
     }
 
     const response = await openai.chat.completions.create({
@@ -35,13 +37,13 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style.`,
+          content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style.`
         },
         {
           role: "user",
-          content: text,
-        },
-      ],
+          content: text
+        }
+      ]
     });
 
     const translation = response.choices[0]?.message?.content?.trim();
@@ -51,7 +53,12 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      translation,
+      success: true,
+      data: {
+        data: {
+          translation
+        }
+      }
     });
   } catch (error: any) {
     console.error("[TRANSLATE_ERROR]", error);

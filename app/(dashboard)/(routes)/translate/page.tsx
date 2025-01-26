@@ -43,10 +43,10 @@ export default function TranslatePage() {
     try {
       setIsLoading(true);
       const response = await api.translate(text, targetLang);
-      if (!response.data?.translation) {
+      if (!response.data?.data?.translation) {
         throw new Error("No translation received from the API");
       }
-      setTranslation(response.data.translation);
+      setTranslation(response.data.data.translation);
       toast.success("Translation complete!");
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
