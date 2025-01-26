@@ -5,11 +5,9 @@ import axios from "axios";
 import { checkSubscription } from "@/lib/subscription";
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
-<<<<<<< HEAD
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-=======
->>>>>>> main
+import { OpenAI } from "openai";
 
 // Style enhancements for different image types
 const stylePrompts = {
@@ -45,7 +43,6 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
     }
 
     // Get style enhancement
-<<<<<<< HEAD
     const styleEnhancement =
       stylePrompts[style as keyof typeof stylePrompts] ||
       stylePrompts.realistic;
@@ -57,15 +54,6 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
     // Add technical quality improvements
     const qualityBoost =
       "best quality, highly detailed, sharp focus, 8K UHD, high resolution";
-=======
-    const styleEnhancement = stylePrompts[style as keyof typeof stylePrompts] || stylePrompts.realistic;
-
-    // Add composition and lighting improvements
-    const compositionBoost = "perfect composition, professional lighting, golden ratio";
-
-    // Add technical quality improvements
-    const qualityBoost = "best quality, highly detailed, sharp focus, 8K UHD, high resolution";
->>>>>>> main
 
     // Combine all enhancements
     processedPrompt = `${processedPrompt}, ${styleEnhancement}, ${compositionBoost}, ${qualityBoost}. 
@@ -78,8 +66,6 @@ Negative prompt: ${globalNegativePrompt}`;
   }
 };
 
-<<<<<<< HEAD
-=======
 // Retry mechanism for API calls
 const retryWithExponentialBackoff = async (
   fn: () => Promise<any>,
@@ -151,13 +137,12 @@ const handleOpenAIError = (error: any) => {
   });
 };
 
->>>>>>> main
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const body = await req.json();
-    const { prompt, amount = 1, style = "realistic" } = body;
+    const { prompt, amount = 1, style = "realistic", resolution } = body;
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -167,22 +152,12 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt is required", { status: 400 });
     }
 
-<<<<<<< HEAD
-    // Generate enhanced prompt
-    const enhancedPrompt = processPrompt(prompt, style);
-
-    const isPro = await checkSubscription();
-    const hasAvailableUsage = await checkFeatureLimit(
-      FEATURE_TYPES.IMAGE_GENERATION
-    );
-=======
     if (!resolution) {
       return new NextResponse("Resolution is required", { status: 400 });
     }
 
     const isPro = await checkSubscription(userId);
     const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.IMAGE_GENERATION);
->>>>>>> main
 
     if (!hasAvailableUsage && !isPro) {
       return new NextResponse(
@@ -191,49 +166,12 @@ export async function POST(req: Request) {
       );
     }
 
+    let result: any;
+
     try {
-<<<<<<< HEAD
-      // Use axios to call OpenAI API directly
-      const response = await axios.post(
-        "https://api.openai.com/v1/images/generations",
-        {
-          prompt: enhancedPrompt,
-          n: Number(amount),
-          size: "1024x1024",
-          response_format: "url",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-        }
-      );
-
-      if (!isPro) {
-        await incrementFeatureUsage(FEATURE_TYPES.IMAGE_GENERATION);
-      }
-
-      return NextResponse.json(response.data);
-    } catch (apiError: any) {
-      console.error("[IMAGE_API_ERROR]", apiError.response?.data || apiError.message);
-      return new NextResponse("Failed to generate images", { status: 500 });
-    }
-  } catch (error: any) {
-    console.error("[GENERAL_ERROR]:", error);
-
-    // Handle specific OpenAI API errors
-    if (error.response && error.response.status) {
-      const errorMessage =
-        error.response.data?.error?.message || "OpenAI API Error";
-      return new NextResponse(errorMessage, { status: error.response.status });
-    }
-
-    return new NextResponse("Internal Server Error", { status: 500 });
-=======
       result = await retryWithExponentialBackoff(async () => {
         const openai = new OpenAI({
-          apiKey: process.env.OPENAI_API_KEY,
+          apiKey: process.env.OPENAI_API_KEY!,
         });
 
         const enhancedPrompt = processPrompt(prompt, style);
@@ -264,6 +202,5 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('[GENERAL_ERROR]:', error);
     return new NextResponse("Internal Error", { status: 500 });
->>>>>>> main
   }
 }
