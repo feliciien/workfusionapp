@@ -115,7 +115,9 @@ const WebsitePerformancePage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="prose max-w-full">
-              <ReactMarkdown>{analysisResult.analysis}</ReactMarkdown>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <ReactMarkdown>{analysisResult.analysis}</ReactMarkdown>
+              </div>
             </CardContent>
           </Card>
         </div>

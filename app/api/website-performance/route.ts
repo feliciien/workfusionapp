@@ -30,12 +30,16 @@ const instructionMessage: OpenAI.Chat.ChatCompletionMessageParam = {
 1. Loading speed and performance metrics.
 2. SEO factors and scores.
 3. Accessibility compliance.
-4. Actionable recommendations for improvements.
+4. Mobile responsiveness analysis.
+5. Security checks for common vulnerabilities.
+6. Keyword analysis, including keyword density and suggestions.
+7. Actionable recommendations for improvements in all areas.
 
 Follow these guidelines:
 - Be accurate and precise.
 - Use professional language suitable for a technical audience.
 - Structure your response clearly with headings and bullet points where appropriate.
+- Include specific examples or data points when possible.
 `,
 };
 
@@ -73,12 +77,15 @@ export async function POST(req: Request) {
     // Construct the prompt for OpenAI
     const prompt = `Analyze the website at the following URL: ${url}
 
-Provide insights on:
+Provide detailed insights on:
 
 - Loading speed and performance metrics.
 - SEO factors and scores.
 - Accessibility compliance.
-- Actionable recommendations for improvements.
+- Mobile responsiveness analysis.
+- Security checks for common vulnerabilities.
+- Keyword analysis, including keyword density and suggestions.
+- Actionable recommendations for improvements in all areas.
 
 Follow best practices and be thorough in your analysis.`;
 
