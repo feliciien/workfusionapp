@@ -7,12 +7,6 @@ const apiClient = axios.create({
   },
 });
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
 export interface Slide {
   type: 'title' | 'intro' | 'content' | 'conclusion';
   title: string;
@@ -31,7 +25,7 @@ export interface DataInsightsResponse {
 
 export const api = {
   // Chat & Writing
-  async chat(message: string): Promise<ApiResponse<{ response: string }>> {
+  async chat(message: string): Promise<{ response: string }> {
     const response = await apiClient.post('/chat', { message });
     return response.data;
   },
@@ -40,58 +34,49 @@ export const api = {
     prompt: string,
     type: string = "blog",
     tone: string = "professional"
-  ): Promise<ApiResponse<{ content: string }>> {
+  ): Promise<{ content: string }> {
     const response = await apiClient.post('/content', { prompt, type, tone });
     return response.data;
   },
 
-  async translate(text: string, targetLang: string): Promise<ApiResponse<{ translation: string }>> {
+  async translate(text: string, targetLang: string): Promise<{ translation: string }> {
     const response = await apiClient.post('/translate', { text, targetLanguage: targetLang });
     return response.data;
   },
 
   // Creative Suite
-  async generateImage(prompt: string): Promise<ApiResponse<{ imageUrl: string }>> {
+  async generateImage(prompt: string): Promise<{ imageUrl: string }> {
     const response = await apiClient.post('/image', { prompt });
     return response.data;
   },
 
-  async generateMusic(prompt: string): Promise<ApiResponse<{ audioUrl: string }>> {
+  async generateMusic(prompt: string): Promise<{ audioUrl: string }> {
     const response = await apiClient.post('/music', { prompt });
     return response.data;
   },
 
-  async generateVideo(prompt: string): Promise<ApiResponse<{ videoUrl: string }>> {
+  async generateVideo(prompt: string): Promise<{ videoUrl: string }> {
     const response = await apiClient.post('/video', { prompt });
     return response.data;
   },
 
   // Development
-  async generateCode(prompt: string, language: string): Promise<ApiResponse<{ code: string }>> {
+  async generateCode(prompt: string, language: string): Promise<{ code: string }> {
     const response = await apiClient.post('/code', { prompt, language });
     return response.data;
   },
 
-  async analyzeCode(code: string): Promise<ApiResponse<{ score: number; issues: Array<{ severity: string; message: string; line?: number }>; suggestions: string[] }>> {
-    try {
-      console.log('Sending code analysis request');
-      const response = await apiClient.post('/code-analysis', { code });
-      console.log('Code analysis response:', response);
-
-      if (!response.data?.data) {
-        console.error('Invalid response structure:', response.data);
-        throw new Error('Invalid response structure from server');
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Code analysis error:', error);
-      throw error;
-    }
+  async analyzeCode(code: string): Promise<{
+    score: number;
+    issues: Array<{ severity: string; message: string; line?: number }>;
+    suggestions: string[];
+  }> {
+    const response = await apiClient.post('/code-analysis', { code });
+    return response.data;
   },
 
   // Business
-  async analyzeData(data: any): Promise<ApiResponse<DataInsightsResponse>> {
+  async analyzeData(data: any): Promise<DataInsightsResponse> {
     const response = await apiClient.post('/data-insights', { data });
     return response.data;
   },
@@ -100,50 +85,20 @@ export const api = {
     topic: string,
     template: string = 'business',
     colorScheme: string = 'default'
-  ): Promise<ApiResponse<PresentationResponse>> {
-    try {
-      const response = await apiClient.post('/presentation', { topic, template, colorScheme });
-
-      // Add logging to debug response
-      console.log('API Response:', response.data);
-
-      if (!response.data?.slides) {
-        throw new Error('Invalid response structure: missing slides');
-      }
-
-      return {
-        success: true,
-        data: {
-          slides: response.data.slides
-        }
-      };
-    } catch (error: any) {
-      console.error('Presentation API error:', error);
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to generate presentation'
-      };
-    }
+  ): Promise<PresentationResponse> {
+    const response = await apiClient.post('/presentation', { topic, template, colorScheme });
+    return response.data;
   },
 
   // Learning
-  async getStudyHelp(query: string): Promise<ApiResponse<{ answer: string }>> {
+  async getStudyHelp(query: string): Promise<{ answer: string }> {
     const response = await apiClient.post('/study', { query });
     return response.data;
   },
 
-  async generateIdeas(topic: string): Promise<ApiResponse<{ ideas: string[] }>> {
-    try {
-      const response = await apiClient.post('/ideas', { topic });
-      if (!response.data?.data) {
-        console.error('Invalid response structure:', response.data);
-        throw new Error('Invalid response structure from server');
-      }
-      return response.data;
-    } catch (error) {
-      console.error('Ideas API error:', error);
-      throw error;
-    }
+  async generateIdeas(topic: string): Promise<{ ideas: string[] }> {
+    const response = await apiClient.post('/ideas', { topic });
+    return response.data;
   },
 };
 

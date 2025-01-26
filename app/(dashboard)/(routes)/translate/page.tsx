@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { ToolPage } from "@/components/tool-page";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,11 +10,10 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api-client";
-import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { tools } from "../dashboard/config";
 
@@ -43,10 +43,12 @@ export default function TranslatePage() {
     try {
       setIsLoading(true);
       const response = await api.translate(text, targetLang);
-      if (!response.data?.data?.translation) {
+
+      if (!response.translation) {
         throw new Error("No translation received from the API");
       }
-      setTranslation(response.data.data.translation);
+
+      setTranslation(response.translation);
       toast.success("Translation complete!");
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
@@ -60,7 +62,7 @@ export default function TranslatePage() {
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Text to translate</label>
+            <label className="text-sm font-medium">Text to Translate</label>
             <Textarea
               placeholder="Enter text to translate..."
               value={text}
@@ -88,7 +90,13 @@ export default function TranslatePage() {
             className="w-full"
             disabled={isLoading || !text || !targetLang}
           >
-            Translate
+            {isLoading ? (
+              <>
+                Translating...
+              </>
+            ) : (
+              "Translate"
+            )}
           </Button>
         </div>
         {translation && (
