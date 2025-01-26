@@ -5,8 +5,11 @@ import axios from "axios";
 import { checkSubscription } from "@/lib/subscription";
 import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
 import { FEATURE_TYPES } from "@/constants";
+<<<<<<< HEAD
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+=======
+>>>>>>> main
 
 // Style enhancements for different image types
 const stylePrompts = {
@@ -42,6 +45,7 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
     }
 
     // Get style enhancement
+<<<<<<< HEAD
     const styleEnhancement =
       stylePrompts[style as keyof typeof stylePrompts] ||
       stylePrompts.realistic;
@@ -53,6 +57,15 @@ const processPrompt = (prompt: string, style: string = "realistic") => {
     // Add technical quality improvements
     const qualityBoost =
       "best quality, highly detailed, sharp focus, 8K UHD, high resolution";
+=======
+    const styleEnhancement = stylePrompts[style as keyof typeof stylePrompts] || stylePrompts.realistic;
+
+    // Add composition and lighting improvements
+    const compositionBoost = "perfect composition, professional lighting, golden ratio";
+
+    // Add technical quality improvements
+    const qualityBoost = "best quality, highly detailed, sharp focus, 8K UHD, high resolution";
+>>>>>>> main
 
     // Combine all enhancements
     processedPrompt = `${processedPrompt}, ${styleEnhancement}, ${compositionBoost}, ${qualityBoost}. 
@@ -65,6 +78,80 @@ Negative prompt: ${globalNegativePrompt}`;
   }
 };
 
+<<<<<<< HEAD
+=======
+// Retry mechanism for API calls
+const retryWithExponentialBackoff = async (
+  fn: () => Promise<any>,
+  maxRetries: number = 2,
+  baseDelay: number = 1000
+) => {
+  let lastError;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      // Add timeout using AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+
+      try {
+        const result = await Promise.race([
+          fn(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Operation timed out')), 50000)
+          )
+        ]);
+
+        clearTimeout(timeoutId);
+        return result;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError' || error.message === 'Operation timed out') {
+          throw new Error('Request timed out after 50 seconds');
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      lastError = error;
+
+      if (i === maxRetries - 1) break;
+
+      if (error?.response?.status === 429 || error.message.includes('timeout')) {
+        const delay = baseDelay * Math.pow(2, i);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+};
+
+// Enhanced error handling for OpenAI API
+const handleOpenAIError = (error: any) => {
+  console.error('[OPENAI_ERROR]:', {
+    status: error?.status,
+    message: error?.message,
+    type: error?.type,
+    code: error?.code
+  });
+
+  if (error?.status === 429) {
+    return new NextResponse("Rate limit exceeded. Please try again later.", { status: 429 });
+  }
+
+  if (error?.message?.includes('billing')) {
+    return new NextResponse("OpenAI API billing error. Please check your account.", { status: 402 });
+  }
+
+  return new NextResponse(error?.message || "Internal server error", {
+    status: error?.status || 500
+  });
+};
+
+>>>>>>> main
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -80,6 +167,7 @@ export async function POST(req: Request) {
       return new NextResponse("Prompt is required", { status: 400 });
     }
 
+<<<<<<< HEAD
     // Generate enhanced prompt
     const enhancedPrompt = processPrompt(prompt, style);
 
@@ -87,6 +175,14 @@ export async function POST(req: Request) {
     const hasAvailableUsage = await checkFeatureLimit(
       FEATURE_TYPES.IMAGE_GENERATION
     );
+=======
+    if (!resolution) {
+      return new NextResponse("Resolution is required", { status: 400 });
+    }
+
+    const isPro = await checkSubscription(userId);
+    const hasAvailableUsage = await checkFeatureLimit(FEATURE_TYPES.IMAGE_GENERATION);
+>>>>>>> main
 
     if (!hasAvailableUsage && !isPro) {
       return new NextResponse(
@@ -96,6 +192,7 @@ export async function POST(req: Request) {
     }
 
     try {
+<<<<<<< HEAD
       // Use axios to call OpenAI API directly
       const response = await axios.post(
         "https://api.openai.com/v1/images/generations",
@@ -133,5 +230,40 @@ export async function POST(req: Request) {
     }
 
     return new NextResponse("Internal Server Error", { status: 500 });
+=======
+      result = await retryWithExponentialBackoff(async () => {
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        const enhancedPrompt = processPrompt(prompt, style);
+        const response = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: enhancedPrompt,
+          n: Number(amount),
+          size:
+            resolution === "1024x1024"
+              ? "1024x1024"
+              : resolution === "1792x1024"
+              ? "1792x1024"
+              : "1024x1024", // Default to square if unsupported size
+          quality: "standard",
+        });
+
+        return response;
+      });
+    } catch (error: any) {
+      return handleOpenAIError(error);
+    }
+
+    if (!isPro) {
+      await incrementFeatureUsage(FEATURE_TYPES.IMAGE_GENERATION);
+    }
+
+    return new NextResponse(JSON.stringify(result.data));
+  } catch (error: any) {
+    console.error('[GENERAL_ERROR]:', error);
+    return new NextResponse("Internal Error", { status: 500 });
+>>>>>>> main
   }
 }
