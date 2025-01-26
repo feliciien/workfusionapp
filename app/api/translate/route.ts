@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
@@ -44,11 +44,17 @@ export async function POST(req: Request) {
       ],
     });
 
+    const translation = response.choices[0]?.message?.content?.trim();
+
+    if (!translation) {
+      return new NextResponse("Translation failed", { status: 500 });
+    }
+
     return NextResponse.json({
-      translation: response.choices[0].message.content,
+      translation,
     });
-  } catch (error) {
-    console.log("[TRANSLATE_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+  } catch (error: any) {
+    console.error("[TRANSLATE_ERROR]", error);
+    return new NextResponse(error.message || "Internal Error", { status: 500 });
   }
 }

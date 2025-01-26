@@ -1,3 +1,5 @@
+/** @format */
+
 "use client";
 
 import { useState } from "react";
@@ -5,7 +7,13 @@ import { ToolPage } from "@/components/tool-page";
 import { tools } from "../dashboard/config";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api-client";
 
@@ -28,17 +36,17 @@ export default function TranslatePage() {
   const [translation, setTranslation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const tool = tools.find(t => t.label === "Translation")!;
+  const tool = tools.find((t) => t.label === "Translation")!;
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       setIsLoading(true);
       const response = await api.translate(text, targetLang);
-      if (!response.data) {
+      if (!response.translation) {
         throw new Error("No translation received from the API");
       }
-      setTranslation(response.data.translation);
+      setTranslation(response.translation);
       toast.success("Translation complete!");
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
@@ -75,9 +83,9 @@ export default function TranslatePage() {
               </SelectContent>
             </Select>
           </div>
-          <Button 
-            type="submit" 
-            className="w-full" 
+          <Button
+            type="submit"
+            className="w-full"
             disabled={isLoading || !text || !targetLang}
           >
             Translate
@@ -86,9 +94,7 @@ export default function TranslatePage() {
         {translation && (
           <div className="space-y-2 mt-4">
             <label className="text-sm font-medium">Translation:</label>
-            <div className="p-4 bg-secondary/50 rounded-lg">
-              {translation}
-            </div>
+            <div className="p-4 bg-secondary/50 rounded-lg">{translation}</div>
             <Button
               type="button"
               variant="outline"
