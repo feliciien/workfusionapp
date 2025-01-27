@@ -1,0 +1,36 @@
+{
+  "navigation": {
+    "home": "Inicio",
+    "pricing": "Precios",
+    "contact": "Contacto",
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse",
+    "dashboard": "Panel de Control"
+  },
+  "landing": {
+    "title": "Tu Asistente de IA Inteligente",
+    "subtitle": "Genera contenido, analiza datos y crea aplicaciones con IA",
+    "getStarted": "Comenzar",
+    "learnMore": "Saber Más"
+  },
+  "features": {
+    "codeGeneration": "Generación de Código",
+    "imageGeneration": "Generación de Imágenes",
+    "chatbot": "Asistente Virtual",
+    "analytics": "Análisis de Datos"
+  },
+  "pricing": {
+    "title": "Nuestros Precios",
+    "free": "Gratis",
+    "pro": "Pro",
+    "enterprise": "Empresa",
+    "monthly": "por mes",
+    "yearly": "por año",
+    "subscribe": "Suscribirse"
+  },
+  "errors": {
+    "general": "Ha ocurrido un error",
+    "notFound": "Página no encontrada",
+    "unauthorized": "No autorizado"
+  }
+}

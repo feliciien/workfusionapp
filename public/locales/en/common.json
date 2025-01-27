@@ -1,0 +1,36 @@
+{
+  "navigation": {
+    "home": "Home",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "login": "Login",
+    "signup": "Sign Up",
+    "dashboard": "Dashboard"
+  },
+  "landing": {
+    "title": "Your Intelligent AI Assistant",
+    "subtitle": "Generate content, analyze data, and create applications with AI",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More"
+  },
+  "features": {
+    "codeGeneration": "Code Generation",
+    "imageGeneration": "Image Generation",
+    "chatbot": "Chatbot Assistant",
+    "analytics": "Data Analytics"
+  },
+  "pricing": {
+    "title": "Our Pricing",
+    "free": "Free",
+    "pro": "Pro",
+    "enterprise": "Enterprise",
+    "monthly": "per month",
+    "yearly": "per year",
+    "subscribe": "Subscribe"
+  },
+  "errors": {
+    "general": "An error occurred",
+    "notFound": "Page not found",
+    "unauthorized": "Unauthorized"
+  }
+}

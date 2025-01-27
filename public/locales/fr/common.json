@@ -1,0 +1,36 @@
+{
+  "navigation": {
+    "home": "Accueil",
+    "pricing": "Tarifs",
+    "contact": "Contact",
+    "login": "Connexion",
+    "signup": "S'inscrire",
+    "dashboard": "Tableau de bord"
+  },
+  "landing": {
+    "title": "Votre Assistant IA Intelligent",
+    "subtitle": "Générez du contenu, analysez des données et créez des applications avec l'IA",
+    "getStarted": "Commencer",
+    "learnMore": "En savoir plus"
+  },
+  "features": {
+    "codeGeneration": "Génération de Code",
+    "imageGeneration": "Génération d'Images",
+    "chatbot": "Assistant Conversationnel",
+    "analytics": "Analyses de Données"
+  },
+  "pricing": {
+    "title": "Nos Tarifs",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "enterprise": "Entreprise",
+    "monthly": "par mois",
+    "yearly": "par an",
+    "subscribe": "S'abonner"
+  },
+  "errors": {
+    "general": "Une erreur s'est produite",
+    "notFound": "Page non trouvée",
+    "unauthorized": "Non autorisé"
+  }
+}
