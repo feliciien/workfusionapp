@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Code, AlertTriangle, Zap } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { analyzeCode, CodeAnalysis } from '@/lib/code-analyzer';
+import { Code, Upload } from "lucide-react";
+import { useState } from "react";
 import { O1Optimization } from './o1-optimization';
 
 interface CodeAnalysisProps {
@@ -66,162 +71,105 @@ export function CodeAnalysisCard({ onAnalysis }: CodeAnalysisProps) {
   };
 
   return (
-    <Card className="w-full">
+    <Card className='w-full'>
       <CardHeader>
         <CardTitle>Code Analysis</CardTitle>
-        <CardDescription>Analyze your code for quality and performance</CardDescription>
+        <CardDescription>
+          Analyze your code for quality and performance
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <Tabs value={inputMethod} onValueChange={(v) => setInputMethod(v as 'paste' | 'file')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="paste">
-                <Code className="w-4 h-4 mr-2" />
+        <div className='space-y-4'>
+          <Tabs
+            value={inputMethod}
+            onValueChange={(v) => setInputMethod(v as "paste" | "file")}
+            className='w-full'>
+            <TabsList className='grid w-full grid-cols-2 mb-4'>
+              <TabsTrigger
+                value='paste'
+                className='flex items-center gap-2 transition-all'>
+                <Code className='w-4 h-4' />
                 Paste Code
               </TabsTrigger>
-              <TabsTrigger value="file">
-                <Upload className="w-4 h-4 mr-2" />
+              <TabsTrigger
+                value='file'
+                className='flex items-center gap-2 transition-all'>
+                <Upload className='w-4 h-4' />
                 Upload File
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="paste">
-              <Textarea
-                placeholder="Paste your code here..."
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="h-48 font-mono"
-              />
+            <TabsContent value='paste' className='mt-4'>
+              <div className='relative'>
+                <Textarea
+                  placeholder='Paste your code here...'
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className='h-48 font-mono resize-none focus:ring-2 focus:ring-primary/50 transition-all'
+                />
+                {code && (
+                  <button
+                    onClick={() => setCode("")}
+                    className='absolute top-2 right-2 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                    title='Clear code'>
+                    <X className='w-4 h-4' />
+                  </button>
+                )}
+              </div>
             </TabsContent>
 
-            <TabsContent value="file">
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+            <TabsContent value='file' className='mt-4'>
+              <div className='border-2 border-dashed rounded-lg p-8 text-center transition-all hover:border-primary/50 cursor-pointer'>
                 <input
-                  type="file"
-                  accept=".js,.ts,.jsx,.tsx,.vue,.svelte,.html,.css"
+                  type='file'
+                  accept='.js,.ts,.jsx,.tsx,.vue,.svelte,.html,.css'
                   onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
+                  className='hidden'
+                  id='file-upload'
                 />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
+                <label
+                  htmlFor='file-upload'
+                  className='cursor-pointer space-y-2 block'>
+                  <Upload className='w-12 h-12 mx-auto mb-4 text-muted-foreground transition-colors group-hover:text-primary' />
+                  <p className='text-lg font-medium text-muted-foreground'>
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className='text-sm text-muted-foreground'>
                     Supports JS, TS, JSX, TSX, Vue, Svelte, HTML, CSS
                   </p>
                 </label>
               </div>
             </TabsContent>
           </Tabs>
-          
+
           <Button
             onClick={handleAnalyze}
             disabled={loading || !code.trim()}
-            className="w-full"
-          >
-            {loading ? 'Analyzing...' : 'Analyze Code'}
+            className='w-full relative overflow-hidden group'>
+            {loading ? (
+              <div className='flex items-center justify-center gap-2'>
+                <Loader2 className='w-4 h-4 animate-spin' />
+                <span>Analyzing...</span>
+              </div>
+            ) : (
+              <div className='flex items-center justify-center gap-2'>
+                <Code className='w-4 h-4' />
+                <span>Analyze Code</span>
+              </div>
+            )}
+            {!loading && (
+              <div className='absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300' />
+            )}
           </Button>
-
-          {analysis && (
-            <div className="space-y-6 mt-4">
-              {/* Complexity Score */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Complexity Score</span>
-                  <span className="text-sm text-muted-foreground">{analysis.complexity}</span>
-                </div>
-                <Progress 
-                  value={Math.min(100, (analysis.complexity / 30) * 100)} 
-                  className="h-2"
-                />
-              </div>
-
-              {/* Performance Score */}
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Performance Score</span>
-                  <span className="text-sm text-muted-foreground">{analysis.performance.score}%</span>
-                </div>
-                <Progress value={analysis.performance.score} className="h-2" />
-              </div>
-
-              {/* Code Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium">Lines of Code</span>
-                  <p className="mt-1 text-2xl font-bold">{analysis.linesOfCode}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">Dependencies</span>
-                  <p className="mt-1 text-2xl font-bold">{analysis.dependencies.length}</p>
-                </div>
-              </div>
-
-              {/* Security Issues */}
-              {analysis.securityIssues.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
-                    <h4 className="text-sm font-medium">Security Issues</h4>
-                  </div>
-                  <div className="space-y-2">
-                    {analysis.securityIssues.map((issue, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <Badge variant="destructive">Security</Badge>
-                        <span className="text-sm">{issue}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Performance Issues */}
-              {analysis.performance.issues.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-4 h-4 text-yellow-500" />
-                    <h4 className="text-sm font-medium">Performance Issues</h4>
-                  </div>
-                  <div className="space-y-2">
-                    {analysis.performance.issues.map((issue, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <Badge variant={getSeverityColor(issue)}>Performance</Badge>
-                        <span className="text-sm">{issue}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Suggestions */}
-              {analysis.suggestions.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Suggestions</h4>
-                  <div className="space-y-2">
-                    {analysis.suggestions.map((suggestion, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <Badge variant={getSeverityColor(suggestion)}>
-                          {suggestion.split(':')[0]}
-                        </Badge>
-                        <span className="text-sm">{suggestion.split(':')[1]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </CardContent>
       <CardFooter>
-        <O1Optimization 
-          code={code} 
+        <O1Optimization
+          code={code}
           onOptimizedCode={(optimizedCode) => {
             setCode(optimizedCode);
             handleAnalyze();
-          }} 
+          }}
         />
       </CardFooter>
     </Card>

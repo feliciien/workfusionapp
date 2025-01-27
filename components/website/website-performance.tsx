@@ -2,7 +2,6 @@
 
 "use client";
 
-import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -81,8 +80,8 @@ export function WebsitePerformance() {
 
   return (
     <div className='px-4 lg:px-8'>
-      <div className='mb-8 space-y-4'>
-        <h2 className='text-2xl md:text-4xl font-bold text-center'>
+      <div className='mb-8 space-y-4 animate-fade-in'>
+        <h2 className='text-2xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60'>
           Website Performance Analyzer
         </h2>
         <p className='text-muted-foreground font-light text-sm md:text-lg text-center'>
@@ -92,14 +91,37 @@ export function WebsitePerformance() {
 
       <div className='space-y-4 mb-4'>
         <div className='flex items-center gap-2'>
-          <Input
-            placeholder='Enter website URL'
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            disabled={loading}
-          />
-          <Button onClick={analyzeWebsite} disabled={loading || !url}>
-            {loading ? <Loader /> : "Analyze"}
+          <div className='relative flex-1'>
+            <Input
+              placeholder='Enter website URL'
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={loading}
+              className='pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/50'
+            />
+            {url && (
+              <button
+                onClick={() => setUrl("")}
+                className='absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'>
+                <X className='w-4 h-4 text-muted-foreground' />
+              </button>
+            )}
+          </div>
+          <Button
+            onClick={analyzeWebsite}
+            disabled={loading || !url}
+            className='relative overflow-hidden group min-w-[100px]'>
+            {loading ? (
+              <div className='flex items-center gap-2'>
+                <Loader2 className='w-4 h-4 animate-spin' />
+                <span>Analyzing</span>
+              </div>
+            ) : (
+              <span>Analyze</span>
+            )}
+            {!loading && (
+              <div className='absolute inset-0 bg-primary/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300' />
+            )}
           </Button>
         </div>
       </div>

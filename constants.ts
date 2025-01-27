@@ -188,3 +188,57 @@ export const tools = [
     proOnly: true
   }
 ];
+
+export const stats = [
+  {
+    value: "1M+",
+    label: "Active Users",
+    subtext: "Worldwide"
+  },
+  {
+    value: "100+",
+    label: "AI Models",
+    subtext: "Integrated"
+  },
+  {
+    value: "99.9%",
+    label: "Uptime",
+    subtext: "Reliability"
+  },
+  {
+    value: "24/7",
+    label: "Support",
+    subtext: "Available"
+  },
+  {
+    value: "99.99%",
+    label: "Service Reliability",
+    subtext: "Enterprise-grade infrastructure"
+  },
+  {
+    value: "<15min",
+    label: "Avg Response Time",
+    subtext: "Dedicated technical support"
+  }
+];
+
+export const features = [
+  {
+    title: "AI-Powered Code Generation",
+    icon: Code,
+    description:
+      "Generate high-quality code snippets and complete applications with our advanced AI technology."
+  },
+  {
+    title: "Smart Image Creation",
+    icon: ImageIcon,
+    description:
+      "Create stunning visuals and artwork using state-of-the-art AI image generation."
+  },
+  {
+    title: "Intelligent Conversation",
+    icon: MessageSquare,
+    description:
+      "Engage in meaningful dialogues with our AI assistant for brainstorming and problem-solving."
+  }
+];
