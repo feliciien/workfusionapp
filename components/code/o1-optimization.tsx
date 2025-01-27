@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from 'react';
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
+import { Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
 
 interface O1OptimizationProps {
   code: string;
@@ -36,7 +35,15 @@ export function O1Optimization({ code, onOptimizedCode }: O1OptimizationProps) {
         }),
       });
 
-      if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error(
+          "Free trial limit reached. Please upgrade to continue using the code optimization feature."
+        );
+      } else if (response.status === 429) {
+        throw new Error(
+          "Too many requests. Please wait a moment before trying again."
+        );
+      } else if (!response.ok) {
         const error = await response.text();
         throw new Error(error);
       }
@@ -61,7 +68,16 @@ export function O1Optimization({ code, onOptimizedCode }: O1OptimizationProps) {
   };
 
   const extractCodeFromResponse = (content: string): string | null => {
-    const codeBlockRegex = /\`\`\`(?:\w+\n)?([^`]+)\`\`\`/;
+    // First try to find a code block with a language specifier
+    const codeBlockWithLangRegex = /```[\w-]+\n([\s\S]+?)```/;
+    const matchWithLang = content.match(codeBlockWithLangRegex);
+
+    if (matchWithLang) {
+      return matchWithLang[1].trim();
+    }
+
+    // Fallback to any code block
+    const codeBlockRegex = /```([\s\S]+?)```/;
     const match = content.match(codeBlockRegex);
     return match ? match[1].trim() : null;
   };
