@@ -1,4 +1,6 @@
-import { Organization, WithContext } from "schema-dts";
+/** @format */
+
+import { Organization, WebPage, WithContext } from "schema-dts";
 
 export function OrganizationStructuredData() {
   const structuredData: WithContext<Organization> = {
@@ -10,7 +12,7 @@ export function OrganizationStructuredData() {
     description:
       "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
     sameAs: [
-      "https://twitter.com/workfusion",
+      "https://twitter.com/workfusion"
       // Add other social media profiles here
     ],
     contactPoint: {
@@ -18,13 +20,13 @@ export function OrganizationStructuredData() {
       telephone: "",
       contactType: "customer service",
       email: "support@workfusionapp.com",
-      availableLanguage: ["English"],
-    },
+      availableLanguage: ["English"]
+    }
   };
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
   );
@@ -36,6 +38,8 @@ interface PageStructuredDataProps {
   image?: string;
   publishedTime?: string;
   modifiedTime?: string;
+  canonical?: string;
+  author?: string;
 }
 
 export function PageStructuredData({
@@ -44,28 +48,64 @@ export function PageStructuredData({
   image,
   publishedTime,
   modifiedTime,
+  canonical,
+  author
 }: PageStructuredDataProps) {
-  const structuredData = {
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const structuredData: WithContext<WebPage> = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: title,
     description: description,
+    url: canonical || siteUrl,
     publisher: {
       "@type": "Organization",
       name: "WorkFusion App",
       logo: {
         "@type": "ImageObject",
-        url: `https://www.workfusionapp.com/logo.png`,
-      },
+        url: `https://www.workfusionapp.com/logo.png`
+      }
     },
-    ...(image && { image }),
+    ...(image && {
+      image: {
+        "@type": "ImageObject",
+        url: image
+      }
+    }),
     ...(publishedTime && { datePublished: publishedTime }),
     ...(modifiedTime && { dateModified: modifiedTime }),
+    ...(author && {
+      author: {
+        "@type": "Person",
+        name: author
+      }
+    }),
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: siteUrl
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: title,
+          item: canonical || siteUrl
+        }
+      ]
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonical || siteUrl
+    }
   };
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
     />
   );
