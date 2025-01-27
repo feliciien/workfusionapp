@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from "react";
 import { useAgent } from './agent-provider';
 
 interface Suggestion {
@@ -47,62 +47,107 @@ export const WebsiteAgent = () => {
   const generateContextualSuggestions = (path: string) => {
     const newSuggestions: Suggestion[] = [];
 
-    // Example: Generate suggestions based on current path
-    // Customize suggestions based on user's current page
-    if (!path.includes('pricing')) {
+    // Analytics-based recommendations
+    if (!path.includes("analytics")) {
       newSuggestions.push({
-        id: 'pricing-1',
-        type: 'feature',
-        title: 'View Pricing Plans',
-        description: 'Explore our pricing options and upgrade to Pro.',
-        action: '/pricing',
-        priority: 1,
+        id: "analytics-1",
+        type: "feature",
+        title: "Website Analytics Dashboard",
+        description:
+          "Get detailed insights into your website performance, user behavior patterns, and conversion metrics.",
+        action: "/analytics",
+        priority: 1
       });
     }
 
-    if (!path.includes('docs')) {
+    // Advanced pricing recommendations
+    if (!path.includes("pricing")) {
       newSuggestions.push({
-        id: 'docs-1',
-        type: 'content',
-        title: 'Documentation',
-        description: 'Learn how to use all our features effectively.',
-        action: '/docs',
-        priority: 2,
+        id: "pricing-1",
+        type: "feature",
+        title: "Custom Pricing Solutions",
+        description:
+          "Explore our flexible pricing plans with enterprise options, annual discounts, and team collaboration features.",
+        action: "/pricing",
+        priority: 2
       });
     }
 
-    if (!path.includes('affiliate')) {
+    // Enhanced documentation suggestions
+    if (!path.includes("docs")) {
       newSuggestions.push({
-        id: 'affiliate-1',
-        type: 'feature',
-        title: 'Join Affiliate Program',
-        description: 'Earn rewards by sharing WorkFusion.',
-        action: '/affiliate',
-        priority: 3,
+        id: "docs-1",
+        type: "content",
+        title: "Interactive Documentation",
+        description:
+          "Access comprehensive guides, API references, code examples, and video tutorials for maximum productivity.",
+        action: "/docs",
+        priority: 3
       });
     }
 
-    // Show contact page for support
-    if (!path.includes('contact')) {
+    // Personalized affiliate program
+    if (!path.includes("affiliate")) {
       newSuggestions.push({
-        id: 'contact-1',
-        type: 'navigation',
-        title: 'Need Help?',
-        description: 'Contact our support team for assistance.',
-        action: '/contact',
-        priority: 4,
+        id: "affiliate-1",
+        type: "feature",
+        title: "Premium Affiliate Program",
+        description:
+          "Join our tiered affiliate program with increased commissions, exclusive promotional materials, and dedicated support.",
+        action: "/affiliate",
+        priority: 4
       });
     }
 
-    // Login suggestion for non-authenticated pages
-    if (!path.includes('auth/signin')) {
+    // Enhanced support options
+    if (!path.includes("contact")) {
       newSuggestions.push({
-        id: 'auth-1',
-        type: 'navigation',
-        title: 'Sign In',
-        description: 'Access your account to use all features.',
-        action: '/auth/signin',
-        priority: 5,
+        id: "contact-1",
+        type: "navigation",
+        title: "Premium Support Access",
+        description:
+          "Get priority support with 24/7 live chat, dedicated account manager, and technical consultation services.",
+        action: "/contact",
+        priority: 5
+      });
+    }
+
+    // Advanced authentication features
+    if (!path.includes("auth/signin")) {
+      newSuggestions.push({
+        id: "auth-1",
+        type: "navigation",
+        title: "Secure Account Access",
+        description:
+          "Sign in to access premium features, team collaboration tools, and personalized workspace settings.",
+        action: "/auth/signin",
+        priority: 6
+      });
+    }
+
+    // Performance optimization suggestions
+    if (!path.includes("website-performance")) {
+      newSuggestions.push({
+        id: "performance-1",
+        type: "feature",
+        title: "Performance Optimization",
+        description:
+          "Analyze and optimize your website performance with AI-powered recommendations and real-time monitoring.",
+        action: "/website-performance",
+        priority: 7
+      });
+    }
+
+    // Network monitoring features
+    if (!path.includes("network")) {
+      newSuggestions.push({
+        id: "network-1",
+        type: "feature",
+        title: "Network Health Monitor",
+        description:
+          "Monitor your network performance, detect issues early, and receive automated optimization suggestions.",
+        action: "/network",
+        priority: 8
       });
     }
 

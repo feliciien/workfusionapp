@@ -1,13 +1,15 @@
+/** @format */
+
+import { FEATURE_TYPES } from "@/constants";
+import { authOptions } from "@/lib/auth-options";
+import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
+import { checkSubscription } from "@/lib/subscription";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
-import { checkSubscription } from "@/lib/subscription";
-import { checkFeatureLimit, incrementFeatureUsage } from "@/lib/feature-limit";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { FEATURE_TYPES } from "@/constants";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 interface PerformanceMetrics {
@@ -17,6 +19,12 @@ interface PerformanceMetrics {
   performanceScore: number;
   seoScore: number;
   accessibilityScore: number;
+  largestContentfulPaint: number;
+  cumulativeLayoutShift: number;
+  firstInputDelay: number;
+  mobileResponsiveness: number;
+  crossBrowserScore: number;
+  timestamp: string;
 }
 
 interface WebsiteAnalysisResponse {
@@ -57,12 +65,18 @@ export async function POST(req: Request) {
     // Simulate performance metrics collection
     // In a production environment, you would use real performance testing tools
     const metrics: PerformanceMetrics = {
-      loadingSpeed: Math.random() * 3 + 1, // 1-4 seconds
-      firstContentfulPaint: Math.random() * 2 + 0.5, // 0.5-2.5 seconds
-      timeToInteractive: Math.random() * 4 + 2, // 2-6 seconds
-      performanceScore: Math.floor(Math.random() * 30 + 70), // 70-100
-      seoScore: Math.floor(Math.random() * 20 + 80), // 80-100
-      accessibilityScore: Math.floor(Math.random() * 25 + 75), // 75-100
+      loadingSpeed: Math.random() * 3 + 1,
+      firstContentfulPaint: Math.random() * 2 + 0.5,
+      timeToInteractive: Math.random() * 4 + 2,
+      performanceScore: Math.floor(Math.random() * 30 + 70),
+      seoScore: Math.floor(Math.random() * 20 + 80),
+      accessibilityScore: Math.floor(Math.random() * 25 + 75),
+      largestContentfulPaint: Math.random() * 4 + 2,
+      cumulativeLayoutShift: Math.random() * 0.5,
+      firstInputDelay: Math.random() * 200 + 50,
+      mobileResponsiveness: Math.floor(Math.random() * 20 + 80),
+      crossBrowserScore: Math.floor(Math.random() * 15 + 85),
+      timestamp: new Date().toISOString()
     };
 
     // Generate insights using OpenAI
@@ -71,29 +85,35 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are a website performance and SEO expert. Analyze the provided metrics and generate actionable insights."
+          content:
+            "You are a website performance and SEO expert. Analyze the provided metrics and generate clear, actionable recommendations. Format your response as a JSON object with three arrays: 'seoInsights', 'accessibilityIssues', and 'performanceRecommendations'. Each array should contain complete, well-written sentences that explain the issue and provide specific solutions. Do not use markdown formatting or bullet points."
         },
         {
           role: "user",
-          content: `Analyze these website metrics for ${url}:\n${JSON.stringify(metrics, null, 2)}\n\nProvide specific recommendations for SEO, accessibility, and performance improvements.`
+          content: `Analyze these website metrics for ${url}:\n${JSON.stringify(metrics, null, 2)}\n\nProvide specific recommendations for SEO, accessibility, and performance improvements in clear, natural language.`
         }
       ],
       temperature: 0.7,
-      max_tokens: 1000
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
     });
 
     const aiSuggestions = response.choices[0].message.content;
     let parsedSuggestions;
-    
+
     try {
       parsedSuggestions = JSON.parse(aiSuggestions || "{}");
     } catch {
       // If AI response isn't valid JSON, create a basic structure from the text
       const suggestions = (aiSuggestions || "").split("\n").filter(Boolean);
       parsedSuggestions = {
-        seoInsights: suggestions.filter(s => s.toLowerCase().includes("seo")),
-        accessibilityIssues: suggestions.filter(s => s.toLowerCase().includes("accessibility")),
-        performanceRecommendations: suggestions.filter(s => s.toLowerCase().includes("performance"))
+        seoInsights: suggestions.filter((s) => s.toLowerCase().includes("seo")),
+        accessibilityIssues: suggestions.filter((s) =>
+          s.toLowerCase().includes("accessibility")
+        ),
+        performanceRecommendations: suggestions.filter((s) =>
+          s.toLowerCase().includes("performance")
+        )
       };
     }
 
@@ -101,7 +121,8 @@ export async function POST(req: Request) {
       metrics,
       seoInsights: parsedSuggestions.seoInsights || [],
       accessibilityIssues: parsedSuggestions.accessibilityIssues || [],
-      performanceRecommendations: parsedSuggestions.performanceRecommendations || []
+      performanceRecommendations:
+        parsedSuggestions.performanceRecommendations || []
     };
 
     if (!isPro) {

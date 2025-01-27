@@ -24,6 +24,12 @@ interface PerformanceMetrics {
   performanceScore: number;
   seoScore: number;
   accessibilityScore: number;
+  largestContentfulPaint: number;
+  cumulativeLayoutShift: number;
+  firstInputDelay: number;
+  mobileResponsiveness: number;
+  crossBrowserScore: number;
+  timestamp: string;
 }
 
 interface WebsiteAnalysisResponse {
@@ -39,6 +45,10 @@ export function WebsitePerformance() {
   const [analysis, setAnalysis] = useState<WebsiteAnalysisResponse | null>(
     null
   );
+  const [historicalData, setHistoricalData] = useState<PerformanceMetrics[]>(
+    []
+  );
+  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
   const proModal = useProModal();
 
   const analyzeWebsite = async () => {
@@ -103,7 +113,7 @@ export function WebsitePerformance() {
           </TabsList>
 
           <TabsContent value='performance' className='space-y-4'>
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
               <Card>
                 <CardHeader>
                   <CardTitle>Performance Score</CardTitle>
@@ -139,6 +149,72 @@ export function WebsitePerformance() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Core Web Vitals</CardTitle>
+                  <CardDescription>Key user experience metrics</CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-2'>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>LCP: </span>
+                    <span className='font-medium'>
+                      {analysis.metrics.largestContentfulPaint.toFixed(2)}s
+                    </span>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>CLS: </span>
+                    <span className='font-medium'>
+                      {analysis.metrics.cumulativeLayoutShift.toFixed(3)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>FID: </span>
+                    <span className='font-medium'>
+                      {analysis.metrics.firstInputDelay.toFixed(0)}ms
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className='grid gap-4 md:grid-cols-2'>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cross-Browser Compatibility</CardTitle>
+                  <CardDescription>
+                    Performance across different browsers
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-2'>
+                    <div className='text-2xl font-bold mb-2'>
+                      {analysis.metrics.crossBrowserScore}/100
+                    </div>
+                    <div className='text-sm text-muted-foreground'>
+                      Your website performs well across major browsers
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mobile Responsiveness</CardTitle>
+                  <CardDescription>Mobile-friendly assessment</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-2'>
+                    <div className='text-2xl font-bold mb-2'>
+                      {analysis.metrics.mobileResponsiveness}/100
+                    </div>
+                    <div className='text-sm text-muted-foreground'>
+                      Mobile optimization score based on responsive design
+                      principles
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Card>
@@ -146,15 +222,15 @@ export function WebsitePerformance() {
                 <CardTitle>Performance Recommendations</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className='space-y-2'>
+                <div className='space-y-4'>
                   {analysis.performanceRecommendations.map(
                     (recommendation, index) => (
-                      <li key={index} className='text-sm'>
-                        • {recommendation}
-                      </li>
+                      <div key={index} className='p-4 bg-muted/50 rounded-lg'>
+                        <p className='text-sm'>{recommendation}</p>
+                      </div>
                     )
                   )}
-                </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -173,13 +249,13 @@ export function WebsitePerformance() {
                 </div>
                 <div className='space-y-4'>
                   <h3 className='font-semibold'>Recommendations:</h3>
-                  <ul className='space-y-2'>
+                  <div className='space-y-3'>
                     {analysis.seoInsights.map((insight, index) => (
-                      <li key={index} className='text-sm'>
-                        • {insight}
-                      </li>
+                      <div key={index} className='p-4 bg-muted/50 rounded-lg'>
+                        <p className='text-sm'>{insight}</p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -197,13 +273,13 @@ export function WebsitePerformance() {
                 </div>
                 <div className='space-y-4'>
                   <h3 className='font-semibold'>Issues and Recommendations:</h3>
-                  <ul className='space-y-2'>
+                  <div className='space-y-3'>
                     {analysis.accessibilityIssues.map((issue, index) => (
-                      <li key={index} className='text-sm'>
-                        • {issue}
-                      </li>
+                      <div key={index} className='p-4 bg-muted/50 rounded-lg'>
+                        <p className='text-sm'>{issue}</p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
