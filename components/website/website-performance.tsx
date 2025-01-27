@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProModal } from "@/hooks/use-pro-modal";
+import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 

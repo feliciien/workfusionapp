@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { analyzeCode, CodeAnalysis } from '@/lib/code-analyzer';
-import { Code, Upload } from "lucide-react";
+import { Code, Loader2, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { O1Optimization } from './o1-optimization';
 
