@@ -59,7 +59,7 @@ export const LandingNavbar = () => {
             <Link href='/sign-in'>
               <Button
                 variant='outline'
-                className='rounded-full border-white/20 text-white hover:bg-white/10 hover:text-white transition-colors'>
+                className='rounded-full text-white bg-white/10 hover:bg-white hover:text-gray-900 transition-colors'>
                 Sign in
               </Button>
             </Link>
