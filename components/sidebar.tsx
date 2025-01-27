@@ -4,7 +4,7 @@
 
 import { FreeCounter } from "@/components/free-counter";
 import { ProLink } from "@/components/pro-link";
-import { FREE_DAILY_LIMIT, FEATURE_TYPES } from "@/constants";
+import { FEATURE_TYPES, FREE_DAILY_LIMIT } from "@/constants";
 import { getFeatureUsage } from "@/lib/feature-limit";
 import { cn } from "@/lib/utils";
 import {
@@ -23,10 +23,9 @@ import {
   Network,
   Palette,
   PresentationIcon,
-  Search,
   Settings,
-  VideoIcon,
-  Users
+  Users,
+  VideoIcon
 } from "lucide-react";
 import { Montserrat } from 'next/font/google';
 import Image from "next/image";
@@ -66,19 +65,20 @@ const routeCategories: RouteCategory[] = [
     name: "Communication & Writing",
     routes: [
       {
-        label: 'Conversation',
+        label: "Conversation",
         icon: MessageSquare,
-        href: '/conversation',
+        href: "/conversation",
         color: "text-violet-500",
-        description: "Chat seamlessly with our AI assistant for ideas and help.",
+        description:
+          "Chat seamlessly with our AI assistant for ideas and help.",
         free: true,
         core: true
       },
       {
-        label: 'Content Writer',
+        label: "Content Writer",
         icon: FileText,
         color: "text-blue-600",
-        href: '/content',
+        href: "/content",
         description: "Generate high-quality articles and blog posts.",
         free: false,
         limitedFree: true,
@@ -86,10 +86,10 @@ const routeCategories: RouteCategory[] = [
         featureType: FEATURE_TYPES.CONTENT_WRITER
       },
       {
-        label: 'Translation',
+        label: "Translation",
         icon: Languages,
         color: "text-green-600",
-        href: '/translate',
+        href: "/translate",
         description: "Translate text between multiple languages accurately.",
         free: false,
         proOnly: true
@@ -100,10 +100,10 @@ const routeCategories: RouteCategory[] = [
     name: "Creative Suite",
     routes: [
       {
-        label: 'Image Generation',
+        label: "Image Generation",
         icon: ImageIcon,
         color: "text-pink-700",
-        href: '/image',
+        href: "/image",
         description: "Create stunning images from text descriptions.",
         free: false,
         limitedFree: true,
@@ -111,28 +111,28 @@ const routeCategories: RouteCategory[] = [
         featureType: FEATURE_TYPES.IMAGE_GENERATION
       },
       {
-        label: 'Music Creation',
+        label: "Music Creation",
         icon: Music,
         color: "text-emerald-500",
-        href: '/music',
+        href: "/music",
         description: "Compose original music and melodies.",
         free: false,
         proOnly: true
       },
       {
-        label: 'Video Generation',
+        label: "Video Generation",
         icon: VideoIcon,
         color: "text-orange-700",
-        href: '/video',
+        href: "/video",
         description: "Create and edit videos with AI assistance.",
         free: false,
         proOnly: true
       },
       {
-        label: 'Art Studio',
+        label: "Art Studio",
         icon: Palette,
         color: "text-purple-500",
-        href: '/art',
+        href: "/art",
         description: "Create digital art with AI assistance.",
         free: false,
         proOnly: true
@@ -143,22 +143,33 @@ const routeCategories: RouteCategory[] = [
     name: "Development Tools",
     routes: [
       {
-        label: 'Code Generation',
+        label: "Code Analysis",
         icon: Code,
         color: "text-green-700",
-        href: '/code',
-        description: "Generate code snippets and entire functions.",
+        href: "/code",
+        description: "Analyze and optimize your code quality.",
         free: false,
         limitedFree: true,
         freeLimit: FREE_DAILY_LIMIT,
-        featureType: FEATURE_TYPES.CODE_GENERATION
+        featureType: FEATURE_TYPES.CODE_ANALYSIS
       },
       {
-        label: 'Code Analysis',
-        icon: Search,
-        color: "text-yellow-600",
-        href: '/code-analysis',
-        description: "Analyze and improve your code quality.",
+        label: "Website Performance",
+        icon: LineChart,
+        color: "text-blue-600",
+        href: "/website-performance",
+        description: "Analyze and optimize your website's performance.",
+        free: false,
+        limitedFree: true,
+        freeLimit: FREE_DAILY_LIMIT,
+        featureType: FEATURE_TYPES.WEBSITE_PERFORMANCE
+      },
+      {
+        label: "Network Analysis",
+        icon: Network,
+        color: "text-orange-700",
+        href: "/network",
+        description: "Monitor and optimize your network performance.",
         free: false,
         proOnly: true
       }
@@ -168,19 +179,19 @@ const routeCategories: RouteCategory[] = [
     name: "Business Tools",
     routes: [
       {
-        label: 'Data Insights',
+        label: "Data Insights",
         icon: LineChart,
         color: "text-blue-500",
-        href: '/data-insights',
+        href: "/data-insights",
         description: "Generate insights from your data.",
         free: false,
         proOnly: true
       },
       {
-        label: 'Presentation',
+        label: "Presentation",
         icon: PresentationIcon,
         color: "text-orange-600",
-        href: '/presentation',
+        href: "/presentation",
         description: "Create professional presentations instantly.",
         free: false,
         limitedFree: true,
@@ -188,10 +199,10 @@ const routeCategories: RouteCategory[] = [
         featureType: FEATURE_TYPES.PRESENTATION
       },
       {
-        label: 'Network Analysis',
+        label: "Network Analysis",
         icon: Network,
         color: "text-indigo-500",
-        href: '/network',
+        href: "/network",
         description: "Analyze and visualize network data.",
         free: false,
         proOnly: true
@@ -202,19 +213,19 @@ const routeCategories: RouteCategory[] = [
     name: "Learning & Research",
     routes: [
       {
-        label: 'Study Assistant',
+        label: "Study Assistant",
         icon: BookOpen,
         color: "text-purple-600",
-        href: '/study',
+        href: "/study",
         description: "Get help with studying and research.",
         free: false,
         proOnly: true
       },
       {
-        label: 'Idea Generator',
+        label: "Idea Generator",
         icon: Lightbulb,
         color: "text-yellow-600",
-        href: '/ideas',
+        href: "/ideas",
         description: "Generate creative ideas for any project.",
         free: false,
         limitedFree: true,
@@ -227,25 +238,25 @@ const routeCategories: RouteCategory[] = [
     name: "System",
     routes: [
       {
-        label: 'Settings',
+        label: "Settings",
         icon: Settings,
-        href: '/settings',
+        href: "/settings",
         color: "text-gray-500",
         description: "Manage your account and preferences.",
         free: true
       },
       {
-        label: 'History',
+        label: "History",
         icon: History,
-        href: '/history',
+        href: "/history",
         color: "text-gray-500",
         description: "View your conversation history.",
         free: true
       },
       {
-        label: 'Affiliate',
+        label: "Affiliate",
         icon: Users,
-        href: '/affiliate',
+        href: "/affiliate",
         color: "text-blue-500",
         description: "Access your affiliate dashboard.",
         free: true
