@@ -22,20 +22,21 @@ export const FREE_DAILY_LIMIT = 20; // Daily quota for free users
 export const FEATURE_TYPES = {
   IMAGE_GENERATION: "image",
   CODE_GENERATION: "code",
+  CODE_ANALYSIS: "code_analysis",
   VOICE_SYNTHESIS: "voice",
   CONTENT_WRITER: "content",
   PRESENTATION: "presentation",
-  IDEA_GENERATOR: "idea",
+  WEBSITE_PERFORMANCE: "website_performance",
+  IDEA_GENERATOR: "ideas",
   VIDEO_GENERATION: "video",
   MUSIC_CREATION: "music",
   ART_STUDIO: "art",
-  TRANSLATION: "translation",
+  TRANSLATION: "translate",
   DATA_INSIGHTS: "data",
   NETWORK_ANALYSIS: "network",
   STUDY_ASSISTANT: "study",
   RESEARCH_ASSISTANT: "research",
-  API_USAGE: "api",
-  WEBSITE_PERFORMANCE: "website_performance"
+  API_USAGE: "api"
 } as const;
 
 export const tools = [
