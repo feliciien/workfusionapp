@@ -64,11 +64,15 @@ export default function FeaturesPage() {
 
       <div className='mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
         {features.map((feature, index) => (
-          <Card key={index} className='p-6 hover:shadow-lg transition-shadow'>
+          <Card
+            key={index}
+            className='p-6 hover:shadow-lg transition-shadow flex flex-col'>
             <div className='text-4xl mb-4'>{feature.icon}</div>
             <h3 className='text-xl font-semibold mb-2'>{feature.title}</h3>
-            <p className='text-gray-600 mb-4'>{feature.description}</p>
-            <Link href={feature.link}>
+            <p className='text-gray-600 mb-4 flex-grow'>
+              {feature.description}
+            </p>
+            <Link href={feature.link} className='mt-auto'>
               <Button className='w-full'>Try Now</Button>
             </Link>
           </Card>
