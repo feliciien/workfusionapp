@@ -1,9 +1,10 @@
 "use client";
 
 import { features } from "@/constants";
-import { Analytics } from "@vercel/analytics/react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
+import { Button } from "./ui/button";
 
 export const LandingContent = () => {
   return (
@@ -42,6 +43,11 @@ export const LandingContent = () => {
               <p className='text-gray-600 leading-relaxed'>
                 {feature.description}
               </p>
+              <Link href='/sign-up' className='mt-6 inline-block'>
+                <Button variant='premium' className='w-full'>
+                  Try Now
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>
@@ -56,7 +62,7 @@ export const LandingContent = () => {
           viewport={{ once: true }}
           className='max-w-7xl mx-auto px-4'>
           <h2 className='text-4xl font-bold text-center text-gray-900 mb-4'>
-            Loved by Industry Leaders
+            Trusted by Industry Leaders
           </h2>
           <p className='text-xl text-center text-gray-600 max-w-2xl mx-auto mb-16'>
             Join thousands of professionals who are revolutionizing their work
@@ -67,21 +73,21 @@ export const LandingContent = () => {
             {/* Testimonial Cards */}
             {[
               {
-                text: "This service transformed our business! Highly recommended.",
-                author: "Alice Smith",
-                role: "Founder, Tech Innovators",
+                text: "This AI platform has revolutionized our development process. We've seen a 300% increase in productivity!",
+                author: "Sarah Chen",
+                role: "CTO, TechVision Global",
                 image: "https://randomuser.me/api/portraits/women/68.jpg"
               },
               {
-                text: "An essential tool that has boosted our productivity tenfold.",
-                author: "Bob Johnson",
-                role: "CEO, Business Solutions",
+                text: "The ROI is incredible. We've automated complex tasks and reduced development time by 70%.",
+                author: "Michael Rodriguez",
+                role: "VP Engineering, InnovateX",
                 image: "https://randomuser.me/api/portraits/men/32.jpg"
               },
               {
-                text: "Exceptional service and support. A game-changer for our operations.",
-                author: "Emma Davis",
-                role: "CTO, Innovate LLC",
+                text: "Their AI tools have become indispensable for our team. The quality and speed of delivery have improved dramatically.",
+                author: "Emily Zhang",
+                role: "Director of AI, FutureTech",
                 image: "https://randomuser.me/api/portraits/women/65.jpg"
               }
             ].map((testimonial, index) => (
@@ -99,24 +105,42 @@ export const LandingContent = () => {
                   <Image
                     src={testimonial.image}
                     alt={testimonial.author}
-                    width={56}
-                    height={56}
-                    className='rounded-full mr-4'
+                    width={48}
+                    height={48}
+                    className='rounded-full'
                   />
-                  <div>
-                    <h4 className='text-gray-900 font-bold text-lg'>
+                  <div className='ml-4'>
+                    <p className='font-semibold text-gray-900'>
                       {testimonial.author}
-                    </h4>
-                    <p className='text-gray-600'>{testimonial.role}</p>
+                    </p>
+                    <p className='text-gray-600 text-sm'>{testimonial.role}</p>
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
+
+          {/* Final CTA Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className='text-center mt-16'>
+            <h3 className='text-3xl font-bold text-gray-900 mb-6'>
+              Ready to Transform Your Business?
+            </h3>
+            <Link href='/sign-up'>
+              <Button
+                variant='premium'
+                className='text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300'>
+                Start Your Free Trial Today
+              </Button>
+            </Link>
+            <p className='mt-4 text-gray-600'>No credit card required</p>
+          </motion.div>
         </motion.div>
       </section>
-
-      <Analytics />
     </div>
   );
 };

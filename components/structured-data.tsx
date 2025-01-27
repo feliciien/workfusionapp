@@ -12,8 +12,8 @@ export function OrganizationStructuredData() {
     description:
       "Transform your business with WorkFusion App's powerful AI tools. Automate tasks, generate content, and boost productivity with our cutting-edge AI platform.",
     sameAs: [
-      "https://twitter.com/workfusion"
-      // Add other social media profiles here
+      "https://www.linkedin.com/company/workfusionapp",
+      "https://www.youtube.com/@WorkfusionApp"
     ],
     contactPoint: {
       "@type": "ContactPoint",

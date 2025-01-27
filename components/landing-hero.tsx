@@ -18,7 +18,6 @@ export const LandingHero = () => {
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.play().catch(() => {
-        // Handle autoplay failure gracefully
         setShowPlayButton(true);
       });
       setShowPlayButton(false);
@@ -78,7 +77,7 @@ export const LandingHero = () => {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}>
             <span className='px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-sm font-medium mb-8 animate-fade-in backdrop-blur-sm border border-gray-200/50 shadow-sm'>
-              🚀 Welcome to the Future of AI
+              🚀 Experience the Power of AI Today
             </span>
           </motion.div>
 
@@ -92,7 +91,7 @@ export const LandingHero = () => {
               : "Transform Your Business with AI-Driven Solutions"}
           </motion.h1>
 
-          {/* Modified Video Section */}
+          {/* Video Demo Section */}
           <motion.div
             className='relative w-full max-w-3xl mt-8'
             initial={{ opacity: 0, scale: 0.95 }}
@@ -141,7 +140,7 @@ export const LandingHero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.8 }}>
-            Boost Efficiency and Innovation with Our Platform
+            Join Thousands of Businesses Already Succeeding with AI
           </motion.p>
 
           <motion.div
@@ -175,33 +174,37 @@ export const LandingHero = () => {
             Experience the power of advanced AI models to boost your creativity,
             productivity, and innovation—no coding required.
           </motion.p>
-        </motion.div>
 
-        {/* CTA Buttons */}
-        <motion.div
-          className='flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.8 }}>
-          <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant='premium'
-                className='w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'>
-                {isSignedIn ? "Go to Dashboard" : "Join the Revolution"}
-              </Button>
-            </motion.div>
-          </Link>
+          {/* Enhanced CTA Buttons */}
+          <motion.div
+            className='flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2, duration: 0.8 }}>
+            <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant='premium'
+                  className='w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'>
+                  {isSignedIn ? "Go to Dashboard" : "Start Free Trial"}
+                </Button>
+              </motion.div>
+            </Link>
 
-          <Link href='/docs'>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant='outline'
-                className='w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-all duration-300 border-2 border-gray-200 text-gray-800 shadow-md hover:shadow-lg'>
-                View Documentation
-              </Button>
-            </motion.div>
-          </Link>
+            <Link href='/docs'>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant='outline'
+                  className='w-full sm:w-auto text-lg py-6 px-8 rounded-full font-semibold bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-all duration-300 border-2 border-gray-200 text-gray-800 shadow-md hover:shadow-lg'>
+                  Explore Features
+                </Button>
+              </motion.div>
+            </Link>
+          </motion.div>
         </motion.div>
       </div>
     </div>
