@@ -23,7 +23,9 @@ import {
   Network,
   Palette,
   PresentationIcon,
+  Scale,
   Settings,
+  Shield,
   Users,
   VideoIcon
 } from "lucide-react";
@@ -61,6 +63,38 @@ interface FeatureUsage {
 }
 
 const routeCategories: RouteCategory[] = [
+  {
+    name: "Legal Tools",
+    routes: [
+      {
+        label: "Contract Generator",
+        icon: FileText,
+        href: "/legal/contract-generator",
+        color: "text-blue-500",
+        description: "Generate legally compliant contracts and agreements",
+        free: false,
+        proOnly: true
+      },
+      {
+        label: "GDPR Compliance",
+        icon: Shield,
+        color: "text-green-500",
+        href: "/legal/gdpr-compliance",
+        description: "Check and ensure GDPR compliance for your business",
+        free: false,
+        proOnly: true
+      },
+      {
+        label: "Legal Research",
+        icon: Scale,
+        color: "text-purple-500",
+        href: "/legal/legal-research",
+        description: "AI-powered legal research and case analysis",
+        free: false,
+        proOnly: true
+      }
+    ]
+  },
   {
     name: "Communication & Writing",
     routes: [

@@ -93,6 +93,50 @@ model UserSubscription {
   @@index([paypalSubscriptionId])
 }
 
+model ToolUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  toolName  String
+  params    String   @db.Text
+  timestamp DateTime @default(now())
+  status    String   @default("pending")
+  result    String?  @db.Text
+  error     String?  @db.Text
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([toolName])
+  @@index([timestamp])
+}
+
+model LegalDocument {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String   @db.Text
+  type        String
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+model CodeAnalysis {
+  id          String   @id @default(cuid())
+  userId      String
+  codeContent String   @db.Text
+  language    String
+  result      String   @db.Text
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([language])
+}
+
 model Conversation {
   id           String       @id @default(cuid())
   userId       String
