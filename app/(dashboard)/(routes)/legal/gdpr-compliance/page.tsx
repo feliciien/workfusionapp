@@ -18,10 +18,60 @@ export default function GDPRCompliancePage() {
     dataBreach: false
   });
 
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  const analyzeCompliance = () => {
+    const complianceRecommendations = [];
+
+    if (!checklist.dataConsent) {
+      complianceRecommendations.push(
+        "Implement explicit consent mechanisms for data collection and processing"
+      );
+    }
+    if (!checklist.dataProtection) {
+      complianceRecommendations.push(
+        "Establish robust data protection measures including encryption and access controls"
+      );
+    }
+    if (!checklist.dataRetention) {
+      complianceRecommendations.push(
+        "Define and document clear data retention policies and deletion procedures"
+      );
+    }
+    if (!checklist.dataAccess) {
+      complianceRecommendations.push(
+        "Implement processes for handling data subject access requests"
+      );
+    }
+    if (!checklist.dataBreach) {
+      complianceRecommendations.push(
+        "Develop and document data breach notification procedures"
+      );
+    }
+
+    return complianceRecommendations;
+  };
+
   const onSubmit = async () => {
     try {
       setLoading(true);
-      // TODO: Implement GDPR compliance check logic
+      const results = analyzeCompliance();
+      setRecommendations(results);
+      setShowResults(true);
+
+      // Save compliance data to the API
+      const response = await fetch("/api/gdpr", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ checklist })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save compliance data");
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -113,6 +163,30 @@ export default function GDPRCompliancePage() {
               Check Compliance
               <Shield className='w-4 h-4 ml-2' />
             </Button>
+            {showResults && (
+              <div className='mt-4 space-y-2'>
+                <h3 className='text-lg font-semibold'>
+                  {recommendations.length > 0
+                    ? "Compliance Recommendations:"
+                    : "Fully Compliant!"}
+                </h3>
+                {recommendations.length > 0 ? (
+                  <ul className='list-disc pl-5 space-y-2'>
+                    {recommendations.map((recommendation, index) => (
+                      <li key={index} className='text-sm text-muted-foreground'>
+                        {recommendation}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className='text-sm text-green-600'>
+                    Your organization appears to have implemented all key GDPR
+                    requirements. Continue monitoring and updating your
+                    practices regularly.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </div>

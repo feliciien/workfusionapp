@@ -16,9 +16,25 @@ export default function LegalResearchPage() {
   const onSubmit = async () => {
     try {
       setLoading(true);
-      // TODO: Implement legal research logic using AI
+      const response = await fetch("/api/legal/research", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to perform legal research");
+      }
+
+      const data = await response.json();
+      setResults(data.content || data.text || "");
     } catch (error) {
       console.error(error);
+      setResults(
+        "An error occurred while performing legal research. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -47,7 +63,7 @@ export default function LegalResearchPage() {
               onClick={onSubmit}
               disabled={loading || !query}
               className='w-full'>
-              Research
+              {loading ? "Researching..." : "Research"}
               <Scale className='w-4 h-4 ml-2' />
             </Button>
             {results && (
