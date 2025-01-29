@@ -17,7 +17,7 @@ import {
   VideoIcon
 } from "lucide-react";
 
-export const FREE_DAILY_LIMIT = 20; // Daily quota for free users
+export const FREE_DAILY_LIMIT = 5; // Daily quota for free users
 
 export const FEATURE_TYPES = {
   IMAGE_GENERATION: "image",
